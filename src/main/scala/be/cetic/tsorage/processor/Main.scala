@@ -11,15 +11,19 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Sink, Source}
 import be.cetic.tsorage.processor.aggregator.{DayAggregator, HourAggregator, MinuteAggregator}
 import com.datastax.driver.core.Cluster
-import com.datastax.oss.driver.api.core.cql._
-
 
 import scala.util.Random
 import java.time.format.DateTimeFormatter
 
+import be.cetic.tsorage.processor.sharder.MonthSharder
+import com.datastax.oss.driver.api.core.CqlSession
+import com.typesafe.scalalogging.LazyLogging
+import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.event.Level
 
 
-object Main
+
+object Main extends LazyLogging
 {
    val shardFormatter = DateTimeFormatter.ofPattern("yyyy-MM")
 
@@ -29,35 +33,9 @@ object Main
    }
 
 
-   /**
-     * Notifies the system that some tags has been ingested.
-     * The system is responsible of integrating this, for querying purpose.
-     *
-     * If the tags have already been notified, there is normally nothing to do.
-     * So a Redis could be used as cache for avoiding any database query.
-     * @param tagnames   The tags keys to notify
-     */
-   def notify(tagnames: Set[String]) =
-   {
-      /**
-        * 1. Check the tagnames that must be added to Cassandra
-        * 2. Add the appropriate columns in a try/catch
-        */
-   }
-
-   /**
-     * Converts a datetime into the shard it belongs to
-     * @param dt  The datetime to convert
-     * @return The shard corresponding to dt.
-     */
-   def shard(dt : LocalDateTime) = dt.format(shardFormatter)
-
-
-
-
    def main(args: Array[String]): Unit =
    {
-/*
+      /*
       val session = Cluster.builder
          .addContactPoint("127.0.0.1")
          .withPort(9042)
@@ -65,6 +43,15 @@ object Main
          .build
          .connect()
 
+       */
+
+      val session = CqlSession.builder()
+         //.addContactPoint(new InetSocketAddress("127.0.0.1", 9042))
+         //.withLocalDatacenter("DC1")
+         .build()
+
+
+/*
       implicit val system = ActorSystem()
       implicit val mat = ActorMaterializer()
 */
@@ -73,7 +60,16 @@ object Main
 
       val timeAggregators = List(MinuteAggregator, HourAggregator, DayAggregator)
 
-      // val processor = Processor(session, "tsorage")
+      val processor = Processor(session, MonthSharder)
+
+      processor.process(FloatMessage(
+         "my sensor",
+         Map("owner2" -> "mg", "quality" -> "miam"),
+         List(
+            (LocalDateTime.now(), 42.0F),
+            (LocalDateTime.now(), 1337.0F),
+         )
+      ))
 /*
       // Getting a stream of messages from an imaginary external system as a Source, and bufferize them
       val messages: Source[FloatMessage, NotUsed] = inboundMessagesConnector().throttle(50, FiniteDuration(5, TimeUnit.SECONDS))
@@ -89,6 +85,6 @@ object Main
 
  */
 
-      print(shard(LocalDateTime.now()))
+
    }
 }

@@ -5,4 +5,4 @@ import java.time.LocalDateTime
 /**
   * A package message containing observations.
   */
-case class FloatMessage(sensor: String, tags: Map[String, String], values: List[(LocalDateTime, Float)]) extends Serializable
+case class FloatMessage(metric: String, tagset: Map[String, String], values: List[(LocalDateTime, Float)]) extends Serializable
