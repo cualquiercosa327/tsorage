@@ -5,20 +5,15 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.CompletableFuture
 
 import be.cetic.tsorage.processor.sharder.Sharder
-import com.datastax.driver.core.{BatchStatement, ConsistencyLevel, ResultSetFuture, Session}
 import com.datastax.oss.driver.api.core.`type`.DataTypes
 import com.datastax.oss.driver.api.core.{CqlSession, DefaultConsistencyLevel}
 import com.datastax.oss.driver.api.core.cql.{BatchStatementBuilder, DefaultBatchType}
-import com.datastax.oss.driver.api.querybuilder.Literal
-import com.google.common.util.concurrent.{Futures, ListenableFuture}
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.MapView
 import scala.jdk.CollectionConverters._
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder._
 import com.datastax.oss.driver.api.querybuilder.SchemaBuilder._
 import com.datastax.oss.driver.api.querybuilder.term.Term
-import com.datastax.oss.protocol.internal.ProtocolConstants.DataType
 
 import scala.util.Try
 
@@ -58,7 +53,7 @@ case class Processor(session: CqlSession, sharder: Sharder) extends LazyLogging
 
       /*
        * TODO : Make it asynchronous ?
-       *    Anyway, the whole foreach must be blocking
+       *        Anyway, the whole foreach must be blocking
        */
       tagnames.foreach(tagname => {
 
@@ -121,9 +116,12 @@ case class Processor(session: CqlSession, sharder: Sharder) extends LazyLogging
       sharded.foreach(shard => processBatch(shard._1, shard._2))
    }
 
-   def process(message: FloatMessage): Unit =
+   def process(message: FloatMessage) =
    {
       notify(message.tagset.keySet)
+
       submitRawObservations(message)
+
+      message.values.map(v => (message.metric, message.tagset, v._1))
    }
 }

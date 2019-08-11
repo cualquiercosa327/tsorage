@@ -3,8 +3,10 @@ package be.cetic.tsorage.processor.aggregator
 import java.time.LocalDateTime
 import java.time.temporal.{ChronoUnit, TemporalUnit}
 
+import com.typesafe.scalalogging.LazyLogging
 
-trait TimeAggregator{
+
+trait TimeAggregator extends LazyLogging{
    /**
      * Provides the moment to which a particular datetime will be aggregated.
      *
@@ -20,9 +22,18 @@ trait TimeAggregator{
      */
    def range(shunk: LocalDateTime): (LocalDateTime, LocalDateTime)
 
+   def name: String
+
+   def updateShunk(metric: String, tagset: Map[String, String], shunk: LocalDateTime): (String, Map[String, String], LocalDateTime) =
+   {
+      logger.info(s"${name} update shunk ${metric}, ${tagset}, ${shunk}")
+
+
+      (metric, tagset, shunk)
+   }
 }
 
-abstract class SimpleTimeAggregator(val unit: TemporalUnit) extends TimeAggregator
+abstract class SimpleTimeAggregator(val unit: TemporalUnit, val name: String) extends TimeAggregator
 {
    def isBorder(dt: LocalDateTime): Boolean
 
@@ -35,7 +46,7 @@ abstract class SimpleTimeAggregator(val unit: TemporalUnit) extends TimeAggregat
 /**
   * Aggretates datetimes to the next minute.
   */
-object MinuteAggregator extends SimpleTimeAggregator(ChronoUnit.MINUTES)
+object MinuteAggregator extends SimpleTimeAggregator(ChronoUnit.MINUTES, "1m")
 {
    def isBorder(dt: LocalDateTime) = (dt.getSecond == 0) && (dt.getNano == 0)
 }
@@ -43,7 +54,7 @@ object MinuteAggregator extends SimpleTimeAggregator(ChronoUnit.MINUTES)
 /**
   * Aggretates datetimes to the next hour.
   */
-object HourAggregator extends SimpleTimeAggregator(ChronoUnit.HOURS)
+object HourAggregator extends SimpleTimeAggregator(ChronoUnit.HOURS, "1h")
 {
    def isBorder(dt: LocalDateTime) = (dt.getMinute == 0) && (dt.getSecond == 0) && (dt.getNano == 0)
 }
@@ -51,7 +62,7 @@ object HourAggregator extends SimpleTimeAggregator(ChronoUnit.HOURS)
 /**
   * Aggretates datetimes to the next day.
   */
-object DayAggregator extends SimpleTimeAggregator(ChronoUnit.DAYS)
+object DayAggregator extends SimpleTimeAggregator(ChronoUnit.DAYS, "1d")
 {
    def isBorder(dt: LocalDateTime) = (dt.getHour == 0) && (dt.getMinute == 0) && (dt.getSecond == 0) && (dt.getNano == 0)
 }
@@ -78,5 +89,7 @@ object MonthAggregator extends TimeAggregator
 
 
    override def range(shunk: LocalDateTime): (LocalDateTime, LocalDateTime) = (shunk.minus(1, ChronoUnit.MONTHS), shunk)
+
+   override def name = "1mo"
 }
 

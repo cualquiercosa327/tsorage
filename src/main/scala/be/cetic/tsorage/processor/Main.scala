@@ -21,6 +21,8 @@ import com.typesafe.scalalogging.LazyLogging
 import org.slf4j.{Logger, LoggerFactory}
 import org.slf4j.event.Level
 
+import scala.concurrent.duration.FiniteDuration
+
 
 
 object Main extends LazyLogging
@@ -28,7 +30,7 @@ object Main extends LazyLogging
    val shardFormatter = DateTimeFormatter.ofPattern("yyyy-MM")
 
    def inboundMessagesConnector(): Source[FloatMessage, NotUsed] = {
-      val prepared = LazyList.from(0).map(d => FloatMessage("my sensor", Map(), List((LocalDateTime.of(2019, 7, 24, Random.nextInt(24), Random.nextInt(60), Random.nextInt(60), 0), Random.nextFloat()))))
+      val prepared = LazyList.from(0).map(d => FloatMessage("my sensor", Map(), List((LocalDateTime.now, Random.nextFloat()))))
       Source(prepared)
    }
 
@@ -51,40 +53,60 @@ object Main extends LazyLogging
          .build()
 
 
-/*
+
       implicit val system = ActorSystem()
       implicit val mat = ActorMaterializer()
-*/
 
-      val groupedSize = 100
+
+      val bufferGroupSize = 100
+      val bufferTime = FiniteDuration(30, TimeUnit.SECONDS)
 
       val timeAggregators = List(MinuteAggregator, HourAggregator, DayAggregator)
+      val sharder = MonthSharder
 
-      val processor = Processor(session, MonthSharder)
+      val processor = Processor(session, sharder)
 
-      processor.process(FloatMessage(
-         "my sensor",
-         Map("owner2" -> "mg", "quality" -> "miam"),
-         List(
-            (LocalDateTime.now(), 42.0F),
-            (LocalDateTime.now(), 1337.0F),
-         )
-      ))
-/*
+
       // Getting a stream of messages from an imaginary external system as a Source, and bufferize them
-      val messages: Source[FloatMessage, NotUsed] = inboundMessagesConnector().throttle(50, FiniteDuration(5, TimeUnit.SECONDS))
+      val messages: Source[FloatMessage, NotUsed] = inboundMessagesConnector()
+         .throttle(10, FiniteDuration(5, TimeUnit.SECONDS))
 
-      val batches = messages.groupedWithin(groupedSize, duration.FiniteDuration(5, TimeUnit.MINUTES))
+      val changes = messages
+         .async
+         .mapConcat(processor.process)
 
+      val byMinute = changes
+         .async
+         .map(event => (event._1, event._2, MinuteAggregator.shunk(event._3)))
+         .groupedWithin(bufferGroupSize, bufferTime)
+         .mapConcat(events => events.toSet) // distinct
+         .map(event => MinuteAggregator.updateShunk(event._1, event._2, event._3))
 
-      val minuteDates = batches.map(batch => batch.map(message => message.sensor -> message.values.map(_._1)))
+      val byHour = byMinute
+         .async
+         .map(event => (event._1, event._2, HourAggregator.shunk(event._3)))
+         .groupedWithin(bufferGroupSize, bufferTime)
+         .mapConcat(events => events.toSet) // distinct
+         .map(event => HourAggregator.updateShunk(event._1, event._2, event._3))
 
-      minuteDates.runWith(Sink.foreach(println))
+      val byDay = byHour
+         .async
+         .map(event => (event._1, event._2, DayAggregator.shunk(event._3)))
+         .groupedWithin(bufferGroupSize, bufferTime)
+         .mapConcat(events => events.toSet) // distinct
+         .map(event => DayAggregator.updateShunk(event._1, event._2, event._3))
 
-      //grouped.map(x => x.size).runWith(Sink.foreach(println))
+      byDay.runWith(Sink.ignore)
 
- */
+      /*
+            val batches = messages.groupedWithin(groupedSize, duration.FiniteDuration(5, TimeUnit.MINUTES))
 
+            val minuteDates = batches.map(batch => batch.map(message => message.sensor -> message.values.map(_._1)))
 
+            minuteDates.runWith(Sink.foreach(println))
+
+            //grouped.map(x => x.size).runWith(Sink.foreach(println))
+
+       */
    }
 }
