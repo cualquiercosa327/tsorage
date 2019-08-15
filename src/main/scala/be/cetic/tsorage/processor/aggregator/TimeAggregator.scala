@@ -3,6 +3,7 @@ package be.cetic.tsorage.processor.aggregator
 import java.time.LocalDateTime
 import java.time.temporal.{ChronoUnit, TemporalUnit}
 
+import be.cetic.tsorage.processor.sharder.Sharder
 import com.typesafe.scalalogging.LazyLogging
 
 
@@ -24,9 +25,16 @@ trait TimeAggregator extends LazyLogging{
 
    def name: String
 
-   def updateShunk(metric: String, tagset: Map[String, String], shunk: LocalDateTime): (String, Map[String, String], LocalDateTime) =
+   def updateShunk(metric: String, tagset: Map[String, String], shunk: LocalDateTime, sharder: Sharder): (String, Map[String, String], LocalDateTime) =
    {
       logger.info(s"${name} update shunk ${metric}, ${tagset}, ${shunk}")
+
+      val (shunkStart, shunkEnd) = range(shunk)
+      val shards = sharder.shards(shunkStart, shunkEnd)
+
+      logger.info(s"${name} queries shards ${shards.mkString(", ")}")
+
+
 
 
       (metric, tagset, shunk)

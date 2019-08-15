@@ -58,8 +58,8 @@ object Main extends LazyLogging
       implicit val mat = ActorMaterializer()
 
 
-      val bufferGroupSize = 100
-      val bufferTime = FiniteDuration(30, TimeUnit.SECONDS)
+      val bufferGroupSize = 10
+      val bufferTime = FiniteDuration(10, TimeUnit.SECONDS)
 
       val timeAggregators = List(MinuteAggregator, HourAggregator, DayAggregator)
       val sharder = MonthSharder
@@ -80,21 +80,21 @@ object Main extends LazyLogging
          .map(event => (event._1, event._2, MinuteAggregator.shunk(event._3)))
          .groupedWithin(bufferGroupSize, bufferTime)
          .mapConcat(events => events.toSet) // distinct
-         .map(event => MinuteAggregator.updateShunk(event._1, event._2, event._3))
+         .map(event => MinuteAggregator.updateShunk(event._1, event._2, event._3, sharder))
 
       val byHour = byMinute
          .async
          .map(event => (event._1, event._2, HourAggregator.shunk(event._3)))
          .groupedWithin(bufferGroupSize, bufferTime)
          .mapConcat(events => events.toSet) // distinct
-         .map(event => HourAggregator.updateShunk(event._1, event._2, event._3))
+         .map(event => HourAggregator.updateShunk(event._1, event._2, event._3, sharder))
 
       val byDay = byHour
          .async
          .map(event => (event._1, event._2, DayAggregator.shunk(event._3)))
          .groupedWithin(bufferGroupSize, bufferTime)
          .mapConcat(events => events.toSet) // distinct
-         .map(event => DayAggregator.updateShunk(event._1, event._2, event._3))
+         .map(event => DayAggregator.updateShunk(event._1, event._2, event._3, sharder))
 
       byDay.runWith(Sink.ignore)
 
