@@ -1,6 +1,5 @@
 package be.cetic.tsorage.processor
 
-import java.net.{Inet4Address, InetSocketAddress}
 import java.time.{LocalDate, LocalDateTime, LocalTime}
 import java.util
 import java.util.concurrent.TimeUnit
@@ -30,14 +29,16 @@ object Main extends LazyLogging
    val shardFormatter = DateTimeFormatter.ofPattern("yyyy-MM")
 
    def inboundMessagesConnector(): Source[FloatMessage, NotUsed] = {
-      val prepared = LazyList.from(0).map(d => FloatMessage("my sensor", Map(), List((LocalDateTime.now, Random.nextFloat()))))
+      val prepared = LazyList.from(0).map(d => FloatMessage("my sensor", Map("owner2" -> "Clara O'Tool"), List((LocalDateTime.now, Random.nextFloat()))))
       Source(prepared)
    }
 
 
    def main(args: Array[String]): Unit =
    {
-      /*
+      val root: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger]
+      root
+
       val session = Cluster.builder
          .addContactPoint("127.0.0.1")
          .withPort(9042)
@@ -45,18 +46,8 @@ object Main extends LazyLogging
          .build
          .connect()
 
-       */
-
-      val session = CqlSession.builder()
-         //.addContactPoint(new InetSocketAddress("127.0.0.1", 9042))
-         //.withLocalDatacenter("DC1")
-         .build()
-
-
-
       implicit val system = ActorSystem()
       implicit val mat = ActorMaterializer()
-
 
       val bufferGroupSize = 10
       val bufferTime = FiniteDuration(10, TimeUnit.SECONDS)
@@ -69,7 +60,7 @@ object Main extends LazyLogging
 
       // Getting a stream of messages from an imaginary external system as a Source, and bufferize them
       val messages: Source[FloatMessage, NotUsed] = inboundMessagesConnector()
-         .throttle(10, FiniteDuration(5, TimeUnit.SECONDS))
+         //.throttle(10, FiniteDuration(5, TimeUnit.SECONDS))
 
       val changes = messages
          .async
@@ -80,21 +71,21 @@ object Main extends LazyLogging
          .map(event => (event._1, event._2, MinuteAggregator.shunk(event._3)))
          .groupedWithin(bufferGroupSize, bufferTime)
          .mapConcat(events => events.toSet) // distinct
-         .map(event => MinuteAggregator.updateShunk(event._1, event._2, event._3, sharder))
+         .map(event => MinuteAggregator.updateShunk(session, event._1, event._2, event._3, sharder))
 
       val byHour = byMinute
          .async
          .map(event => (event._1, event._2, HourAggregator.shunk(event._3)))
          .groupedWithin(bufferGroupSize, bufferTime)
          .mapConcat(events => events.toSet) // distinct
-         .map(event => HourAggregator.updateShunk(event._1, event._2, event._3, sharder))
+         .map(event => HourAggregator.updateShunk(session, event._1, event._2, event._3, sharder))
 
       val byDay = byHour
          .async
          .map(event => (event._1, event._2, DayAggregator.shunk(event._3)))
          .groupedWithin(bufferGroupSize, bufferTime)
          .mapConcat(events => events.toSet) // distinct
-         .map(event => DayAggregator.updateShunk(event._1, event._2, event._3, sharder))
+         .map(event => DayAggregator.updateShunk(session, event._1, event._2, event._3, sharder))
 
       byDay.runWith(Sink.ignore)
 

@@ -5,15 +5,13 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.CompletableFuture
 
 import be.cetic.tsorage.processor.sharder.Sharder
-import com.datastax.oss.driver.api.core.`type`.DataTypes
-import com.datastax.oss.driver.api.core.{CqlSession, DefaultConsistencyLevel}
-import com.datastax.oss.driver.api.core.cql.{BatchStatementBuilder, DefaultBatchType}
+import com.datastax.driver.core.{BatchStatement, BoundStatement, ConsistencyLevel, DataType, Session}
 import com.typesafe.scalalogging.LazyLogging
+import com.datastax.driver.core.schemabuilder.SchemaBuilder._
+import com.datastax.driver.core.querybuilder.QueryBuilder._
 
 import scala.jdk.CollectionConverters._
-import com.datastax.oss.driver.api.querybuilder.QueryBuilder._
-import com.datastax.oss.driver.api.querybuilder.SchemaBuilder._
-import com.datastax.oss.driver.api.querybuilder.term.Term
+import scala.collection.parallel.CollectionConverters._
 
 import scala.util.Try
 
@@ -27,7 +25,7 @@ import scala.util.Try
   * 4. Buffering of the flatten raw values
   * 5. Processing each time series, by (metric, tagset)
   */
-case class Processor(session: CqlSession, sharder: Sharder) extends LazyLogging
+case class Processor(session: Session, sharder: Sharder) extends LazyLogging
 {
    /**
      * Maximum number of inserts in a single batch.
@@ -58,12 +56,10 @@ case class Processor(session: CqlSession, sharder: Sharder) extends LazyLogging
       tagnames.foreach(tagname => {
 
          val alterRaw = alterTable("tsorage_raw", "numeric")
-            .addColumn(tagname, DataTypes.TEXT)
-            .build()
+            .addColumn("tagname").`type`(DataType.text())
 
          val alterAgg = alterTable("tsorage_agg", "numeric")
-            .addColumn(tagname, DataTypes.TEXT)
-            .build()
+            .addColumn(tagname).`type`(DataType.text())
 
          Try(session.execute(alterRaw))
          Try(session.execute(alterAgg))
@@ -82,26 +78,31 @@ case class Processor(session: CqlSession, sharder: Sharder) extends LazyLogging
    {
       logger.info(s"Submitting ${message.values.size} raw values to (${message.metric}, ${message.tagset})")
       val sharded: Map[String, List[(LocalDateTime, Float)]] = message.values.groupBy(observation => sharder.shard(observation._1))
-      val javatags : java.util.Map[String, Term] = message.tagset.view.mapValues(v => literal(v).asInstanceOf[Term]).toMap.asJava
+      val javatags : java.util.Map[String, String] = message.tagset.asJava
+
+      val baseInsertQuery = insertInto("tsorage_raw", "numeric")
+         .value("metric", message.metric)
+         .values(message.tagset.keys.toList.asJava, message.tagset.asInstanceOf[Map[String, AnyRef]].values.toList.asJava)
 
       def processBatch(shardId: String, batchContent: List[(LocalDateTime, Float)]) =
       {
+         /*
+          * TODO : Prepared statements are supposed to be much more efficient,
+          *   but binding them blocks the workflow. Investigate + fix it.
+          *
+          *   https://medium.com/netflix-techblog/astyanax-update-c936487bb0c0
+          */
 
-         val preparedInsertQuery = insertInto("tsorage_raw", "numeric")
-            .value("metric", literal(message.metric))
-            .value("shard", literal(shardId))
-            .values(javatags)
-            .value("datetime", bindMarker())
-            .value("value", bindMarker())
+         val shardedQuery = baseInsertQuery.value("shard", shardId)
 
-         val statements = batchContent.map(content =>
-            preparedInsertQuery.build(content._1.toInstant(ZoneOffset.UTC).toEpochMilli, content._2)
+         val statements = batchContent.map(content => shardedQuery
+            .value("datetime", content._1.toInstant(ZoneOffset.UTC).toEpochMilli)
+            .value("value", content._2)
          ).asJava
 
-         val batch = new BatchStatementBuilder(DefaultBatchType.UNLOGGED)
-            .setConsistencyLevel(DefaultConsistencyLevel.LOCAL_QUORUM)
-            .build()
+         val batch = new BatchStatement(BatchStatement.Type.UNLOGGED)
             .addAll(statements)
+            .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
          session.execute(batch)
       }
@@ -119,9 +120,7 @@ case class Processor(session: CqlSession, sharder: Sharder) extends LazyLogging
    def process(message: FloatMessage) =
    {
       notify(message.tagset.keySet)
-
       submitRawObservations(message)
-
       message.values.map(v => (message.metric, message.tagset, v._1))
    }
 }
