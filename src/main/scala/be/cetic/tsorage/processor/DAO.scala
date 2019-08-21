@@ -7,7 +7,7 @@ import com.datastax.driver.core.{ConsistencyLevel, Session}
 import com.datastax.driver.core.querybuilder.QueryBuilder.{bindMarker, insertInto}
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.jdk.CollectionConverters._
+import collection.JavaConverters._
 
 object DAO extends LazyLogging
 {

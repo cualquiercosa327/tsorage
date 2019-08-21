@@ -50,7 +50,7 @@ object MonthSharder extends TimeFormatSharder(DateTimeFormatter.ofPattern("yyyy-
          val currentRange = range(currentShard)
 
          if(currentRange._1 isAfter end) ret
-         else recShards(end, current.plusMonths(1), ret.appended(shard(current)))
+         else recShards(end, current.plusMonths(1),  ret :+ (shard(current)))
       }
 
       recShards(end, start, Nil)
@@ -84,7 +84,7 @@ object DaySharder extends TimeFormatSharder(DateTimeFormatter.ofPattern("yyyy-MM
          val currentRange = range(currentShard)
 
          if(currentRange._1 isAfter end) ret
-         else recShards(end, current.plusDays(1), ret.appended(shard(current)))
+         else recShards(end, current.plusDays(1), ret :+ shard(current))
       }
 
       recShards(end, start, Nil)

@@ -12,8 +12,7 @@ import com.datastax.driver.core.{ConsistencyLevel, Row, Session, SimpleStatement
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.jdk.CollectionConverters._
-import scala.collection.parallel.CollectionConverters._
+import collection.JavaConverters._
 
 trait TimeAggregator extends LazyLogging{
 
