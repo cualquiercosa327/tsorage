@@ -27,23 +27,25 @@ import scala.concurrent.duration.FiniteDuration
 import collection.JavaConverters._
 
 
+object RandomMessageIterator extends Iterator[FloatMessage]
+{
+   override def hasNext() = true
+   override def next(): FloatMessage = FloatMessage("my sensor", Map("owner2" -> "Clara O'Tool"), List((LocalDateTime.now, Random.nextFloat())))
+}
 
+object RandomMessageIterable extends scala.collection.immutable.Iterable[FloatMessage]
+{
+   override def iterator: Iterator[FloatMessage] = RandomMessageIterator
+}
 
 object Main extends LazyLogging
 {
    val shardFormatter = DateTimeFormatter.ofPattern("yyyy-MM")
 
-   def inboundMessagesConnector(): Source[FloatMessage, NotUsed] = {
-      val prepared = Stream.from(0).map(d => FloatMessage("my sensor", Map("owner2" -> "Clara O'Tool"), List((LocalDateTime.now, Random.nextFloat()))))
-      Source(prepared)
-   }
-
+   def inboundMessagesConnector(): Source[FloatMessage, NotUsed] = Source(RandomMessageIterable)
 
    def main(args: Array[String]): Unit =
    {
-      val root: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger]
-      root
-
       val session = Cluster.builder
          .addContactPoint("127.0.0.1")
          .withPort(9042)
@@ -64,8 +66,8 @@ object Main extends LazyLogging
             .value("value", bindMarker("value"))
       )
 
-
       val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
+         val x = observation.tagset.map(tag => tag._1)
          prepared.bind()
             .setString("metric", observation.metric)
             .setString("shard", sharder.shard(observation.datetime))
@@ -79,12 +81,8 @@ object Main extends LazyLogging
 
       val timeAggregators = List(MinuteAggregator, HourAggregator, DayAggregator)
 
-      val processor = Processor(session, sharder)
-
-
       // Getting a stream of messages from an imaginary external system as a Source, and bufferize them
       val messages: Source[FloatMessage, NotUsed] = inboundMessagesConnector()
-         //.throttle(10, FiniteDuration(5, TimeUnit.SECONDS))
 
       /**
         * A function ensuring all tagnames contained in a message
@@ -94,6 +92,7 @@ object Main extends LazyLogging
       val notifyTagnames: FloatMessage => FloatMessage = (message: FloatMessage) => message
 
       val settings: CassandraBatchSettings = CassandraBatchSettings(100, FiniteDuration(20, TimeUnit.SECONDS))
+
       val rawFlow = CassandraFlow.createWithPassThrough[FloatObservation](16,
          preparedRawInsert,
          bindRawInsert)(session)
@@ -103,8 +102,6 @@ object Main extends LazyLogging
          .mapConcat(fanOutObservations)
          .via(rawFlow)
          .runWith(Sink.ignore)
-
-
 
       /*
             val changes = messages
