@@ -11,7 +11,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 
 object Cassandra extends LazyLogging {
-  private val conf = ConfigFactory.load("storage.conf")
+  private val conf = ConfigFactory.load("tsorage.conf")
   private val cassandraHost = conf.getString("cassandra.host")
   private val cassandraPort = conf.getInt("cassandra.port")
 

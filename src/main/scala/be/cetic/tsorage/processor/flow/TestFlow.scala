@@ -16,7 +16,7 @@ class TestFlow(val aggregators: List[TimeAggregator], val sharder: Sharder)(impl
   val cassandraFlow = new CassandraFlow(sharder)
   val observationFlow = new ObservationFlow()
 
-  val conf = ConfigFactory.load("storage.conf")
+  val conf = ConfigFactory.load("tsorage.conf")
 
   val baseFlow = messages
        .map(cassandraFlow.notifyTagnames)

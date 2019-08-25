@@ -40,7 +40,7 @@ object Main extends LazyLogging with App {
 
   def inboundMessagesConnector(): Source[FloatMessage, NotUsed] = RandomMessageIterator.source()
 
-  val conf = ConfigFactory.load("storage.conf")
+  val conf = ConfigFactory.load("tsorage.conf")
   val cassandraHost = conf.getString("cassandra.host")
   val cassandraPort = conf.getInt("cassandra.port")
   val root: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)
@@ -63,10 +63,10 @@ object Main extends LazyLogging with App {
   val settings: CassandraBatchSettings = CassandraBatchSettings(100, FiniteDuration(20, TimeUnit.SECONDS))
 
   val minuteAggregator = MinuteAggregator
-  val dayAggregator = DayAggregator
+  val hourAggregator = HourAggregator
 
   val test = new TestFlow(
-    List(minuteAggregator, dayAggregator),
+    List(minuteAggregator, hourAggregator),
     sharder).flow
     .runWith(Sink.ignore)
 
