@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter
 import akka.dispatch.ExecutionContexts
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
 import akka.stream.alpakka.cassandra.scaladsl.AltCassandraFlow
-import be.cetic.tsorage.processor.sharder.MonthSharder
+import be.cetic.tsorage.processor.sharder.{DaySharder, MonthSharder}
 import be.cetic.tsorage.processor.source.{RandomMessageIterable, RandomMessageIterator}
 import com.datastax.driver.core.querybuilder.Insert
 import com.datastax.driver.core.querybuilder.QueryBuilder.{bindMarker, insertInto}
@@ -45,6 +45,11 @@ object Main extends LazyLogging with App {
   val cassandraPort = conf.getInt("cassandra.port")
   val root: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)
 
+  val sharder = conf.getString("sharder") match {
+    case "day" => DaySharder
+    case _ => MonthSharder
+  }
+
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
@@ -52,14 +57,17 @@ object Main extends LazyLogging with App {
 
   val bufferGroupSize = 1000
   val bufferTime = FiniteDuration(1, TimeUnit.SECONDS)
-  val timeAggregators = List(MinuteAggregator, HourAggregator, DayAggregator)
 
   // Getting a stream of messages from an imaginary external system as a Source, and bufferize them
 
   val settings: CassandraBatchSettings = CassandraBatchSettings(100, FiniteDuration(20, TimeUnit.SECONDS))
 
+  val minuteAggregator = MinuteAggregator
+  val dayAggregator = DayAggregator
 
-  val test = new TestFlow().flow
+  val test = new TestFlow(
+    List(minuteAggregator, dayAggregator),
+    sharder).flow
     .runWith(Sink.ignore)
 
 }

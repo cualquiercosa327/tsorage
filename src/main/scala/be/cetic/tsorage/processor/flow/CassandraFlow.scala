@@ -1,5 +1,7 @@
 package be.cetic.tsorage.processor.flow
 
+import java.time.LocalDateTime
+
 import akka.stream.alpakka.cassandra.scaladsl.AltCassandraFlow
 import be.cetic.tsorage.processor.{FloatMessage, FloatObservation}
 import be.cetic.tsorage.processor.database.Cassandra
@@ -14,6 +16,7 @@ import scala.util.Try
 class CassandraFlow(sharder: Sharder) {
   val session = Cassandra.session
   val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
+
     val baseBound = prepared.bind()
       .setString("metric", observation.metric)
       .setString("shard", sharder.shard(observation.datetime))
@@ -81,7 +84,15 @@ class CassandraFlow(sharder: Sharder) {
     f
   }
 
+  /**
+    * Extracts a datetime from an observation.
+    */
+  val observationToTime: FloatObservation => (String, String, LocalDateTime) = observation =>
+    (observation.metric, sharder.shard(observation.datetime), observation.datetime)
+
   val rawFlow = AltCassandraFlow.createWithPassThrough[FloatObservation](16,
     getRawInsertPreparedStatement,
     bindRawInsert)(session)
+
+
 }
