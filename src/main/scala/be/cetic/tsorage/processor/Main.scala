@@ -37,8 +37,8 @@ object RandomMessageIterator extends Iterator[FloatMessage]
    private val tagValues = List("hello", "there", "Clara O'toll", "~foo", "Ahaha \" !")
 
    override def hasNext() = true
-   /*
-   override def next(): FloatMessage = FloatMessage(
+
+   def randomTags(): FloatMessage = FloatMessage(
       "my sensor",
       Map(
          tagNames(Random.nextInt(tagNames.size)) -> tagValues(Random.nextInt(tagValues.size)),
@@ -46,15 +46,17 @@ object RandomMessageIterator extends Iterator[FloatMessage]
          tagNames(Random.nextInt(tagNames.size)) -> tagValues(Random.nextInt(tagValues.size))),
       List((LocalDateTime.now, Random.nextFloat())))
 
-    */
 
-   override def next(): FloatMessage = FloatMessage(
+
+   def simpleNext = FloatMessage(
       "my sensor",
       Map(
          "status" -> "ok",
          "owner" -> "myself"
       ),
       List((LocalDateTime.now, Random.nextFloat())))
+
+   override def next(): FloatMessage = simpleNext
 }
 
 object RandomMessageIterable extends scala.collection.immutable.Iterable[FloatMessage]
@@ -141,8 +143,9 @@ object Main extends LazyLogging
          var cache: Set[String] = Set()
 
          val f: FloatMessage => FloatMessage = msg => {
-            val recentTags = msg.tagset.keySet.filter(t => !(cache contains t))
+            val recentTags = msg.tagset.keySet.diff(cache)
             cache = cache ++ recentTags
+            logger.info(s"Alter table with columns ${recentTags}")
 
             recentTags.map(tag => s"""ALTER TABLE tsorage_raw.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
                   .foreach(t => Try(session.execute(t)))
