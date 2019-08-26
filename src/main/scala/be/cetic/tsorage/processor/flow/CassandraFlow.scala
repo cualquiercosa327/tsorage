@@ -1,18 +1,24 @@
 package be.cetic.tsorage.processor.flow
 
-import akka.stream.alpakka.cassandra.scaladsl.AltCassandraFlow
-import be.cetic.tsorage.processor.{FloatMessage, FloatObservation}
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.sharder.Sharder
-import com.datastax.driver.core.{BoundStatement, PreparedStatement, Session}
+import be.cetic.tsorage.processor.{FloatMessage, FloatObservation}
 import com.datastax.driver.core.querybuilder.Insert
 import com.datastax.driver.core.querybuilder.QueryBuilder.{bindMarker, insertInto}
-import com.datastax.oss.driver.shaded.guava.common.cache.{CacheBuilder, CacheLoader}
+import com.datastax.driver.core.{BoundStatement, PreparedStatement}
+import com.datastax.oss.driver.shaded.guava.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
+import com.typesafe.config.ConfigFactory
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
-class CassandraFlow(sharder: Sharder) {
-  val session = Cassandra.session
+class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor) {
+  private val config = ConfigFactory.load("storage.conf")
+  private val keyspaceRaw = config.getString("cassandra.keyspaces.raw")
+  private implicit val session = Cassandra.session
+
   val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
     val baseBound = prepared.bind()
       .setString("metric", observation.metric)
@@ -27,7 +33,7 @@ class CassandraFlow(sharder: Sharder) {
 
   val getRawInsertPreparedStatement: FloatObservation => PreparedStatement = {
 
-    val cache = CacheBuilder.newBuilder()
+    val cache: LoadingCache[Set[String], PreparedStatement] = CacheBuilder.newBuilder()
       .maximumSize(100)
       .build(
         new CacheLoader[Set[String], PreparedStatement] {
@@ -35,7 +41,7 @@ class CassandraFlow(sharder: Sharder) {
             val tagnames = tags.toList
             val tagMarkers = tags.map(tag => bindMarker(tag)).toList
 
-            val baseStatement = insertInto("tsorage_raw", "numeric")
+            val baseStatement = insertInto(keyspaceRaw, "numeric")
               .value("metric", bindMarker("metric"))
               .value("shard", bindMarker("shard"))
               .value("datetime", bindMarker("datetime"))
@@ -61,12 +67,12 @@ class CassandraFlow(sharder: Sharder) {
     * are prepared in the Cassandra database. The retrieved object
     * is the message itself, and the tagname management is a side effect.
     */
-  val notifyTagnames: (FloatMessage => FloatMessage) = {
+  val notifyTagnames: FloatMessage => FloatMessage = {
 
     var cache: Set[String] = Set()
 
     val f: FloatMessage => FloatMessage = msg => {
-      val recentTags = msg.tagset.keySet.filter(t => !(cache contains t))
+      val recentTags = msg.tagset.keySet.diff(cache)
       cache = cache ++ recentTags
 
       recentTags.map(tag => s"""ALTER TABLE tsorage_raw.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
@@ -81,7 +87,7 @@ class CassandraFlow(sharder: Sharder) {
     f
   }
 
-  val rawFlow = AltCassandraFlow.createWithPassThrough[FloatObservation](16,
+  val rawFlow: Flow[FloatObservation, FloatObservation, NotUsed] = AltCassandraFlow.createWithPassThrough[FloatObservation](16,
     getRawInsertPreparedStatement,
-    bindRawInsert)(session)
+    bindRawInsert)
 }

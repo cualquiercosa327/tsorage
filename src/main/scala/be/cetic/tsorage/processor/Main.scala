@@ -1,38 +1,24 @@
 package be.cetic.tsorage.processor
 
-import java.time.{LocalDate, LocalDateTime, LocalTime}
-import java.util
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, OverflowStrategy}
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import be.cetic.tsorage.processor.aggregator.{DayAggregator, HourAggregator, MinuteAggregator}
-import com.datastax.driver.core.{BatchStatement, BoundStatement, Cluster, ConsistencyLevel, DataType, PreparedStatement, Session}
-import com.datastax.oss.driver.api.querybuilder.SchemaBuilder._
-
-import scala.util.{Random, Try}
-import java.time.format.DateTimeFormatter
-
-import akka.dispatch.ExecutionContexts
+import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
-import akka.stream.alpakka.cassandra.scaladsl.AltCassandraFlow
-import be.cetic.tsorage.processor.sharder.MonthSharder
-import be.cetic.tsorage.processor.source.{RandomMessageIterable, RandomMessageIterator}
-import com.datastax.driver.core.querybuilder.Insert
-import com.datastax.driver.core.querybuilder.QueryBuilder.{bindMarker, insertInto}
-import com.datastax.oss.driver.api.core.CqlSession
+import akka.stream.scaladsl.{Sink, Source}
+import akka.dispatch.ExecutionContexts
+
+import be.cetic.tsorage.processor.aggregator.{DayAggregator, HourAggregator, MinuteAggregator}
+import be.cetic.tsorage.processor.flow.TestFlow
+import be.cetic.tsorage.processor.source.RandomMessageIterator
 import com.typesafe.config.ConfigFactory
-import com.datastax.oss.driver.shaded.guava.common.cache.{CacheBuilder, CacheLoader}
 import com.typesafe.scalalogging.LazyLogging
 import org.slf4j.{Logger, LoggerFactory}
-import org.slf4j.event.Level
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
-import collection.JavaConverters._
-import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.flow.{CassandraFlow, ObservationFlow, TestFlow}
 
 
 object Main extends LazyLogging with App {
@@ -58,7 +44,7 @@ object Main extends LazyLogging with App {
 
   val settings: CassandraBatchSettings = CassandraBatchSettings(100, FiniteDuration(20, TimeUnit.SECONDS))
 
-
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
   val test = new TestFlow().flow
     .runWith(Sink.ignore)
 
