@@ -32,7 +32,6 @@ class TestFlow(val aggregators: List[TimeAggregator], val sharder: Sharder)(impl
   val flow = aggregators.foldLeft(baseFlow)( (prev, agg) => {
     prev
        .map(change => (change._1, change._2, agg.shunk(change._3)))
-       // TODO : Group if you whish optimize it
        .map(c => agg.updateShunk(c._1, c._2, c._3))
   })
 

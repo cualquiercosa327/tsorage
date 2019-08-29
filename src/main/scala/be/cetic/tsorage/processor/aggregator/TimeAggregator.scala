@@ -15,6 +15,16 @@ import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
 
+/**
+  * Factory object for time aggregators
+  */
+object Aggregator
+{
+   def apply(name: String): TimeAggregator = name match {
+
+   }
+}
+
 abstract class TimeAggregator extends LazyLogging
 {
    private val raw_aggregators: Map[String, Iterable[(Date, Float)] => Float] = Map(
