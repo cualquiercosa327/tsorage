@@ -66,7 +66,7 @@ object Main extends LazyLogging with App {
   val hourAggregator = HourAggregator
 
   val aggNames = conf.getStringList("aggregators")
-  val aggregators = aggNames.map(agg => )
+  val aggregators = List(MinuteAggregator, HourAggregator, DayAggregator)
 
   val test = new TestFlow(
     List(minuteAggregator, hourAggregator),

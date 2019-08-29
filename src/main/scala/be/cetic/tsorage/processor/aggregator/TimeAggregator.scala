@@ -20,9 +20,7 @@ import collection.JavaConverters._
   */
 object Aggregator
 {
-   def apply(name: String): TimeAggregator = name match {
-
-   }
+   def apply(name: String): TimeAggregator = ???
 }
 
 abstract class TimeAggregator extends LazyLogging
