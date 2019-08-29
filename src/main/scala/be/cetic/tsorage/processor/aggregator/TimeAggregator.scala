@@ -19,6 +19,7 @@ abstract class TimeAggregator extends LazyLogging
 {
    private val raw_aggregators: Map[String, Iterable[(Date, Float)] => Float] = Map(
       "sum" ->   {values => values.map(_._2).sum},
+      "s_sum" -> {values => values.map(x=> x._2*x._2).sum},
       "count" -> {values => values.size},
       "max" ->   {values => values.map(_._2).max},
       "min" ->   {values => values.map(_._2).min}
@@ -31,6 +32,7 @@ abstract class TimeAggregator extends LazyLogging
 
    private val agg_aggregators: Map[String, Iterable[Float] => Float] = Map(
       "sum" ->   {values => values.sum},
+      "s_sum" -> {values => values.map(x=> x*x).sum},
       "count" -> {values => values.sum},
       "max" ->   {values => values.max},
       "min" ->   {values => values.min}
