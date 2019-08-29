@@ -6,6 +6,7 @@ import java.time.temporal.{ChronoUnit, TemporalUnit}
 import java.util.Date
 
 import be.cetic.tsorage.processor.DAO
+import be.cetic.tsorage.processor.database.Cassandra
 import com.datastax.driver.core.querybuilder.QueryBuilder._
 import be.cetic.tsorage.processor.sharder.Sharder
 import com.datastax.driver.core.{ConsistencyLevel, Row, Session, SimpleStatement}
@@ -14,26 +15,30 @@ import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
 
-trait TimeAggregator extends LazyLogging{
-
+abstract class TimeAggregator extends LazyLogging
+{
    private val raw_aggregators: Map[String, Iterable[(Date, Float)] => Float] = Map(
       "sum" ->   {values => values.map(_._2).sum},
-      "s_sum" -> {values => values.map(x=> x._2*x._2).sum},
       "count" -> {values => values.size},
       "max" ->   {values => values.map(_._2).max},
-      "min" ->   {values => values.map(_._2).min},
-      "first" -> {values => values.minBy(_._1)._2},
-      "last" ->  {values => values.maxBy(_._1)._2}
+      "min" ->   {values => values.map(_._2).min}
    )
 
-   private val agg_aggregators: Map[String, Iterable[(Date, Float)] => Float] = Map(
-      "sum" ->   {values => values.map(_._2).sum},
-      "s_sum" -> {values => values.map(x=> x._2*x._2).sum},
-      "count" -> {values => values.map(_._2).sum},
-      "max" ->   {values => values.map(_._2).max},
-      "min" ->   {values => values.map(_._2).min},
-      "first" -> {values => values.minBy(_._1)._2},
-      "last" ->  {values => values.maxBy(_._1)._2}
+   private val raw_temp_aggregators: Map[String, Iterable[(Date, Float)] => (Date, Float)] = Map(
+      "first" -> {values => values.minBy(_._1)},
+      "last" ->  {values => values.maxBy(_._1)}
+   )
+
+   private val agg_aggregators: Map[String, Iterable[Float] => Float] = Map(
+      "sum" ->   {values => values.sum},
+      "count" -> {values => values.sum},
+      "max" ->   {values => values.max},
+      "min" ->   {values => values.min}
+   )
+
+   private val agg_temp_aggregators: Map[String, Iterable[(Date, Float)] => (Date, Float)] = Map(
+      "first" -> {values => values.minBy(_._1)},
+      "last" ->  {values => values.maxBy(_._1)}
    )
 
    /**
@@ -56,62 +61,103 @@ trait TimeAggregator extends LazyLogging{
    def previousName: String
 
    def updateShunkFromRaw(
-                            session: Session,
                             metric: String,
                             tagset: Map[String, String],
-                            shunk: LocalDateTime,
-                            sharder: Sharder
+                            shunk: LocalDateTime
                          ): Unit =
    {
       val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(shunk)
-      val shards = sharder.shards(shunkStart, shunkEnd)
+      val shards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       val queries = shards.map(shard => DAO.getRawShunkValues(metric, shard, shunkStart, shunkEnd, tagset))
       logger.info(s"QUERIES: ${queries.mkString(" ; ")}")
       val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
       val results = statements.par
-         .map(statement => session.execute(statement).all().asScala)
+         .map(statement => Cassandra.session.execute(statement).all().asScala)
          .reduce((l1, l2) => l1 ++ l2)
          .map(row => (row.getTimestamp("datetime"), row.getFloat("value"))).toArray
 
-      // calculate and submit aggregates
+      val shunkShard = Cassandra.sharder.shard(shunk)
 
-      raw_aggregators.foreach(agg => DAO.submitValue(session, metric, sharder.shard(shunk), name, agg._1, tagset, shunk, agg._2(results)))
+      // calculate and submit aggregates
+      raw_aggregators.foreach(agg => Cassandra.submitValue(
+         metric,
+         shunkShard,
+         name,
+         agg._1,
+         tagset,
+         shunk,
+         agg._2(results)
+      ))
+
+      raw_temp_aggregators.foreach(agg => {
+         val transformedResult = agg._2(results)
+
+         Cassandra.submitTemporalValue(
+            metric,
+            shunkShard,
+            name,
+            agg._1,
+            tagset,
+            shunk,
+            transformedResult._1,
+            transformedResult._2
+         )
+      })
    }
 
    def updateShunkFromAgg(
-                            session: Session,
                             metric: String,
                             tagset: Map[String, String],
-                            shunk: LocalDateTime,
-                            sharder: Sharder)
-
-
+                            shunk: LocalDateTime
+                         )
    : Unit =
    {
       val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(shunk)
-      val shards = sharder.shards(shunkStart, shunkEnd)
+      val shards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       agg_aggregators.par.foreach(agg => {
          val queries = shards.map(shard => DAO.getAggShunkValues(metric, shard, previousName, agg._1, shunkStart, shunkEnd, tagset))
          val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
          val results = statements.par
-            .map(statement => session.execute(statement).all().asScala)
+            .map(statement => Cassandra.session.execute(statement).all().asScala)
             .reduce((l1, l2) => l1 ++ l2)
-            .map(row => (row.getTimestamp("datetime"), row.getFloat("value"))).toArray
+            .map(row => row.getFloat("value")).toArray
 
-         DAO.submitValue(session, metric, sharder.shard(shunk), name, agg._1, tagset, shunk, agg._2(results))
+         Cassandra.submitValue(metric, Cassandra.sharder.shard(shunk), name, agg._1, tagset, shunk, agg._2(results))
+      })
+
+      agg_temp_aggregators.par.foreach(agg => {
+         val queries = shards.map(shard => DAO.getAggTempShunkValues(metric, shard, previousName, agg._1, shunkStart, shunkEnd, tagset))
+         val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
+
+         val results = statements.par
+            .map(statement => Cassandra.session.execute(statement).all().asScala)
+            .reduce((l1, l2) => l1 ++ l2)
+            .map(row => (row.getTimestamp("observation_datetime"), row.getFloat("value"))).toArray
+
+         val transformedResult = agg._2(results)
+
+         Cassandra.submitTemporalValue(
+            metric,
+            Cassandra.sharder.shard(shunk),
+            name,
+            agg._1,
+            tagset,
+            shunk,
+            transformedResult._1,
+            transformedResult._2)
       })
    }
 
-   def updateShunk(session: Session, metric: String, tagset: Map[String, String], shunk: LocalDateTime, sharder: Sharder): (String, Map[String, String], LocalDateTime) =
+   def updateShunk(metric: String, tagset: Map[String, String], shunk: LocalDateTime): (String, Map[String, String], LocalDateTime) =
    {
       logger.info(s"${name} update shunk ${metric}, ${tagset}, ${shunk}")
 
-      if(previousName == "raw") updateShunkFromRaw(session, metric, tagset, shunk, sharder)
-      else updateShunkFromAgg(session, metric, tagset, shunk, sharder)
+      if(previousName == "raw") updateShunkFromRaw(metric, tagset, shunk)
+      else updateShunkFromAgg(metric, tagset, shunk)
 
       (metric, tagset, shunk)
    }
