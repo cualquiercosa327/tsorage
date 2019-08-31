@@ -9,6 +9,8 @@ import be.cetic.tsorage.ingestion.message.{FloatBody, FloatMessageJsonSupport}
 
 import scala.io.StdIn
 
+import spray.json._
+
 /**
  * An AKKA system that runs an HTTP server waiting for Datadog compliant messages.
  * It implements a part of the Datadog Metrics API : https://docs.datadoghq.com/api/?lang=python#post-timeseries-points
@@ -27,6 +29,7 @@ object HTTPInterface extends FloatMessageJsonSupport
             post {
                entity(as[FloatBody]) { body =>
                   val messages = body.series.map(s => s.prepared())
+                  messages.foreach(m => println(m.toJson))
                   complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h1>Say hello to akka-http ${messages}</h1>"))
                }
             }
