@@ -6,9 +6,9 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import be.cetic.tsorage.ingestion.message.{FloatBody, FloatMessageJsonSupport}
+import be.cetic.tsorage.ingestion.sink.MockupSink
 
 import scala.io.StdIn
-
 import spray.json._
 
 /**
@@ -24,13 +24,16 @@ object HTTPInterface extends FloatMessageJsonSupport
       // needed for the future flatMap/onComplete in the end
       implicit val executionContext = system.dispatcher
 
+      val sink = MockupSink
+
       val route =
          path("api" / "v1" / "series") {
             post {
                entity(as[FloatBody]) { body =>
                   val messages = body.series.map(s => s.prepared())
-                  messages.foreach(m => println(m.toJson))
-                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h1>Say hello to akka-http ${messages}</h1>"))
+                  messages foreach sink.submit
+
+                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK"))
                }
             }
          }
