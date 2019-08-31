@@ -24,7 +24,7 @@ object HTTPInterface extends FloatMessageJsonSupport
          path("api" / "v1" / "series") {
             post {
                entity(as[FloatBody]) { body =>
-                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h1>Say hello to akka-http ${body.series(0)}</h1>"))
+                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h1>Say hello to akka-http ${body.series(0).prepared()}</h1>"))
                }
             }
          }
