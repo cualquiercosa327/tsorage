@@ -5,6 +5,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
+import be.cetic.tsorage.ingestion.message.{FloatBody, FloatMessageJsonSupport}
+
 import scala.io.StdIn
 
 /**
@@ -24,7 +26,8 @@ object HTTPInterface extends FloatMessageJsonSupport
          path("api" / "v1" / "series") {
             post {
                entity(as[FloatBody]) { body =>
-                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h1>Say hello to akka-http ${body.series(0).prepared()}</h1>"))
+                  val messages = body.series.map(s => s.prepared())
+                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h1>Say hello to akka-http ${messages}</h1>"))
                }
             }
          }

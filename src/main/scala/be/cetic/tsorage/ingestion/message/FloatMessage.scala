@@ -1,10 +1,7 @@
-package be.cetic.tsorage.ingestion.http
+package be.cetic.tsorage.ingestion.message
 
 import java.time.{Instant, LocalDateTime}
 import java.util.TimeZone
-
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json.DefaultJsonProtocol
 
 /**
  * A message, provided by an external client.
@@ -44,20 +41,4 @@ case class FloatMessage(
             TimeZone.getTimeZone("UTC").toZoneId())  , point._2))
       )
    }
-}
-
-/**
- * A message, structured like an internal TSorage message.
- */
-case class PreparedFloatMessage(
-   metric: String,
-   tagset: Map[String, String],
-   values: List[(LocalDateTime, Float)]
-)
-
-case class FloatBody(series: List[FloatMessage])
-
-trait FloatMessageJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
-   implicit val messageFormat = jsonFormat6(FloatMessage)
-   implicit val bodyFormat = jsonFormat1(FloatBody)
 }
