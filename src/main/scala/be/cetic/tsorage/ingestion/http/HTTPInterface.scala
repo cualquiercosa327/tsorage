@@ -19,9 +19,8 @@ object HTTPInterface extends FloatMessageJsonSupport
 {
    def main(args: Array[String]): Unit =
    {
-      implicit val system = ActorSystem("my-system")
+      implicit val system = ActorSystem("http-interface")
       implicit val materializer = ActorMaterializer()
-      // needed for the future flatMap/onComplete in the end
       implicit val executionContext = system.dispatcher
 
       val sink = MockupSink
@@ -44,8 +43,6 @@ object HTTPInterface extends FloatMessageJsonSupport
 
                         entity(as[FloatBody])
                         { body =>
-
-                           println(s"API KEY: ${api_key}")
                            val messages = body.series.map(s => s.prepared())
                            messages foreach sink.submit
 
