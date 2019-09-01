@@ -1,7 +1,7 @@
 package be.cetic.tsorage.ingestion.http
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.{Http, server}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
@@ -26,17 +26,38 @@ object HTTPInterface extends FloatMessageJsonSupport
 
       val sink = MockupSink
 
-      val route =
-         path("api" / "v1" / "series") {
-            post {
-               entity(as[FloatBody]) { body =>
-                  val messages = body.series.map(s => s.prepared())
-                  messages foreach sink.submit
 
-                  complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK"))
+      val route = decodeRequest
+      {
+         withoutSizeLimit
+         {
+            path("api" / "v1" / "series")
+            {
+               post
+               {
+                  parameter('api_key)
+                  {
+                     api_key =>
+                     {
+                        println(s"bee bop ${api_key}")
+                        println(decodeRequest)
+
+                        entity(as[FloatBody])
+                        { body =>
+
+                           println(s"API KEY: ${api_key}")
+                           val messages = body.series.map(s => s.prepared())
+                           messages foreach sink.submit
+
+                           complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK"))
+                        }
+                     }
+                  }
                }
             }
          }
+      }
+
 
       val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
 
