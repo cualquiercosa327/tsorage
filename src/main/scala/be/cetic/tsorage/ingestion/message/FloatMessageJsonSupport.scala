@@ -19,4 +19,5 @@ trait FloatMessageJsonSupport extends DefaultJsonProtocol with SprayJsonSupport 
    implicit val messageFormat = jsonFormat6(FloatMessage)
    implicit val bodyFormat = jsonFormat1(FloatBody)
    implicit val preparedMessageFormat = jsonFormat3(PreparedFloatMessage)
+   implicit val checkRunMessageFormat = jsonFormat6(CheckRunMessage)
 }
