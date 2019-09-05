@@ -4,8 +4,10 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.{Http, server}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
-import akka.kafka.ProducerSettings
+import akka.kafka.{ProducerMessage, ProducerSettings}
+import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
 import be.cetic.tsorage.ingestion.message.{CheckRunMessage, FloatBody, FloatMessageJsonSupport}
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -28,13 +30,12 @@ object HTTPInterface extends FloatMessageJsonSupport
 
       val conf = ConfigFactory.load("ingest-http.conf")
       val config = system.settings.config.getConfig("akka.kafka.producer")
-/*
-      val producerSettings =
-         ProducerSettings(config, new StringSerializer, new StringSerializer)
-            .withBootstrapServers(s"${conf.getString("akka.host")}:${conf.getString("akka.port")}")
+
+      val producerSettings = ProducerSettings(system, new StringSerializer, new StringSerializer)
+         .withBootstrapServers(s"${conf.getString("kafka.host")}:${conf.getInt("kafka.port")}")
 
       val kafkaProducer = producerSettings.createKafkaProducer()
-*/
+
       val routeSeries =
       decodeRequest
       {
@@ -50,16 +51,10 @@ object HTTPInterface extends FloatMessageJsonSupport
                      {
                         entity(as[FloatBody])
                         { body =>
-                      val messages = body.series.map(s => s.prepared())
-                           /*                            .map(m => new ProducerRecord[String, String](
-                                                        conf.getString("akka.topic"),
-                                                        m.metric,
-                                                        m.toJson.compactPrint
-                                                     )
-                                                  )
-                    */
+                           val messages = body.series.map(s => s.prepared())
 
-                           messages foreach println
+                           messages.map(message => new ProducerRecord[String, String](conf.getString("kafka.topic"), message.toJson.compactPrint))
+                                 .foreach(pr => kafkaProducer.send(pr))
 
                            complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK"))
                         }
@@ -84,7 +79,6 @@ object HTTPInterface extends FloatMessageJsonSupport
                      {
                         entity(as[List[CheckRunMessage]])
                         { body =>
-                           println(s"Received ${body}")
                            complete(HttpEntity(ContentTypes.`application/json`, """{"status": "ok"}"""))
                            // TODO: Determine a proper way to process this kind of message
                         }
@@ -103,7 +97,7 @@ object HTTPInterface extends FloatMessageJsonSupport
       bindingFuture
          .flatMap(_.unbind()) // trigger unbinding from the port
          .onComplete(_ => {
-            // kafkaProducer.close()
+            kafkaProducer.close()
             system.terminate()
          }) // and shutdown when done
    }
