@@ -29,7 +29,6 @@ object HTTPInterface extends FloatMessageJsonSupport
       implicit val executionContext = system.dispatcher
 
       val conf = ConfigFactory.load("ingest-http.conf")
-      val config = system.settings.config.getConfig("akka.kafka.producer")
 
       val producerSettings = ProducerSettings(system, new StringSerializer, new StringSerializer)
          .withBootstrapServers(s"${conf.getString("kafka.host")}:${conf.getInt("kafka.port")}")
