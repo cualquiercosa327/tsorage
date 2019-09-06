@@ -14,17 +14,6 @@ object RandomMessageIterator extends Iterator[FloatMessage] {
 
   override def hasNext() = true
 
-  /*
-  override def next(): FloatMessage = FloatMessage(
-     "my sensor",
-     Map(
-        tagNames(Random.nextInt(tagNames.size)) -> tagValues(Random.nextInt(tagValues.size)),
-        tagNames(Random.nextInt(tagNames.size)) -> tagValues(Random.nextInt(tagValues.size)),
-        tagNames(Random.nextInt(tagNames.size)) -> tagValues(Random.nextInt(tagValues.size))),
-     List((LocalDateTime.now, Random.nextFloat())))
-
-   */
-
   override def next(): FloatMessage = FloatMessage(
     "my sensor",
     Map(
