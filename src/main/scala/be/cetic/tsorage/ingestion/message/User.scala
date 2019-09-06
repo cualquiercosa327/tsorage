@@ -7,4 +7,4 @@ import java.time.LocalDateTime
  *
  * TODO : The class also exists in the Hub repository. Common concepts should be declared only once.
  */
-case class AuthenticationResponse(id: Int, name: String, expiracy: Option[LocalDateTime])
+case class User(id: Int, name: String, expiracy: Option[LocalDateTime])
