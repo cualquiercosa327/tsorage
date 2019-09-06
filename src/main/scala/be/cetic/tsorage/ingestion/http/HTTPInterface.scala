@@ -3,25 +3,45 @@ package be.cetic.tsorage.ingestion.http
 import akka.actor.ActorSystem
 import akka.http.scaladsl.{Http, server}
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directive1
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, Unmarshal, Unmarshaller}
 import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import be.cetic.tsorage.ingestion.message.{CheckRunMessage, FloatBody, FloatMessageJsonSupport}
-import com.typesafe.config.ConfigFactory
+import be.cetic.tsorage.ingestion.message.{AuthenticationQuery, AuthenticationResponse, CheckRunMessage, FloatBody, FloatMessageJsonSupport}
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.io.StdIn
 import spray.json._
 
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success}
+import scala.concurrent.duration._
+
 /**
  * An AKKA system that runs an HTTP server waiting for Datadog compliant messages.
  * It implements a part of the Datadog Metrics API : https://docs.datadoghq.com/api/?lang=python#post-timeseries-points
  */
 object HTTPInterface extends FloatMessageJsonSupport
+                     with DefaultJsonProtocol
+                     with PredefinedFromEntityUnmarshallers
 {
+   def authenticate(token: String, conf: Config, system: ActorSystem, context: ExecutionContext, mat: ActorMaterializer): Future[Option[AuthenticationResponse]] = {
+      val request = HttpRequest(
+         method = HttpMethods.POST,
+         uri = s"http://${conf.getString("authentication.host")}:${conf.getInt("authentication.port")}${conf.getString("authentication.path")}",
+         entity = HttpEntity(ContentTypes.`application/json`, AuthenticationQuery(token).toJson.compactPrint)
+      )
+
+      Http(system).singleRequest(request).mapTo[Option[AuthenticationResponse]]
+   }
+
+   
+
    def main(args: Array[String]): Unit =
    {
       implicit val system = ActorSystem("http-interface")
