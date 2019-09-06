@@ -9,7 +9,7 @@ import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeser
 import spray.json.{RootJsonFormat, _}
 
 object KafkaConsumer {
-  val kafkaConfig = ConfigFactory.load("storage.conf").getConfig("kafka")
+  val kafkaConfig = ConfigFactory.load("tsorage.conf").getConfig("kafka")
   val bootstrapServerUrl = s"${kafkaConfig.getString("host")}:${kafkaConfig.getString("port")}"
   val group = kafkaConfig.getString("group")
 
@@ -26,7 +26,7 @@ object KafkaConsumer {
 
 class KafkaConsumer() extends DefaultJsonProtocol {
 
-  private val config = ConfigFactory.load()
+  private val config = ConfigFactory.load("tsorage.conf")
   private val topic = config.getString("kafka.topic")
   private val subscription = Subscriptions.topics(topic)
   private val consumerSettings = KafkaConsumer.consumerSettings

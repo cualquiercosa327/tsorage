@@ -2,6 +2,8 @@ package be.cetic.tsorage.processor.flow
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
+import java.time.LocalDateTime
+
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.sharder.Sharder
 import be.cetic.tsorage.processor.{FloatMessage, FloatObservation}
@@ -15,11 +17,12 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
 class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor) {
-  private val config = ConfigFactory.load("storage.conf")
+  private val config = ConfigFactory.load("tsorage.conf")
   private val keyspaceRaw = config.getString("cassandra.keyspaces.raw")
   private implicit val session = Cassandra.session
 
   val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
+
     val baseBound = prepared.bind()
       .setString("metric", observation.metric)
       .setString("shard", sharder.shard(observation.datetime))
@@ -87,7 +90,13 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
     f
   }
 
-  val rawFlow: Flow[FloatObservation, FloatObservation, NotUsed] = AltCassandraFlow.createWithPassThrough[FloatObservation](16,
+  /**
+    * Extracts a datetime from an observation.
+    */
+  val observationToTime: FloatObservation => (String, String, LocalDateTime) = observation =>
+    (observation.metric, sharder.shard(observation.datetime), observation.datetime)
+
+  val rawFlow = AltCassandraFlow.createWithPassThrough[FloatObservation](16,
     getRawInsertPreparedStatement,
     bindRawInsert)
 }
