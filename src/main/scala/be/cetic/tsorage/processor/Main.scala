@@ -9,10 +9,9 @@ import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
 import akka.stream.scaladsl.{Sink, Source}
 import akka.dispatch.ExecutionContexts
-
 import be.cetic.tsorage.processor.aggregator.{DayAggregator, HourAggregator, MinuteAggregator}
 import be.cetic.tsorage.processor.flow.TestFlow
-import be.cetic.tsorage.processor.source.RandomMessageIterator
+import be.cetic.tsorage.processor.source.{KafkaConsumer, RandomMessageIterator}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import org.slf4j.{Logger, LoggerFactory}
@@ -21,10 +20,13 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
 
 
-object Main extends LazyLogging with App {
+object Main extends LazyLogging with App
+            with FloatMessageJsonSupport
+{
   val shardFormatter = DateTimeFormatter.ofPattern("yyyy-MM")
 
-  def inboundMessagesConnector(): Source[FloatMessage, NotUsed] = RandomMessageIterator.source()
+  def inboundMessagesConnector(): Source[FloatMessage, _] = new KafkaConsumer().deserializedSource[FloatMessage]
+
 
   val conf = ConfigFactory.load("storage.conf")
   val cassandraHost = conf.getString("cassandra.host")
@@ -39,8 +41,6 @@ object Main extends LazyLogging with App {
   val bufferGroupSize = 1000
   val bufferTime = FiniteDuration(1, TimeUnit.SECONDS)
   val timeAggregators = List(MinuteAggregator, HourAggregator, DayAggregator)
-
-  // Getting a stream of messages from an imaginary external system as a Source, and bufferize them
 
   val settings: CassandraBatchSettings = CassandraBatchSettings(100, FiniteDuration(20, TimeUnit.SECONDS))
 

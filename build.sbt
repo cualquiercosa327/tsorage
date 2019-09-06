@@ -11,6 +11,8 @@ libraryDependencies += "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" %
 libraryDependencies += "com.typesafe.akka" %% "akka-stream-kafka" % "1.0.5"
 libraryDependencies += "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "1.1.1"
 libraryDependencies += "io.spray" %% "spray-json" % "1.3.5"
+libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.9"
+
 
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test"

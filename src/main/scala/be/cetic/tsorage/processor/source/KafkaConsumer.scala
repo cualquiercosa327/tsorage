@@ -15,7 +15,6 @@ object KafkaConsumer {
 
   val config = ConfigFactory.load("kafka-consumer.conf").getConfig("akka.kafka.consumer")
 
-
   val consumerSettings =
     ConsumerSettings(config, new StringDeserializer, new ByteArrayDeserializer)
       .withBootstrapServers(bootstrapServerUrl)
