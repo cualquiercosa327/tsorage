@@ -12,10 +12,10 @@ class MonthTimeAggregator extends FlatSpec with Matchers
 
 
    "A Month aggregator" should "round to the next month" in {
-      MonthAggregator.shunk(dt1) shouldEqual LocalDateTime.of(2019, 9, 1, 0, 0, 0)
+      new MonthAggregator("").shunk(dt1) shouldEqual LocalDateTime.of(2019, 9, 1, 0, 0, 0)
    }
 
    "A Month aggregator" should "retrieve the right border shunk" in {
-      MonthAggregator.shunk(borderDT) shouldEqual borderDT
+      new MonthAggregator("").shunk(borderDT) shouldEqual borderDT
    }
 }

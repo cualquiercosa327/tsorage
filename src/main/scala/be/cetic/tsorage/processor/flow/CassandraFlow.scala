@@ -1,7 +1,5 @@
 package be.cetic.tsorage.processor.flow
 
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.processor.database.Cassandra
@@ -24,10 +22,10 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
   val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
 
     val baseBound = prepared.bind()
-      .setString("metric", observation.metric)
-      .setString("shard", sharder.shard(observation.datetime))
-      .setTimestamp("datetime", java.sql.Timestamp.valueOf(observation.datetime))
-      .setFloat("value", observation.value)
+      .setString("metric_", observation.metric)
+      .setString("shard_", sharder.shard(observation.datetime))
+      .setTimestamp("datetime_", java.sql.Timestamp.valueOf(observation.datetime))
+      .setFloat("value_", observation.value)
 
     val folder: (BoundStatement, (String, String)) => BoundStatement = (prev: BoundStatement, tag: (String, String)) => prev.setString(tag._1, tag._2)
 
@@ -45,10 +43,10 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
             val tagMarkers = tags.map(tag => bindMarker(tag)).toList
 
             val baseStatement = insertInto(keyspaceRaw, "numeric")
-              .value("metric", bindMarker("metric"))
-              .value("shard", bindMarker("shard"))
-              .value("datetime", bindMarker("datetime"))
-              .value("value", bindMarker("value"))
+              .value("metric_", bindMarker("metric_"))
+              .value("shard_", bindMarker("shard_"))
+              .value("datetime_", bindMarker("datetime_"))
+              .value("value_", bindMarker("value_"))
 
             val folder: (Insert, String) => Insert = (base, tagname) => base.value(tagname, bindMarker(tagname))
             val finalStatement = tags.foldLeft(baseStatement)(folder)

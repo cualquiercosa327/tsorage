@@ -11,14 +11,14 @@ import spray.json.{RootJsonFormat, _}
 object KafkaConsumer {
   val kafkaConfig = ConfigFactory.load("tsorage.conf").getConfig("kafka")
   val bootstrapServerUrl = s"${kafkaConfig.getString("host")}:${kafkaConfig.getString("port")}"
-  val group = kafkaConfig.getString("group")
+  val group = kafkaConfig.getString("tsorage-processor")
 
   val config = ConfigFactory.load("kafka-consumer.conf").getConfig("akka.kafka.consumer")
 
   val consumerSettings =
     ConsumerSettings(config, new StringDeserializer, new ByteArrayDeserializer)
       .withBootstrapServers(bootstrapServerUrl)
-      .withGroupId("group1")
+      .withGroupId(group)
       .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
 }

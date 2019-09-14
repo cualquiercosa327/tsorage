@@ -43,10 +43,10 @@ object Cassandra extends LazyLogging {
                     value: Float): Unit =
   {
     val baseStatement = insertInto("tsorage_raw", "numeric")
-       .value("metric", metric)
-       .value("shard", shard)
-       .value("datetime", datetime.format(datetimeFormatter))
-       .value("value", value)
+       .value("metric_", metric)
+       .value("shard_", shard)
+       .value("datetime_", datetime.format(datetimeFormatter))
+       .value("value_", value)
 
     val statement = tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
@@ -76,12 +76,13 @@ object Cassandra extends LazyLogging {
                     value: Float): Unit =
   {
     val baseStatement = insertInto("tsorage_agg", "numeric")
-       .value("metric", metric)
-       .value("shard", shard)
-       .value("interval", period)
-       .value("aggregator", aggregator)
-       .value("datetime", datetime.format(datetimeFormatter))
-       .value("value", value)
+       .value("metric_", metric)
+       .value("shard_", shard)
+       .value("interval_", period)
+       .value("aggregator_", aggregator)
+       .value("datetime_", datetime.format(datetimeFormatter))
+       .value("value_", value)
+    logger.info(s"Base statement is ${baseStatement}")
 
     val statement = tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
@@ -113,13 +114,13 @@ object Cassandra extends LazyLogging {
                             value: Float): Unit =
   {
     val baseStatement = insertInto("tsorage_agg", "numeric")
-       .value("metric", metric)
-       .value("shard", shard)
-       .value("interval", period)
-       .value("aggregator", aggregator)
-       .value("datetime", datetime.format(datetimeFormatter))
-       .value("observation_datetime", observationDatetime)
-       .value("value", value)
+       .value("metric_", metric)
+       .value("shard_", shard)
+       .value("interval_", period)
+       .value("aggregator_", aggregator)
+       .value("datetime_", datetime.format(datetimeFormatter))
+       .value("observation_datetime_", observationDatetime)
+       .value("value_", value)
 
     val statement = tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))

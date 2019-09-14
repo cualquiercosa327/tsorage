@@ -10,15 +10,15 @@ class HourTimeAggregatorTest extends FlatSpec with Matchers
    val borderDT = LocalDateTime.of(2019, 8, 9, 12, 0, 0)
 
    "A Hour aggregator" should "round to the next hour" in {
-      HourAggregator.shunk(dt1) shouldEqual LocalDateTime.of(2019, 8, 9, 13, 0, 0)
+      new HourAggregator("").shunk(dt1) shouldEqual LocalDateTime.of(2019, 8, 9, 13, 0, 0)
    }
 
    it should "retrieve the right border shunk" in {
-      HourAggregator.shunk(borderDT) shouldEqual borderDT
+      new HourAggregator("").shunk(borderDT) shouldEqual borderDT
    }
 
    it should "correctly detect a border" in {
-      HourAggregator.isBorder(dt1) shouldBe false
-      HourAggregator.isBorder(borderDT) shouldBe true
+      new HourAggregator("").isBorder(dt1) shouldBe false
+      new HourAggregator("").isBorder(borderDT) shouldBe true
    }
 }

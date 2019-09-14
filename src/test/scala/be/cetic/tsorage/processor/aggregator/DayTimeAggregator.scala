@@ -11,15 +11,15 @@ class DayTimeAggregator extends FlatSpec with Matchers
    val borderDT = LocalDateTime.of(2019, 8, 9, 0, 0, 0)
 
    "A Day aggregator" should "round to the next day" in {
-      DayAggregator.shunk(dt1) shouldEqual LocalDateTime.of(2019, 8, 10, 0, 0, 0)
+      new DayAggregator("").shunk(dt1) shouldEqual LocalDateTime.of(2019, 8, 10, 0, 0, 0)
    }
 
    it should "retrieve the right border shunk" in {
-      DayAggregator.shunk(borderDT) shouldEqual borderDT
+      new DayAggregator("").shunk(borderDT) shouldEqual borderDT
    }
 
    it should "correctly detect a border" in {
-      DayAggregator.isBorder(dt1) shouldBe false
-      DayAggregator.isBorder(borderDT) shouldBe true
+      new DayAggregator("").isBorder(dt1) shouldBe false
+      new DayAggregator("").isBorder(borderDT) shouldBe true
    }
 }

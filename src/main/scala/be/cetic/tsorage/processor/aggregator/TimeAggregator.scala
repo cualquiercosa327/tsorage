@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoUnit, TemporalUnit}
 import java.util.Date
 
-import be.cetic.tsorage.processor.DAO
+import be.cetic.tsorage.processor.{DAO, ObservationUpdate}
 import be.cetic.tsorage.processor.database.Cassandra
 import com.datastax.driver.core.querybuilder.QueryBuilder._
 import be.cetic.tsorage.processor.sharder.Sharder
@@ -51,6 +51,8 @@ abstract class TimeAggregator extends LazyLogging
      */
    def shunk(dt: LocalDateTime): LocalDateTime
 
+   def shunk(update: ObservationUpdate): ObservationUpdate = ObservationUpdate(update.metric, update.tagset, shunk(update.datetime))
+
    /**
      * Provides the datetime range corresponding to a particular shunk. The begining of the range is exclusive, while the end is inclusive
      * @param shunk  A shunk datetime
@@ -62,34 +64,31 @@ abstract class TimeAggregator extends LazyLogging
 
    def previousName: String
 
-   def updateShunkFromRaw(
-                            metric: String,
-                            tagset: Map[String, String],
-                            shunk: LocalDateTime
-                         ): Unit =
+   def updateShunkFromRaw(update: ObservationUpdate): Unit =
    {
-      val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(shunk)
+      val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(update.datetime)
       val shards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
-      val queries = shards.map(shard => DAO.getRawShunkValues(metric, shard, shunkStart, shunkEnd, tagset))
+      val queries = shards.map(shard => DAO.getRawShunkValues(update.metric, shard, shunkStart, shunkEnd, update.tagset))
       logger.info(s"QUERIES: ${queries.mkString(" ; ")}")
       val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
       val results = statements.par
          .map(statement => Cassandra.session.execute(statement).all().asScala)
          .reduce((l1, l2) => l1 ++ l2)
-         .map(row => (row.getTimestamp("datetime"), row.getFloat("value"))).toArray
+         .map(row => (row.getTimestamp("datetime_"), row.getFloat("value_"))).toArray
 
-      val shunkShard = Cassandra.sharder.shard(shunk)
+      val shunkShard = Cassandra.sharder.shard(update.datetime)
+
 
       // calculate and submit aggregates
       raw_aggregators.foreach(agg => Cassandra.submitValue(
-         metric,
+         update.metric,
          shunkShard,
          name,
          agg._1,
-         tagset,
-         shunk,
+         update.tagset,
+         update.datetime,
          agg._2(results)
       ))
 
@@ -97,71 +96,75 @@ abstract class TimeAggregator extends LazyLogging
          val transformedResult = agg._2(results)
 
          Cassandra.submitTemporalValue(
-            metric,
+            update.metric,
             shunkShard,
             name,
             agg._1,
-            tagset,
-            shunk,
+            update.tagset,
+            update.datetime,
             transformedResult._1,
             transformedResult._2
          )
       })
    }
 
-   def updateShunkFromAgg(
-                            metric: String,
-                            tagset: Map[String, String],
-                            shunk: LocalDateTime
-                         )
+   def updateShunkFromAgg(update: ObservationUpdate)
    : Unit =
    {
-      val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(shunk)
+      val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(update.datetime)
       val shards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       agg_aggregators.par.foreach(agg => {
-         val queries = shards.map(shard => DAO.getAggShunkValues(metric, shard, previousName, agg._1, shunkStart, shunkEnd, tagset))
+         val queries = shards.map(shard => DAO.getAggShunkValues(update.metric, shard, previousName, agg._1, shunkStart, shunkEnd, update.tagset))
          val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
          val results = statements.par
             .map(statement => Cassandra.session.execute(statement).all().asScala)
             .reduce((l1, l2) => l1 ++ l2)
-            .map(row => row.getFloat("value")).toArray
+            .map(row => row.getFloat("value_")).toArray
 
-         Cassandra.submitValue(metric, Cassandra.sharder.shard(shunk), name, agg._1, tagset, shunk, agg._2(results))
+         Cassandra.submitValue(update.metric, Cassandra.sharder.shard(update.datetime), name, agg._1, update.tagset, update.datetime, agg._2(results))
+
       })
 
       agg_temp_aggregators.par.foreach(agg => {
-         val queries = shards.map(shard => DAO.getAggTempShunkValues(metric, shard, previousName, agg._1, shunkStart, shunkEnd, tagset))
+         val queries = shards.map(shard => DAO.getAggTempShunkValues(update.metric, shard, previousName, agg._1, shunkStart, shunkEnd, update.tagset))
          val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
          val results = statements.par
             .map(statement => Cassandra.session.execute(statement).all().asScala)
             .reduce((l1, l2) => l1 ++ l2)
-            .map(row => (row.getTimestamp("observation_datetime"), row.getFloat("value"))).toArray
+            .map(row => (row.getTimestamp("observation_datetime_"), row.getFloat("value_"))).toArray
 
          val transformedResult = agg._2(results)
 
          Cassandra.submitTemporalValue(
-            metric,
-            Cassandra.sharder.shard(shunk),
+            update.metric,
+            Cassandra.sharder.shard(update.datetime),
             name,
             agg._1,
-            tagset,
-            shunk,
+            update.tagset,
+            update.datetime,
             transformedResult._1,
-            transformedResult._2)
+            transformedResult._2
+         )
+
       })
    }
 
-   def updateShunk(metric: String, tagset: Map[String, String], shunk: LocalDateTime): (String, Map[String, String], LocalDateTime) =
+   /**
+     *
+     * @param update The update to perform
+     * @return The observation update that has been performed
+     */
+   def updateShunk(update: ObservationUpdate): ObservationUpdate =
    {
-      logger.info(s"${name} update shunk ${metric}, ${tagset}, ${shunk}")
+      logger.info(s"${name} update shunk ${update}")
 
-      if(previousName == "raw") updateShunkFromRaw(metric, tagset, shunk)
-      else updateShunkFromAgg(metric, tagset, shunk)
+      if(previousName == "raw") updateShunkFromRaw(update)
+      else updateShunkFromAgg(update)
 
-      (metric, tagset, shunk)
+      update
    }
 }
 
@@ -178,7 +181,7 @@ abstract class SimpleTimeAggregator(val unit: TemporalUnit, val name: String, va
 /**
   * Aggretates datetimes to the next minute.
   */
-object MinuteAggregator extends SimpleTimeAggregator(ChronoUnit.MINUTES, "1m", "raw")
+class MinuteAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.MINUTES, "1m", previousName)
 {
    def isBorder(dt: LocalDateTime) = (dt.getSecond == 0) && (dt.getNano == 0)
 }
@@ -186,7 +189,7 @@ object MinuteAggregator extends SimpleTimeAggregator(ChronoUnit.MINUTES, "1m", "
 /**
   * Aggretates datetimes to the next hour.
   */
-object HourAggregator extends SimpleTimeAggregator(ChronoUnit.HOURS, "1h", "1m")
+class HourAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.HOURS, "1h", previousName)
 {
    def isBorder(dt: LocalDateTime) = (dt.getMinute == 0) && (dt.getSecond == 0) && (dt.getNano == 0)
 }
@@ -194,7 +197,7 @@ object HourAggregator extends SimpleTimeAggregator(ChronoUnit.HOURS, "1h", "1m")
 /**
   * Aggretates datetimes to the next day.
   */
-object DayAggregator extends SimpleTimeAggregator(ChronoUnit.DAYS, "1d", "1h")
+class DayAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.DAYS, "1d", previousName)
 {
    def isBorder(dt: LocalDateTime) = (dt.getHour == 0) && (dt.getMinute == 0) && (dt.getSecond == 0) && (dt.getNano == 0)
 }
@@ -202,7 +205,7 @@ object DayAggregator extends SimpleTimeAggregator(ChronoUnit.DAYS, "1d", "1h")
 /**
   * Aggretates datetimes to the next month.
   */
-object MonthAggregator extends TimeAggregator
+class MonthAggregator(val previousName: String) extends TimeAggregator
 {
    private def isBorder(dt: LocalDateTime) =
       (dt.getDayOfMonth == 1) &&
@@ -223,6 +226,5 @@ object MonthAggregator extends TimeAggregator
    override def range(shunk: LocalDateTime): (LocalDateTime, LocalDateTime) = (shunk.minus(1, ChronoUnit.MONTHS), shunk)
 
    override def name = "1mo"
-   override def previousName = "1d"
 }
 

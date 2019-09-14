@@ -5,7 +5,6 @@ import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
-//import akka.stream.alpakka.cassandra.impl.GuavaFutures._
 
 /**
   * An alternative implementation to https://github.com/akka/alpakka/blob/v1.1.1/cassandra/src/main/scala/akka/stream/alpakka/cassandra/scaladsl/CassandraFlow.scala
@@ -26,5 +25,6 @@ object AltCassandraFlow
             val fut: Future[ResultSet]= session.executeAsync(statementBinder(t, statement(t)))
               fut.map(_ => t)
          }
-      )
+      ).named("Async Cassandra Sink")
+
 }

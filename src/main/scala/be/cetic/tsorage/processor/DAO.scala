@@ -38,13 +38,13 @@ object DAO extends LazyLogging
 
       val query =
          s"""
-            | SELECT datetime, value
+            | SELECT datetime_, value_
             | FROM tsorage_raw.numeric
             | WHERE
-            |   (metric = '${metric}') AND
-            |   (shard = '${shard}') AND
-            |   (datetime > '${shunkStart.format(datetimeFormatter)}') AND
-            |   (datetime <= '${shunkEnd.format(datetimeFormatter)}')
+            |   (metric_ = '${metric}') AND
+            |   (shard_ = '${shard}') AND
+            |   (datetime_ > '${shunkStart.format(datetimeFormatter)}') AND
+            |   (datetime_ <= '${shunkEnd.format(datetimeFormatter)}')
             |   ${tagsetAsClause(tagset)}
             |
            | ALLOW FILTERING;
@@ -81,15 +81,15 @@ object DAO extends LazyLogging
 
       val query =
          s"""
-            | SELECT value
+            | SELECT value_
             | FROM tsorage_agg.numeric
             | WHERE
-            |   (metric = '${metric}') AND
-            |   (shard = '${shard}') AND
-            |   (interval = '${interval}') AND
-            |   (aggregator = '${aggregator}') AND
-            |   (datetime > '${shunkStart.format(datetimeFormatter)}') AND
-            |   (datetime <= '${shunkEnd.format(datetimeFormatter)}')
+            |   (metric_ = '${metric}') AND
+            |   (shard_ = '${shard}') AND
+            |   (interval_ = '${interval}') AND
+            |   (aggregator_ = '${aggregator}') AND
+            |   (datetime_ > '${shunkStart.format(datetimeFormatter)}') AND
+            |   (datetime_ <= '${shunkEnd.format(datetimeFormatter)}')
             |   ${tagsetAsClause(tagset)}
             |
            | ALLOW FILTERING;
@@ -126,15 +126,15 @@ object DAO extends LazyLogging
 
       val query =
          s"""
-            | SELECT observation_datetime, value
+            | SELECT observation_datetime_, value_
             | FROM tsorage_agg.numeric
             | WHERE
-            |   (metric = '${metric}') AND
-            |   (shard = '${shard}') AND
-            |   (interval = '${interval}') AND
-            |   (aggregator = '${aggregator}') AND
-            |   (datetime > '${shunkStart.format(datetimeFormatter)}') AND
-            |   (datetime <= '${shunkEnd.format(datetimeFormatter)}')
+            |   (metric_ = '${metric}') AND
+            |   (shard_ = '${shard}') AND
+            |   (interval_ = '${interval}') AND
+            |   (aggregator_ = '${aggregator}') AND
+            |   (datetime_ > '${shunkStart.format(datetimeFormatter)}') AND
+            |   (datetime_ <= '${shunkEnd.format(datetimeFormatter)}')
             |   ${tagsetAsClause(tagset)}
             |
             | ALLOW FILTERING;

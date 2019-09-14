@@ -12,10 +12,10 @@ class MinuteTimeAggregatorTest extends FlatSpec with Matchers
 
 
    "A Minute aggregator" should "round to the next minute" in {
-      MinuteAggregator.shunk(dt1) shouldEqual LocalDateTime.of(2019, 8, 9, 12, 35, 0)
+      new MinuteAggregator("").shunk(dt1) shouldEqual LocalDateTime.of(2019, 8, 9, 12, 35, 0)
    }
 
    "A Minute aggregator" should "retrieve the right border shunk" in {
-      MinuteAggregator.shunk(borderDT) shouldEqual borderDT
+      new MinuteAggregator("").shunk(borderDT) shouldEqual borderDT
    }
 }
