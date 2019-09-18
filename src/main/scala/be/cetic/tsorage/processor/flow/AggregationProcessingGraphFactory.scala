@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContextExecutor
   */
 object AggregationProcessingGraphFactory
 {
-   private def prepareValue(aggregator: TimeAggregator)(update: ObservationUpdate) = {
+   private def prepareValue(aggregator: TimeAggregator)(update: ObservationUpdate[Float]) = {
       val shunkedUpdate = aggregator.shunk(update)
 
       aggregator.updateShunk(shunkedUpdate)

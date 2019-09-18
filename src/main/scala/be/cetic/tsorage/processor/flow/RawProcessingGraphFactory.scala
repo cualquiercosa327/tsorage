@@ -29,7 +29,15 @@ object RawProcessingGraphFactory
       val declareTags = builder.add(Flow[FloatMessage].map(cassandraFlow.notifyTagnames))
       val flattenMessage = builder.add(ObservationFlow.flattenMessage)
       val storeRawValues = builder.add(cassandraFlow.rawFlow)
-      val toUpdate = builder.add( Flow.fromFunction({observation: FloatObservation => ObservationUpdate(observation.metric, observation.tagset, observation.datetime)}))
+      val toUpdate = builder.add(
+         Flow.fromFunction({observation: FloatObservation => ObservationUpdate(
+            observation.metric,
+            observation.tagset,
+            observation.datetime,
+            "raw",
+            Map("raw" -> observation.value)
+         )})
+      )
 
       // Combine shapes into a graph
       notEmpty ~> dropBadTags ~> declareTags ~> flattenMessage ~> storeRawValues ~> toUpdate

@@ -1,16 +1,12 @@
 package be.cetic.tsorage.processor.aggregator
 
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoUnit, TemporalUnit}
 import java.util.Date
 
 import be.cetic.tsorage.processor.{DAO, ObservationUpdate}
 import be.cetic.tsorage.processor.database.Cassandra
-import com.datastax.driver.core.querybuilder.QueryBuilder._
-import be.cetic.tsorage.processor.sharder.Sharder
 import com.datastax.driver.core.{ConsistencyLevel, Row, Session, SimpleStatement}
-import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
@@ -51,7 +47,13 @@ abstract class TimeAggregator extends LazyLogging
      */
    def shunk(dt: LocalDateTime): LocalDateTime
 
-   def shunk(update: ObservationUpdate): ObservationUpdate = ObservationUpdate(update.metric, update.tagset, shunk(update.datetime))
+   def shunk[T](update: ObservationUpdate[T]): ObservationUpdate[T] = ObservationUpdate(
+      update.metric,
+      update.tagset,
+      shunk(update.datetime),
+      update.interval,
+      update.values
+   )
 
    /**
      * Provides the datetime range corresponding to a particular shunk. The begining of the range is exclusive, while the end is inclusive
@@ -64,7 +66,12 @@ abstract class TimeAggregator extends LazyLogging
 
    def previousName: String
 
-   def updateShunkFromRaw(update: ObservationUpdate): Unit =
+   /**
+     * Update the shunk corresponding to a given observation update.
+     * @param update The observation update, corresponding to a change to pass on this aggregator.
+     * @return The observation update corresponding to the updated shunk , The list of updated
+     */
+   def updateShunkFromRaw(update: ObservationUpdate[Float]): ObservationUpdate[Float] =
    {
       val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(update.datetime)
       val shards = Cassandra.sharder.shards(shunkStart, shunkEnd)
@@ -80,41 +87,41 @@ abstract class TimeAggregator extends LazyLogging
 
       val shunkShard = Cassandra.sharder.shard(update.datetime)
 
-
       // calculate and submit aggregates
-      raw_aggregators.foreach(agg => Cassandra.submitValue(
+      val values = raw_aggregators.map(agg => agg._1 -> agg._2(results))
+      values.foreach(v => Cassandra.submitValue(
          update.metric,
          shunkShard,
          name,
-         agg._1,
+         v._1,
          update.tagset,
          update.datetime,
-         agg._2(results)
+         v._2
       ))
 
-      raw_temp_aggregators.foreach(agg => {
-         val transformedResult = agg._2(results)
+      val temp_values = raw_temp_aggregators.map(agg => agg._1 -> agg._2(results))
+      temp_values.foreach(v => Cassandra.submitTemporalValue(
+         update.metric,
+         shunkShard,
+         name,
+         v._1,
+         update.tagset,
+         update.datetime,
+         v._2._1,
+         v._2._2
+      ))
 
-         Cassandra.submitTemporalValue(
-            update.metric,
-            shunkShard,
-            name,
-            agg._1,
-            update.tagset,
-            update.datetime,
-            transformedResult._1,
-            transformedResult._2
-         )
-      })
+      val all_values = values ++ temp_values.mapValues(v => v._2)
+
+      ObservationUpdate(update.metric, update.tagset, update.datetime, name, all_values)
    }
 
-   def updateShunkFromAgg(update: ObservationUpdate)
-   : Unit =
+   def updateShunkFromAgg(update: ObservationUpdate[Float]): ObservationUpdate[Float] =
    {
       val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = range(update.datetime)
       val shards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
-      agg_aggregators.par.foreach(agg => {
+      val values = agg_aggregators.map(agg => {
          val queries = shards.map(shard => DAO.getAggShunkValues(update.metric, shard, previousName, agg._1, shunkStart, shunkEnd, update.tagset))
          val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
@@ -123,11 +130,12 @@ abstract class TimeAggregator extends LazyLogging
             .reduce((l1, l2) => l1 ++ l2)
             .map(row => row.getFloat("value_")).toArray
 
-         Cassandra.submitValue(update.metric, Cassandra.sharder.shard(update.datetime), name, agg._1, update.tagset, update.datetime, agg._2(results))
-
+         agg._1 -> agg._2(results)
       })
 
-      agg_temp_aggregators.par.foreach(agg => {
+      values.foreach(v => Cassandra.submitValue(update.metric, Cassandra.sharder.shard(update.datetime), name, v._1, update.tagset, update.datetime, v._2))
+
+      val temp_values = agg_temp_aggregators.map(agg => {
          val queries = shards.map(shard => DAO.getAggTempShunkValues(update.metric, shard, previousName, agg._1, shunkStart, shunkEnd, update.tagset))
          val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
@@ -136,20 +144,23 @@ abstract class TimeAggregator extends LazyLogging
             .reduce((l1, l2) => l1 ++ l2)
             .map(row => (row.getTimestamp("observation_datetime_"), row.getFloat("value_"))).toArray
 
-         val transformedResult = agg._2(results)
-
-         Cassandra.submitTemporalValue(
-            update.metric,
-            Cassandra.sharder.shard(update.datetime),
-            name,
-            agg._1,
-            update.tagset,
-            update.datetime,
-            transformedResult._1,
-            transformedResult._2
-         )
-
+         agg._1 -> agg._2(results)
       })
+
+      temp_values.foreach(v => Cassandra.submitTemporalValue(
+         update.metric,
+         Cassandra.sharder.shard(update.datetime),
+         name,
+         v._1,
+         update.tagset,
+         update.datetime,
+         v._2._1,
+         v._2._2
+      ))
+
+      val all_values = values ++ temp_values.mapValues(v => v._2)
+
+      ObservationUpdate(update.metric, update.tagset, update.datetime, name, all_values)
    }
 
    /**
@@ -157,14 +168,12 @@ abstract class TimeAggregator extends LazyLogging
      * @param update The update to perform
      * @return The observation update that has been performed
      */
-   def updateShunk(update: ObservationUpdate): ObservationUpdate =
+   def updateShunk(update: ObservationUpdate[Float]): ObservationUpdate[Float] =
    {
       logger.info(s"${name} update shunk ${update}")
 
       if(previousName == "raw") updateShunkFromRaw(update)
       else updateShunkFromAgg(update)
-
-      update
    }
 }
 

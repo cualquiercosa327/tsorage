@@ -6,4 +6,4 @@ import java.time.LocalDateTime
   * Represents a change in an observation.
   * A change may be followed by other successive changes.
   */
-case class ObservationUpdate(metric: String, tagset: Map[String, String], datetime: LocalDateTime)
+case class ObservationUpdate[T](metric: String, tagset: Map[String, String], datetime: LocalDateTime, interval: String, values: Map[String, T])
