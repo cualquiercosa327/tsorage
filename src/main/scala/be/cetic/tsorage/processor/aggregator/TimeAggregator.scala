@@ -190,65 +190,15 @@ object TimeAggregator
    }
 }
 
-abstract class SimpleTimeAggregator(val unit: TemporalUnit, val name: String, val previousName: String) extends TimeAggregator
-{
-   def isBorder(dt: LocalDateTime): Boolean
-
-   def shunk(dt: LocalDateTime): LocalDateTime = if(isBorder(dt)) dt
-                                                 else dt.truncatedTo(unit).plus(1, unit)
-
-   def range(shunk: LocalDateTime): (LocalDateTime, LocalDateTime) = (shunk.minus(1, unit) , shunk)
-}
-
-/**
-  * Aggregates datetimes to the next minute.
-  */
-class MinuteAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.MINUTES, "1m", previousName)
-{
-   def isBorder(dt: LocalDateTime) = (dt.getSecond == 0) && (dt.getNano == 0)
-}
-
-/**
-  * Aggregates datetimes to the next hour.
-  */
-class HourAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.HOURS, "1h", previousName)
-{
-   def isBorder(dt: LocalDateTime) = (dt.getMinute == 0) && (dt.getSecond == 0) && (dt.getNano == 0)
-}
-
-/**
-  * Aggregates datetimes to the next day.
-  */
-class DayAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.DAYS, "1d", previousName)
-{
-   def isBorder(dt: LocalDateTime) = (dt.getHour == 0) && (dt.getMinute == 0) && (dt.getSecond == 0) && (dt.getNano == 0)
-}
-
-/**
-  * Aggregates datetimes to the next month.
-  */
-class MonthAggregator(val previousName: String) extends TimeAggregator
-{
-   private def isBorder(dt: LocalDateTime) =
-      (dt.getDayOfMonth == 1) &&
-      (dt.getHour == 0) &&
-      (dt.getMinute == 0) &&
-      (dt.getSecond == 0) &&
-      (dt.getNano == 0)
-
-   override def shunk(dt: LocalDateTime): LocalDateTime = if(isBorder(dt)) dt
-                                                          else dt.plus(1, ChronoUnit.MONTHS)
-                                                                .withDayOfMonth(1)
-                                                                .withHour(0)
-                                                                .withMinute(0)
-                                                                .withSecond(0)
-                                                                .withNano(0)
 
 
-   override def range(shunk: LocalDateTime): (LocalDateTime, LocalDateTime) = (shunk.minus(1, ChronoUnit.MONTHS), shunk)
 
-   override def name = "1mo"
-}
+
+
+
+
+
+
 
 
 
