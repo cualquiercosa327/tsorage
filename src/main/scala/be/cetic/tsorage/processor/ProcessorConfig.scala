@@ -1,7 +1,9 @@
 package be.cetic.tsorage.processor
 
+import be.cetic.tsorage.processor.aggregator.TimeAggregator
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
+import collection.JavaConverters._
 
 /**
   * A representation of the Processor configuration
@@ -28,5 +30,18 @@ object ProcessorConfig extends LazyLogging
          accepted,
          message.values
       )
+   }
+
+   /**
+     * Generate the list of workers that will temporally aggregate incoming values.
+     * The generation is proposed according to the "aggregators" property of the configuration file.
+     * @return The sequence of aggregators to call when a value enters the processor.
+     */
+   def aggregators(): List[TimeAggregator] =
+   {
+      val names = conf.getStringList("aggregators").asScala
+
+      val aggs = names.scanLeft(("raw", Option.empty[TimeAggregator])){ case ((previousName, previousAgg), name) => (name, Some(TimeAggregator(name, previousName))) }
+      aggs.toList.flatMap(agg => agg._2)
    }
 }

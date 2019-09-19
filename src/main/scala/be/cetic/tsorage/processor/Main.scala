@@ -62,9 +62,8 @@ object Main extends LazyLogging with App
   val hourAggregator = new HourAggregator(minuteAggregator.name)
   val dayAggregator = new DayAggregator(hourAggregator.name)
 
-  val aggregators = List(minuteAggregator)
+  val aggregators = ProcessorConfig.aggregators()
 
-  //val rawProcessorGraph = RawProcessingGraphFactory.createGraph
   val processorGraph = GlobalProcessingGraphFactory.createGraph(aggregators)
 
   inboundMessagesConnector()

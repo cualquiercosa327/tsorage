@@ -175,6 +175,19 @@ abstract class TimeAggregator extends LazyLogging
       if(previousName == "raw") updateShunkFromRaw(update)
       else updateShunkFromAgg(update)
    }
+
+   override def toString = s"Aggregator(${name}, ${previousName})"
+}
+
+object TimeAggregator
+{
+   def apply(name: String, previous: String): TimeAggregator = name match {
+      case "1m" => new MinuteAggregator(previous)
+      case "1h" => new HourAggregator(previous)
+      case "1d" => new DayAggregator(previous)
+      case "1mo" => new MonthAggregator(previous)
+      case _ => throw InvalidTimeAggregatorName(name)
+   }
 }
 
 abstract class SimpleTimeAggregator(val unit: TemporalUnit, val name: String, val previousName: String) extends TimeAggregator
@@ -188,7 +201,7 @@ abstract class SimpleTimeAggregator(val unit: TemporalUnit, val name: String, va
 }
 
 /**
-  * Aggretates datetimes to the next minute.
+  * Aggregates datetimes to the next minute.
   */
 class MinuteAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.MINUTES, "1m", previousName)
 {
@@ -196,7 +209,7 @@ class MinuteAggregator(previousName: String) extends SimpleTimeAggregator(Chrono
 }
 
 /**
-  * Aggretates datetimes to the next hour.
+  * Aggregates datetimes to the next hour.
   */
 class HourAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.HOURS, "1h", previousName)
 {
@@ -204,7 +217,7 @@ class HourAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUn
 }
 
 /**
-  * Aggretates datetimes to the next day.
+  * Aggregates datetimes to the next day.
   */
 class DayAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUnit.DAYS, "1d", previousName)
 {
@@ -212,7 +225,7 @@ class DayAggregator(previousName: String) extends SimpleTimeAggregator(ChronoUni
 }
 
 /**
-  * Aggretates datetimes to the next month.
+  * Aggregates datetimes to the next month.
   */
 class MonthAggregator(val previousName: String) extends TimeAggregator
 {
@@ -236,4 +249,6 @@ class MonthAggregator(val previousName: String) extends TimeAggregator
 
    override def name = "1mo"
 }
+
+
 
