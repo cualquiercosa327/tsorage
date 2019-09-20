@@ -1,9 +1,9 @@
 package be.cetic.tsorage.processor.database
 
-import java.time.LocalDateTime
+import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Date
 
-import be.cetic.tsorage.processor.DAO.{datetimeFormatter, logger}
 import be.cetic.tsorage.processor.sharder.{DaySharder, MonthSharder}
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
@@ -28,7 +28,7 @@ object Cassandra extends LazyLogging {
   }
 
   /**
-    * Synchronously submits a raw value in the rax table.
+    * Synchronously submits a raw value in the raw table.
     * @param metric
     * @param shard
     * @param tagset
@@ -42,17 +42,19 @@ object Cassandra extends LazyLogging {
                     datetime: LocalDateTime,
                     value: Float): Unit =
   {
+    val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
+
     val baseStatement = insertInto("tsorage_raw", "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
-       .value("datetime_", datetime.format(datetimeFormatter))
+       .value("datetime_", ts)
        .value("value_", value)
 
     val statement = tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
        .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
-    logger.info(s"DAO submits value ${statement}")
+    logger.info(s"Cassandra submits raw value ${statement}")
     session.execute(statement.toString)
   }
 
@@ -75,12 +77,15 @@ object Cassandra extends LazyLogging {
                     datetime: LocalDateTime,
                     value: Float): Unit =
   {
+    val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
+
+
     val baseStatement = insertInto("tsorage_agg", "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
        .value("interval_", period)
        .value("aggregator_", aggregator)
-       .value("datetime_", datetime.format(datetimeFormatter))
+       .value("datetime_", ts)
        .value("value_", value)
     logger.info(s"Base statement is ${baseStatement}")
 
@@ -88,7 +93,7 @@ object Cassandra extends LazyLogging {
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
        .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
-    logger.info(s"DAO submits value ${statement}")
+    logger.info(s"Cassandra submits value ${statement}")
 
     session.execute(statement.toString)
   }
@@ -113,12 +118,14 @@ object Cassandra extends LazyLogging {
                             observationDatetime: Date,
                             value: Float): Unit =
   {
+    val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
+
     val baseStatement = insertInto("tsorage_agg", "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
        .value("interval_", period)
        .value("aggregator_", aggregator)
-       .value("datetime_", datetime.format(datetimeFormatter))
+       .value("datetime_", ts)
        .value("observation_datetime_", observationDatetime)
        .value("value_", value)
 
@@ -126,10 +133,8 @@ object Cassandra extends LazyLogging {
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
        .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
-    logger.info(s"DAO submits value ${statement}")
+    logger.info(s"Cassandra submits value ${statement}")
 
     session.execute(statement.toString)
   }
-
-
 }

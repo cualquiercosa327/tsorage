@@ -1,6 +1,7 @@
 package be.cetic.tsorage.processor
 
-import java.time.LocalDateTime
+import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
@@ -8,9 +9,9 @@ import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
 
-object DAO extends LazyLogging
+object DAO extends LazyLogging with TimeFormatHelper
 {
-   val datetimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
 
    def colName(name: String) = s""""$name""""
    def colValue(value: String)= s"""'${value.replace("'", "''")}'"""
@@ -43,8 +44,8 @@ object DAO extends LazyLogging
             | WHERE
             |   (metric_ = '${metric}') AND
             |   (shard_ = '${shard}') AND
-            |   (datetime_ > '${shunkStart.format(datetimeFormatter)}') AND
-            |   (datetime_ <= '${shunkEnd.format(datetimeFormatter)}')
+            |   (datetime_ > '${formatLDT(shunkStart)}') AND
+            |   (datetime_ <= '${formatLDT(shunkEnd)}')
             |   ${tagsetAsClause(tagset)}
             |
            | ALLOW FILTERING;
@@ -88,8 +89,8 @@ object DAO extends LazyLogging
             |   (shard_ = '${shard}') AND
             |   (interval_ = '${interval}') AND
             |   (aggregator_ = '${aggregator}') AND
-            |   (datetime_ > '${shunkStart.format(datetimeFormatter)}') AND
-            |   (datetime_ <= '${shunkEnd.format(datetimeFormatter)}')
+            |   (datetime_ > '${formatLDT(shunkStart)}') AND
+            |   (datetime_ <= '${formatLDT(shunkEnd)}')
             |   ${tagsetAsClause(tagset)}
             |
            | ALLOW FILTERING;
@@ -133,8 +134,8 @@ object DAO extends LazyLogging
             |   (shard_ = '${shard}') AND
             |   (interval_ = '${interval}') AND
             |   (aggregator_ = '${aggregator}') AND
-            |   (datetime_ > '${shunkStart.format(datetimeFormatter)}') AND
-            |   (datetime_ <= '${shunkEnd.format(datetimeFormatter)}')
+            |   (datetime_ > '${formatLDT(shunkStart)}') AND
+            |   (datetime_ <= '${formatLDT(shunkEnd)}')
             |   ${tagsetAsClause(tagset)}
             |
             | ALLOW FILTERING;
@@ -142,6 +143,4 @@ object DAO extends LazyLogging
 
       query
    }
-
-
 }

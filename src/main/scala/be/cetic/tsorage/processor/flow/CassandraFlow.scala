@@ -1,6 +1,7 @@
 package be.cetic.tsorage.processor.flow
 
-import java.time.LocalDateTime
+import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneId, ZoneOffset}
 
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.sharder.Sharder
@@ -20,11 +21,12 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
   private implicit val session = Cassandra.session
 
   val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
+    val ts = Timestamp.from(observation.datetime.atOffset(ZoneOffset.UTC).toInstant)
 
     val baseBound = prepared.bind()
       .setString("metric_", observation.metric)
       .setString("shard_", sharder.shard(observation.datetime))
-      .setTimestamp("datetime_", java.sql.Timestamp.valueOf(observation.datetime))
+      .setTimestamp("datetime_", ts)
       .setFloat("value_", observation.value)
 
     val folder: (BoundStatement, (String, String)) => BoundStatement = (prev: BoundStatement, tag: (String, String)) => prev.setString(tag._1, tag._2)
