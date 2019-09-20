@@ -4,6 +4,7 @@ import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Date
 
+import be.cetic.tsorage.processor.ProcessorConfig
 import be.cetic.tsorage.processor.sharder.{DaySharder, MonthSharder}
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
@@ -11,7 +12,11 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 
 object Cassandra extends LazyLogging {
-  private val conf = ConfigFactory.load("tsorage.conf")
+  private val conf = ProcessorConfig.conf
+
+  private val rawKeyspace = conf.getString("cassandra.keyspaces.raw")
+  private val aggKeyspace = conf.getString("cassandra.keyspaces.aggregated")
+
   private val cassandraHost = conf.getString("cassandra.host")
   private val cassandraPort = conf.getInt("cassandra.port")
 
@@ -44,7 +49,7 @@ object Cassandra extends LazyLogging {
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
-    val baseStatement = insertInto("tsorage_raw", "numeric")
+    val baseStatement = insertInto(rawKeyspace, "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
        .value("datetime_", ts)
@@ -80,7 +85,7 @@ object Cassandra extends LazyLogging {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
 
-    val baseStatement = insertInto("tsorage_agg", "numeric")
+    val baseStatement = insertInto(aggKeyspace, "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
        .value("interval_", period)
@@ -120,7 +125,7 @@ object Cassandra extends LazyLogging {
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
-    val baseStatement = insertInto("tsorage_agg", "numeric")
+    val baseStatement = insertInto(aggKeyspace, "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
        .value("interval_", period)

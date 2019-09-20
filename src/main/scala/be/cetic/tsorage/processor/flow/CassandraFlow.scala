@@ -5,7 +5,7 @@ import java.time.{LocalDateTime, ZoneId, ZoneOffset}
 
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.sharder.Sharder
-import be.cetic.tsorage.processor.{FloatMessage, FloatObservation}
+import be.cetic.tsorage.processor.{FloatMessage, FloatObservation, ProcessorConfig}
 import com.datastax.driver.core.querybuilder.Insert
 import com.datastax.driver.core.querybuilder.QueryBuilder.{bindMarker, insertInto}
 import com.datastax.driver.core.{BoundStatement, PreparedStatement}
@@ -16,8 +16,12 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
 
 class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor) {
-  private val config = ConfigFactory.load("tsorage.conf")
-  private val keyspaceRaw = config.getString("cassandra.keyspaces.raw")
+
+  private val config = ProcessorConfig.conf
+
+  private val rawKeyspace = config.getString("cassandra.keyspaces.raw")
+  private val aggKeyspace = config.getString("cassandra.keyspaces.aggregated")
+
   private implicit val session = Cassandra.session
 
   val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
@@ -44,7 +48,7 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
             val tagnames = tags.toList
             val tagMarkers = tags.map(tag => bindMarker(tag)).toList
 
-            val baseStatement = insertInto(keyspaceRaw, "numeric")
+            val baseStatement = insertInto(rawKeyspace, "numeric")
               .value("metric_", bindMarker("metric_"))
               .value("shard_", bindMarker("shard_"))
               .value("datetime_", bindMarker("datetime_"))
@@ -78,10 +82,10 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
       val recentTags = msg.tagset.keySet.diff(cache)
       cache = cache ++ recentTags
 
-      recentTags.map(tag => s"""ALTER TABLE tsorage_raw.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
+      recentTags.map(tag => s"""ALTER TABLE ${rawKeyspace}.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
         .foreach(t => Try(session.execute(t)))
 
-      recentTags.map(tag => s"""ALTER TABLE tsorage_agg.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
+      recentTags.map(tag => s"""ALTER TABLE ${aggKeyspace}.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
         .foreach(t => Try(session.execute(t)))
 
       msg

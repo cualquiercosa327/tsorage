@@ -16,6 +16,10 @@ object DAO extends LazyLogging with TimeFormatHelper
    def colName(name: String) = s""""$name""""
    def colValue(value: String)= s"""'${value.replace("'", "''")}'"""
    def tagAsClause(key: String, value: String) = s"(${colName(key)} = ${colValue(value)} )"
+
+   private val rawKeyspace = ProcessorConfig.conf.getString("cassandra.keyspaces.raw")
+   private val aggKeyspace = ProcessorConfig.conf.getString("cassandra.keyspaces.aggregated")
+
    def tagsetAsClause(tagset: Map[String, String]) = tagset match {
       case m:Map[String, String] if m.isEmpty => ""
       case _ => tagset.iterator.map(entry => tagAsClause(entry._1, entry._2)).mkString(" AND ", " AND ", "")
@@ -40,7 +44,7 @@ object DAO extends LazyLogging with TimeFormatHelper
       val query =
          s"""
             | SELECT datetime_, value_
-            | FROM tsorage_raw.numeric
+            | FROM ${rawKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND
             |   (shard_ = '${shard}') AND
@@ -83,7 +87,7 @@ object DAO extends LazyLogging with TimeFormatHelper
       val query =
          s"""
             | SELECT value_
-            | FROM tsorage_agg.numeric
+            | FROM ${aggKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND
             |   (shard_ = '${shard}') AND
@@ -128,7 +132,7 @@ object DAO extends LazyLogging with TimeFormatHelper
       val query =
          s"""
             | SELECT observation_datetime_, value_
-            | FROM tsorage_agg.numeric
+            | FROM ${aggKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND
             |   (shard_ = '${shard}') AND
