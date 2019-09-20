@@ -1,8 +1,9 @@
 package be.cetic.tsorage.processor
 
-import be.cetic.tsorage.processor.aggregator.TimeAggregator
+import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
+
 import collection.JavaConverters._
 
 /**
@@ -19,13 +20,13 @@ object ProcessorConfig extends LazyLogging
      * @param message   A message
      * @return The message, without any tag with forbidden name.
      */
-   def dropBadTags(message: FloatMessage): FloatMessage = {
+   def dropBadTags(message: Message[Double]): Message[Double] = {
       val (rejected, accepted) = message.tagset.span(entry => forbiddenTagnames contains entry._1)
 
       if(!rejected.isEmpty)
          logger.info(s"Rejected tags due to forbidden tagname: ${rejected}")
 
-      FloatMessage(
+      Message(
          message.metric,
          accepted,
          message.values

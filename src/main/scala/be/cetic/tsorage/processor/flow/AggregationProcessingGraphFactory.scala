@@ -3,8 +3,9 @@ package be.cetic.tsorage.processor.flow
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
-import be.cetic.tsorage.processor.aggregator.TimeAggregator
-import be.cetic.tsorage.processor.{ObservationUpdate}
+import be.cetic.tsorage.processor.ObservationUpdate
+import be.cetic.tsorage.processor.aggregator.Aggregator
+import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -13,14 +14,14 @@ import scala.concurrent.ExecutionContextExecutor
   */
 object AggregationProcessingGraphFactory
 {
-   private def prepareValue(aggregator: TimeAggregator)(update: ObservationUpdate[Float]) = {
-      val shunkedUpdate = aggregator.shunk(update)
+   private def prepareValue(aggregator: Aggregator[Double])(update: ObservationUpdate[Double]) = {
+      val shunkedUpdate = aggregator.timeAggregator.shunk(update)
 
       aggregator.updateShunk(shunkedUpdate)
       shunkedUpdate
    }
 
-   def createGraph(aggregator: TimeAggregator)(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+   def createGraph(aggregator: Aggregator[Double])(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
       import GraphDSL.Implicits._
 
       // Define internal flow shapes
@@ -32,5 +33,5 @@ object AggregationProcessingGraphFactory
 
       // Expose port
       FlowShape(worker.in, worker.out)
-   }.named(s"Aggregation Processing ${aggregator.name}")
+   }.named(s"Aggregation Processing ${aggregator.timeAggregator.name}")
 }

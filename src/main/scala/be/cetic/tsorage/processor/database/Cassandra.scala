@@ -34,18 +34,20 @@ object Cassandra extends LazyLogging {
 
   /**
     * Synchronously submits a raw value in the raw table.
+    *
     * @param metric
     * @param shard
     * @param tagset
     * @param datetime
     * @param value
     */
-  def submitValue(
+  def submitValue[T](
                     metric: String,
                     shard: String,
                     tagset: Map[String, String],
                     datetime: LocalDateTime,
-                    value: Float): Unit =
+                    valueColumn: String,
+                    value: T): Unit =
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
@@ -53,7 +55,7 @@ object Cassandra extends LazyLogging {
        .value("metric_", metric)
        .value("shard_", shard)
        .value("datetime_", ts)
-       .value("value_", value)
+       .value(valueColumn, value)
 
     val statement = tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
@@ -65,6 +67,7 @@ object Cassandra extends LazyLogging {
 
   /**
     * Synchronously submits a value in the aggregated table.
+    *
     * @param metric
     * @param shard
     * @param period
@@ -73,14 +76,15 @@ object Cassandra extends LazyLogging {
     * @param datetime
     * @param value
     */
-  def submitValue(
+  def submitValue[T](
                     metric: String,
                     shard: String,
                     period: String,
                     aggregator: String,
                     tagset: Map[String, String],
                     datetime: LocalDateTime,
-                    value: Float): Unit =
+                    valueColumn: String,
+                    value: T): Unit =
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
@@ -91,7 +95,7 @@ object Cassandra extends LazyLogging {
        .value("interval_", period)
        .value("aggregator_", aggregator)
        .value("datetime_", ts)
-       .value("value_", value)
+       .value(valueColumn, value)
     logger.info(s"Base statement is ${baseStatement}")
 
     val statement = tagset
@@ -113,7 +117,7 @@ object Cassandra extends LazyLogging {
     * @param datetime
     * @param value
     */
-  def submitTemporalValue(
+  def submitTemporalValue[T](
                             metric: String,
                             shard: String,
                             period: String,
@@ -121,7 +125,8 @@ object Cassandra extends LazyLogging {
                             tagset: Map[String, String],
                             datetime: LocalDateTime,
                             observationDatetime: Date,
-                            value: Float): Unit =
+                            valueColumn: String,
+                            value: T): Unit =
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
@@ -132,7 +137,7 @@ object Cassandra extends LazyLogging {
        .value("aggregator_", aggregator)
        .value("datetime_", ts)
        .value("observation_datetime_", observationDatetime)
-       .value("value_", value)
+       .value(valueColumn, value)
 
     val statement = tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))

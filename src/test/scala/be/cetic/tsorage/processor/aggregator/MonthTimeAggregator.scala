@@ -2,6 +2,7 @@ package be.cetic.tsorage.processor.aggregator
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.processor.aggregator.time.MonthAggregator
 import org.scalatest.{FlatSpec, Matchers}
 
 

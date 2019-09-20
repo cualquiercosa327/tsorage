@@ -43,7 +43,7 @@ object DAO extends LazyLogging with TimeFormatHelper
 
       val query =
          s"""
-            | SELECT datetime_, value_
+            | SELECT datetime_, value_double_
             | FROM ${rawKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND
@@ -86,7 +86,7 @@ object DAO extends LazyLogging with TimeFormatHelper
 
       val query =
          s"""
-            | SELECT value_
+            | SELECT datetime_, value_double_
             | FROM ${aggKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND
@@ -131,7 +131,7 @@ object DAO extends LazyLogging with TimeFormatHelper
 
       val query =
          s"""
-            | SELECT observation_datetime_, value_
+            | SELECT observation_datetime_, value_double_
             | FROM ${aggKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND
