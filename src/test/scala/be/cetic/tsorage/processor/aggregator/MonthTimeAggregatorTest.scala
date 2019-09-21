@@ -6,7 +6,7 @@ import be.cetic.tsorage.processor.aggregator.time.MonthAggregator
 import org.scalatest.{FlatSpec, Matchers}
 
 
-class MonthTimeAggregator extends FlatSpec with Matchers
+class MonthTimeAggregatorTest extends FlatSpec with Matchers
 {
    val dt1 = LocalDateTime.of(2019, 8, 9, 12, 34, 56, 789000)
    val borderDT = LocalDateTime.of(2019, 8, 1, 0, 0, 0)
