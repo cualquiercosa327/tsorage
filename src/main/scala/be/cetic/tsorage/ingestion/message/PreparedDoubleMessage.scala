@@ -7,9 +7,10 @@ import spray.json.DefaultJsonProtocol
 /**
  * A message, structured like an internal TSorage message.
  */
-case class PreparedFloatMessage(
+case class PreparedDoubleMessage(
    metric: String,
    tagset: Map[String, String],
-   values: List[(LocalDateTime, Float)]
+   `type`: String,
+   values: List[(LocalDateTime, Double)]
 )
 

@@ -11,7 +11,7 @@ import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import be.cetic.tsorage.ingestion.message.{AuthenticationQuery, CheckRunMessage, FloatBody, FloatMessage, FloatMessageJsonSupport, User}
+import be.cetic.tsorage.ingestion.message.{AuthenticationQuery, CheckRunMessage, DoubleBody, DoubleMessage, FloatMessageJsonSupport, User}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
@@ -78,7 +78,7 @@ object HTTPInterface extends FloatMessageJsonSupport
                      authorize(conf, system, executionContext, materializer)(api_key){
                         user =>
 
-                           entity(as[FloatBody])
+                           entity(as[DoubleBody])
                            { body =>
                               val messages = body.series.map(s => s.prepared())
 

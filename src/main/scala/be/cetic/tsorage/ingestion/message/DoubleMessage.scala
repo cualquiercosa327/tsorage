@@ -1,14 +1,14 @@
 package be.cetic.tsorage.ingestion.message
 
-import java.time.{Instant, LocalDateTime}
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.TimeZone
 
 /**
  * A message, provided by an external client.
  */
-case class FloatMessage(
+case class DoubleMessage(
                           metric: String,
-                          points: List[(Double, Float)], // The first term of the pair is the Unix timestamp, in second (with optional decima)
+                          points: List[(Double, Double)], // The first term of the pair is the Unix timestamp, in second (with optional decimal)
                           `type`: Option[String],
                           interval: Option[Long],
                           host: Option[String],
@@ -34,11 +34,14 @@ case class FloatMessage(
          case Some(h) => preparedTagsWithInterval + ("host" -> h)
       }
 
-      PreparedFloatMessage(
+      PreparedDoubleMessage(
          metric,
          preparedTagsWithHost,
-         points.map(point => (LocalDateTime.ofInstant(Instant.ofEpochMilli((point._1 * 1000).toLong),
-            TimeZone.getTimeZone("UTC").toZoneId())  , point._2))
+         "double",
+         points.map(point => (
+            LocalDateTime.ofEpochSecond(point._1.toLong, 0, ZoneOffset.UTC),
+            point._2
+         ))
       )
    }
 }
