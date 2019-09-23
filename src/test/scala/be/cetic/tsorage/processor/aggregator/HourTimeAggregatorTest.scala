@@ -2,6 +2,7 @@ package be.cetic.tsorage.processor.aggregator
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.processor.aggregator.time.HourAggregator
 import org.scalatest.{FlatSpec, Matchers}
 
 class HourTimeAggregatorTest extends FlatSpec with Matchers

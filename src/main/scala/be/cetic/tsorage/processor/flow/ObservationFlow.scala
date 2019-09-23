@@ -2,15 +2,15 @@ package be.cetic.tsorage.processor.flow
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import be.cetic.tsorage.processor.{FloatMessage, FloatObservation}
+import be.cetic.tsorage.processor.{Message, Observation}
 
 class ObservationFlow() {
-  val fanOutObservations: FloatMessage => List[FloatObservation] = { message => message.values.map(v => FloatObservation(message.metric, message.tagset, v._1, v._2)) }
+  def fanOutObservations[T]: Message[T] => List[Observation[T]] = { message => message.values.map(v => Observation(message.metric, message.tagset, v._1, v._2, message.support)) }
 }
 
 object ObservationFlow
 {
-  val flattenMessage = Flow[FloatMessage]
-     .mapConcat(message => message.values.map(v => FloatObservation(message.metric, message.tagset, v._1, v._2)))
+  def flattenMessage[T] = Flow[Message[T]]
+     .mapConcat(message => message.values.map(v => Observation(message.metric, message.tagset, v._1, v._2, message.support)))
      .named("fannedOutMessages")
 }

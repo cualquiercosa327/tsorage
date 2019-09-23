@@ -1,4 +1,4 @@
-package be.cetic.tsorage.processor.aggregator
+package be.cetic.tsorage.processor.aggregator.time
 
 /**
   * An exception raised when an invalid aggregator name is used.

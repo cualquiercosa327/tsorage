@@ -5,7 +5,7 @@ import java.time.{LocalDateTime, ZoneId, ZoneOffset}
 
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.sharder.Sharder
-import be.cetic.tsorage.processor.{FloatMessage, FloatObservation, ProcessorConfig}
+import be.cetic.tsorage.processor.{Message, Observation, ProcessorConfig}
 import com.datastax.driver.core.querybuilder.Insert
 import com.datastax.driver.core.querybuilder.QueryBuilder.{bindMarker, insertInto}
 import com.datastax.driver.core.{BoundStatement, PreparedStatement}
@@ -24,49 +24,51 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
 
   private implicit val session = Cassandra.session
 
-  val bindRawInsert: (FloatObservation, PreparedStatement) => BoundStatement = (observation: FloatObservation, prepared: PreparedStatement) => {
+  def bindRawInsert[T]: (Observation[T], PreparedStatement) => BoundStatement = (observation: Observation[T], prepared: PreparedStatement) => {
     val ts = Timestamp.from(observation.datetime.atOffset(ZoneOffset.UTC).toInstant)
 
     val baseBound = prepared.bind()
       .setString("metric_", observation.metric)
       .setString("shard_", sharder.shard(observation.datetime))
       .setTimestamp("datetime_", ts)
-      .setFloat("value_", observation.value)
+      .set(observation.support.colname, observation.value, observation.support.codec)
 
     val folder: (BoundStatement, (String, String)) => BoundStatement = (prev: BoundStatement, tag: (String, String)) => prev.setString(tag._1, tag._2)
 
     observation.tagset.foldLeft(baseBound)(folder)
   }
 
-  val getRawInsertPreparedStatement: FloatObservation => PreparedStatement = {
-
+  def getRawInsertPreparedStatement[T]: Observation[T] => PreparedStatement = { obs => {
     val cache: LoadingCache[Set[String], PreparedStatement] = CacheBuilder.newBuilder()
-      .maximumSize(100)
-      .build(
-        new CacheLoader[Set[String], PreparedStatement] {
-          def load(tags: Set[String]): PreparedStatement = {
-            val tagnames = tags.toList
-            val tagMarkers = tags.map(tag => bindMarker(tag)).toList
+       .maximumSize(100)
+       .build(
+         new CacheLoader[Set[String], PreparedStatement] {
+           def load(tags: Set[String]): PreparedStatement = {
+             val tagnames = tags.toList
+             val tagMarkers = tags.map(tag => bindMarker(tag)).toList
 
-            val baseStatement = insertInto(rawKeyspace, "numeric")
-              .value("metric_", bindMarker("metric_"))
-              .value("shard_", bindMarker("shard_"))
-              .value("datetime_", bindMarker("datetime_"))
-              .value("value_", bindMarker("value_"))
+             val baseStatement = insertInto(rawKeyspace, "numeric")
+                .value("metric_", bindMarker("metric_"))
+                .value("shard_", bindMarker("shard_"))
+                .value("datetime_", bindMarker("datetime_"))
+                .value(obs.support.colname, bindMarker(obs.support.colname))
 
-            val folder: (Insert, String) => Insert = (base, tagname) => base.value(tagname, bindMarker(tagname))
-            val finalStatement = tags.foldLeft(baseStatement)(folder)
+             val folder: (Insert, String) => Insert = (base, tagname) => base.value(tagname, bindMarker(tagname))
+             val finalStatement = tags.foldLeft(baseStatement)(folder)
 
-            session.prepare(finalStatement)
-          }
-        }
-      )
+             session.prepare(finalStatement)
+           }
+         }
+       )
 
-    val f: FloatObservation => PreparedStatement = observation => {
+    val f: Observation[T] => PreparedStatement = observation => {
       cache.get(observation.tagset.keySet)
     }
 
-    f
+    f(obs)
+  }
+
+
   }
 
   /**
@@ -74,11 +76,11 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
     * are prepared in the Cassandra database. The retrieved object
     * is the message itself, and the tagname management is a side effect.
     */
-  val notifyTagnames: FloatMessage => FloatMessage = {
+  def notifyTagnames[T]: Message[T] => Message[T] = {
 
     var cache: Set[String] = Set()
 
-    val f: FloatMessage => FloatMessage = msg => {
+    val f: Message[T] => Message[T] = msg => {
       val recentTags = msg.tagset.keySet.diff(cache)
       cache = cache ++ recentTags
 
@@ -97,10 +99,10 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
   /**
     * Extracts a datetime from an observation.
     */
-  val observationToTime: FloatObservation => (String, String, LocalDateTime) = observation =>
+  def observationToTime[T]: Observation[T] => (String, String, LocalDateTime) = observation =>
     (observation.metric, sharder.shard(observation.datetime), observation.datetime)
 
-  val rawFlow = AltCassandraFlow.createWithPassThrough[FloatObservation](16,
+  def rawFlow[T] = AltCassandraFlow.createWithPassThrough[Observation[T]](16,
     getRawInsertPreparedStatement,
     bindRawInsert)
 }

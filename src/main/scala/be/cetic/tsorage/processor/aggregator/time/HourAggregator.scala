@@ -1,4 +1,4 @@
-package be.cetic.tsorage.processor.aggregator
+package be.cetic.tsorage.processor.aggregator.time
 
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
