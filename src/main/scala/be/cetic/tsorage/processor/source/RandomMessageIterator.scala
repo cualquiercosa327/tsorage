@@ -5,6 +5,7 @@ import java.time.LocalDateTime
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import be.cetic.tsorage.processor.Message
+import be.cetic.tsorage.processor.datatype.DoubleDataType
 
 import scala.util.Random
 
@@ -20,7 +21,9 @@ object RandomMessageIterator extends Iterator[Message[Double]] {
       "status" -> "ok",
       "owner" -> "myself"
     ),
-    List((LocalDateTime.now, Random.nextFloat())))
+    List((LocalDateTime.now, Random.nextDouble())),
+    DoubleDataType
+  )
 
   def source(): Source[Message[Double], NotUsed] = Source(RandomMessageIterable)
 

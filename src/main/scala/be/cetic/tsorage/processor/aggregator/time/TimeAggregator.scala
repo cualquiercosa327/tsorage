@@ -24,7 +24,8 @@ abstract class TimeAggregator() extends LazyLogging
       update.tagset,
       shunk(update.datetime),
       update.interval,
-      update.values
+      update.values,
+      update.support
    )
 
    /**

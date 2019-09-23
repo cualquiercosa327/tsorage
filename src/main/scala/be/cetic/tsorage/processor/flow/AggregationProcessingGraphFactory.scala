@@ -14,24 +14,25 @@ import scala.concurrent.ExecutionContextExecutor
   */
 object AggregationProcessingGraphFactory
 {
-   private def prepareValue(aggregator: Aggregator[Double])(update: ObservationUpdate[Double]) = {
-      val shunkedUpdate = aggregator.timeAggregator.shunk(update)
+   private def prepareValue[T](timeAggregator: TimeAggregator)(update: ObservationUpdate[T]) = {
+      val shunkedUpdate = timeAggregator.shunk(update)
+      val aggregator = Aggregator(timeAggregator, update.support)
 
       aggregator.updateShunk(shunkedUpdate)
       shunkedUpdate
    }
 
-   def createGraph(aggregator: Aggregator[Double])(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+   def createGraph(timeAggregator: TimeAggregator)(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
       import GraphDSL.Implicits._
 
       // Define internal flow shapes
 
-      val worker = builder.add(Flow.fromFunction(prepareValue(aggregator)))
+      val worker = builder.add(Flow.fromFunction(prepareValue[Any](timeAggregator)))
 
       // Combine shapes into a graph
       worker
 
       // Expose port
       FlowShape(worker.in, worker.out)
-   }.named(s"Aggregation Processing ${aggregator.timeAggregator.name}")
+   }.named(s"Aggregation Processing ${timeAggregator.name}")
 }

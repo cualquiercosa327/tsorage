@@ -6,7 +6,7 @@ import java.util.Date
 import be.cetic.tsorage.processor.{DAO, ObservationUpdate}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.datatype.SupportedDataType
+import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -16,7 +16,7 @@ import scala.collection.JavaConverters._
 /**
   * An entity aggregating values, and updating derivated aggregated values.
   */
-case class Aggregator[T](timeAggregator: TimeAggregator, support: SupportedDataType[T]) extends LazyLogging
+case class Aggregator[T](timeAggregator: TimeAggregator, support: DataTypeSupport[T]) extends LazyLogging
 {
    /**
      * Update the shunk corresponding to a given observation update.
@@ -40,7 +40,7 @@ case class Aggregator[T](timeAggregator: TimeAggregator, support: SupportedDataT
       val shunkShard = Cassandra.sharder.shard(update.datetime)
 
       // calculate and submit aggregates
-      val values: Map[String, T] = support.aggregator.rawAggregators.map(agg => agg._1 -> agg._2(results))
+      val values: Map[String, T] = support.dataAggregator.rawAggregators.map(agg => agg._1 -> agg._2(results))
 
       values.foreach(v => Cassandra.submitValue(
          update.metric,
@@ -53,7 +53,7 @@ case class Aggregator[T](timeAggregator: TimeAggregator, support: SupportedDataT
          v._2
       ))
 
-      val temp_values: Map[String, (Date, T)] = support.aggregator.rawTempAggregators.map(agg => agg._1 -> agg._2(results))
+      val temp_values: Map[String, (Date, T)] = support.dataAggregator.rawTempAggregators.map(agg => agg._1 -> agg._2(results))
       temp_values.foreach(v => Cassandra.submitTemporalValue(
          update.metric,
          shunkShard,
@@ -68,7 +68,14 @@ case class Aggregator[T](timeAggregator: TimeAggregator, support: SupportedDataT
 
       val all_values = values ++ temp_values.mapValues(v => v._2)
 
-      ObservationUpdate(update.metric, update.tagset, update.datetime, timeAggregator.name, all_values)
+      ObservationUpdate(
+         update.metric,
+         update.tagset,
+         update.datetime,
+         timeAggregator.name,
+         all_values,
+         update.support
+      )
    }
 
    def updateShunkFromAgg(update: ObservationUpdate[T]): ObservationUpdate[T] =
@@ -76,7 +83,7 @@ case class Aggregator[T](timeAggregator: TimeAggregator, support: SupportedDataT
       val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = timeAggregator.range(update.datetime)
       val shards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
-      val values = support.aggregator.aggAggregators.map(agg => {
+      val values = support.dataAggregator.aggAggregators.map(agg => {
          val queries = shards.map(shard => DAO.getAggShunkValues(update.metric, shard, timeAggregator.previousName, agg._1, shunkStart, shunkEnd, update.tagset))
          val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
@@ -101,7 +108,7 @@ case class Aggregator[T](timeAggregator: TimeAggregator, support: SupportedDataT
          )
       )
 
-      val temp_values: Map[String, (Date, T)] = support.aggregator.aggTempAggregators.map(agg => {
+      val temp_values: Map[String, (Date, T)] = support.dataAggregator.aggTempAggregators.map(agg => {
          val queries = shards.map(shard => DAO.getAggTempShunkValues(update.metric, shard, timeAggregator.previousName, agg._1, shunkStart, shunkEnd, update.tagset))
          val statements = queries.map(q => new SimpleStatement(q).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
 
@@ -129,7 +136,14 @@ case class Aggregator[T](timeAggregator: TimeAggregator, support: SupportedDataT
 
       val all_values = values ++ temp_values.mapValues(v => v._2)
 
-      ObservationUpdate(update.metric, update.tagset, update.datetime, timeAggregator.name, all_values)
+      ObservationUpdate(
+         update.metric,
+         update.tagset,
+         update.datetime,
+         timeAggregator.name,
+         all_values,
+         update.support
+      )
    }
 
    /**

@@ -20,16 +20,17 @@ object ProcessorConfig extends LazyLogging
      * @param message   A message
      * @return The message, without any tag with forbidden name.
      */
-   def dropBadTags(message: Message[Double]): Message[Double] = {
+   def dropBadTags[T](message: Message[T]): Message[T] = {
       val (rejected, accepted) = message.tagset.span(entry => forbiddenTagnames contains entry._1)
 
       if(!rejected.isEmpty)
          logger.info(s"Rejected tags due to forbidden tagname: ${rejected}")
 
-      Message(
+      Message[T](
          message.metric,
          accepted,
-         message.values
+         message.values,
+         message.support
       )
    }
 

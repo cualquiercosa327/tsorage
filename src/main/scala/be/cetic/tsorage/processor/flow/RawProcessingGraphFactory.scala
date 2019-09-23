@@ -23,19 +23,19 @@ object RawProcessingGraphFactory
 
       val cassandraFlow = new CassandraFlow(Cassandra.sharder)
 
-
-      val notEmpty = builder.add(Flow[Message[Double]].filter(message => !message.values.isEmpty))
-      val dropBadTags = builder.add(Flow[Message[Double]].map(ProcessorConfig.dropBadTags))
-      val declareTags = builder.add(Flow[Message[Double]].map(cassandraFlow.notifyTagnames))
-      val flattenMessage = builder.add(ObservationFlow.flattenMessage)
-      val storeRawValues = builder.add(cassandraFlow.rawFlow)
+      val notEmpty = builder.add(Flow[Message[Any]].filter(message => !message.values.isEmpty))
+      val dropBadTags = builder.add(Flow[Message[Any]].map(ProcessorConfig.dropBadTags))
+      val declareTags = builder.add(Flow[Message[Any]].map(cassandraFlow.notifyTagnames))
+      val flattenMessage = builder.add(ObservationFlow.flattenMessage[Any])
+      val storeRawValues = builder.add(cassandraFlow.rawFlow[Any])
       val toUpdate = builder.add(
-         Flow.fromFunction({observation: Observation[Double] => ObservationUpdate(
+         Flow.fromFunction({observation: Observation[Any] => ObservationUpdate(
             observation.metric,
             observation.tagset,
             observation.datetime,
             "raw",
-            Map("raw" -> observation.value)
+            Map("raw" -> observation.value),
+            observation.support
          )})
       )
 

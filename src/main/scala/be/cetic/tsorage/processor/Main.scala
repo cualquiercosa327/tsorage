@@ -26,7 +26,7 @@ import spray.json._
 
 
 object Main extends LazyLogging with App
-            with DoubleMessageJsonSupport
+            with MessageJsonSupport
 {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
@@ -47,9 +47,9 @@ object Main extends LazyLogging with App
    //  .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
 
-  def inboundMessagesConnector(): Source[Message[Double], _] = Consumer
+  def inboundMessagesConnector(): Source[Message[Any], _] = Consumer
      .plainSource(consumerSettings, Subscriptions.topics(conf.getString("kafka.topic")))
-     .map(record => record.value().parseJson.convertTo[Message[Double]])
+     .map(record => Message.messageFormat.read(record.value().parseJson))
 
   val bufferGroupSize = 1000
   val bufferTime = FiniteDuration(1, TimeUnit.SECONDS)
