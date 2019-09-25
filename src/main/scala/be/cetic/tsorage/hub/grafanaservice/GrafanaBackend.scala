@@ -67,37 +67,6 @@ object GrafanaBackend {
           case _: JsonEOFException => complete(StatusCodes.BadRequest)
         }
     }
-
-    /*
-     try {
-       val requestMap = parseJsonString(request)
-       val response = responseSearchRequest(requestMap)
-       complete(HttpEntity(`application/json`, response))
-     } catch {
-       case _: JsonParseException => complete(StatusCodes.BadRequest)
-       case _: JsonEOFException => complete(StatusCodes.BadRequest)
-     }
-     */
-
-    /*
-    // Faster, but longer code. What's the best choice?
-
-    var requestMap: Map[String, Any] = null
-    var parsingErrorOccurred = true // We assume that a parsing error will occur.
-    try {
-      requestMap = parseJsonString(request)
-      parsingErrorOccurred = false // No parsing error occurred.
-    } catch {
-      case _: JsonParseException =>
-    }
-
-    if (parsingErrorOccurred) {
-      complete(StatusCodes.BadRequest)
-    } else {
-      val response = responseSearchRequest(requestMap)
-      complete(HttpEntity(`application/json`, response))
-    }
-    */
   }
 
   /**
@@ -163,21 +132,10 @@ object GrafanaBackend {
       insideOfResponse.append(sensor)
       insideOfResponse.append("\", \"datapoints\":[")
 
-      /*
-      insideOfResponse.append(
-        sensorDataList.map(
-          singleSensorData =>
-            new StringBuilder("[").append(singleSensorData.mkString(",")).toString
-        ).mkString("],")
-      )
-      insideOfResponse.append("]")
-      */
-
       insideOfResponse.append(
         sensorDataList.map(
           _.mkString("[", ",", "]").toString
         ).mkString(",")
-        //).mkString("[", ",", "]")
       )
 
       insideOfResponse.append("]}")

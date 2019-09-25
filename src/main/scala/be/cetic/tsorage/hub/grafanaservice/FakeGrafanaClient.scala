@@ -15,8 +15,6 @@ object FakeGrafanaClient {
     implicit val materializer = ActorMaterializer()
     implicit val executionContext = system.dispatcher
 
-    // JSON request.
-
     // Test the "/" route.
     var uri = s"http://${GrafanaBackend.host}:${GrafanaBackend.port}/" // "/" route.
     var responseFuture: Future[HttpResponse] = Http().singleRequest(HttpRequest(uri = uri))
