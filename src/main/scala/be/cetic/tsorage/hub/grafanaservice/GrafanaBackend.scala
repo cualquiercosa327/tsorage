@@ -5,184 +5,96 @@ import java.time.Instant
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.MediaTypes.`application/json`
-import akka.http.scaladsl.model.{HttpEntity, StatusCodes}
-import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.model.StatusCodes
 import akka.stream.ActorMaterializer
-import akka.http.scaladsl.server.StandardRoute
+import akka.http.scaladsl.server.{Directives, StandardRoute}
 import akka.http.scaladsl.server.directives.DebuggingDirectives
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.core.io.JsonEOFException
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-
-import scala.collection.mutable.ListBuffer
 import scala.io.StdIn
-import scala.util.{Failure, Success, Try}
 
-object GrafanaBackend {
+object GrafanaBackend extends Directives with JsonSupport {
   val host = "localhost"
   val port = 8080
   val database = FakeDatabase
 
   /**
-   * Parse a JSON string into a Map collection.
-   *
-   * @param jsonString a JSON string.
-   * @return the Map collection corresponding to jsonString.
-   */
-  def parseJsonString(jsonString: String): Map[String, Any] = {
-    parse(jsonString).values.asInstanceOf[Map[String, Any]]
-  }
-
-  /**
    * Response to the search request ("/search"). In our case, it is the name of the sensors that is returned.
    *
-   * @param request the request in Map format.
-   * @return the result of the query request (in this case, the name of sensors).
+   * @param request the search request.
+   * @return the response to the search request (in this case, the name of sensors).
    */
-  private def responseSearchRequest(request: Map[String, Any]): String = {
-    database.sensors.mkString("[\"", "\", \"", "\"]")
+  private def responseSearchRequest(request: SearchRequest): SearchResponse = {
+    //database.sensors.mkString("[\"", "\", \"", "\"]")
+    SearchResponse(database.sensors.toList)
   }
 
   /**
    * Handle the search route ("/search").
    * From the official documentation: /search used by the find metric options on the query tab in panels.
    *
-   * @param request the request. It is a JSON string.
+   * @param request the search request.
    * @return a Standard route (for Akka HTTP). It is the response to the request.
    */
-  private def handleSearchRoute(request: String): StandardRoute = {
-    val requestMap = Try(parseJsonString(request))
-    requestMap match {
-      case Success(_) =>
-        // The request was successfully parsed.
-
-        val response = responseSearchRequest(requestMap.get)
-        complete(HttpEntity(`application/json`, response))
-      case Failure(error) =>
-        // Error occurred when running the "parseJsonString" method.
-        error match {
-          case _: JsonParseException => complete(StatusCodes.BadRequest)
-          case _: JsonEOFException => complete(StatusCodes.BadRequest)
-        }
-    }
+  private def handleSearchRoute(request: SearchRequest): StandardRoute = {
+    val response = responseSearchRequest(request)
+    complete(response)
   }
 
   /**
    * Response to the query request ("/query").
    * To do this, the database is queried taking into account the parameters.
    *
-   * @param request the request in Map format.
-   * @return the result of the query request.
-   * @throws NoSuchElementException if one or more keys are not found in the request.
-   * @throws ClassCastException     if one or more items cannot be casted. For example, request("theValueIsAInt") cannot be
-   *                                casted to an integer when it should be.
+   * @param request the query request.
+   * @return the response to the query request.
    */
-  private def responseQueryRequest(request: Map[String, Any]): String = {
-    var timestampFrom: Long = 0
-    var timestampTo: Long = 0
-    var interval: Long = 0
-    var maxDataPoints = 0
-    var sensorNames: List[String] = List()
-    try {
-      // Retrieve the range of time.
-      val timeRange = request("range").asInstanceOf[Map[String, Any]]
-      val timeFrom = timeRange("from").toString
-      val timeTo = timeRange("to").toString
+  private def responseQueryRequest(request: QueryRequest): QueryResponse = {
+    // Convert date time (ISO 8601) to timestamp in milliseconds.
+    val timestampFrom = Instant.parse(request.range.from).toEpochMilli
+    val timestampTo = Instant.parse(request.range.to).toEpochMilli
 
-      // Retrieve date time (ISO 8601) to timestamp in milliseconds.
-      timestampFrom = Instant.parse(timeFrom).toEpochMilli
-      timestampTo = Instant.parse(timeTo).toEpochMilli
-
-      // Retrieve the interval in milliseconds.
-      interval = request("intervalMs").asInstanceOf[Number].longValue()
-
-      // Retrieve the maximum of data points.
-      maxDataPoints = request("maxDataPoints").asInstanceOf[Number].intValue()
-
-      // Retrieve the name of the sensors.
-      val sensorList = request("targets").asInstanceOf[List[Map[String, String]]]
-      sensorNames = for (attribute <- sensorList)
-        yield attribute("target")
-    } catch {
-      case _: NoSuchElementException => throw new NoSuchElementException("Key(s) not found.")
-      case _: ClassCastException => throw new ClassCastException("Cannot cast one or more items of the request.")
+    // Get the name of sensors.
+    var sensors = List[String]()
+    for (target <- request.targets) {
+      sensors = target.target match {
+        case Some(name) =>
+          name +: sensors
+        case _ => sensors
+      }
     }
 
     // Extract the data from the database in order to response to the request.
-    var response: Map[String, List[List[Long]]] = Map()
-
-    for (sensor <- sensorNames) {
+    var dataPointsList = List[DataPoints]()
+    for (sensor <- sensors) {
+      // Extract data for this sensor.
       val sensorData = database.extractData(sensor, (timestampFrom / 1000).toInt, (timestampTo / 1000).toInt)
+      println(sensorData)
 
-      var sensorDataList = ListBuffer[List[Long]]()
-      for ((timestamp, value) <- sensorData) {
-        sensorDataList += List(value, timestamp.toLong * 1000)
-      }
+      // Retrieve the data points from the sensor data.
+      val dataPoints = for ((timestamp, value) <- sensorData)
+        yield List[BigDecimal](value, timestamp.toLong * 1000)
 
-      response += (sensor -> sensorDataList.toList)
+      // Prepend all data points for this sensor to the list of data points.
+      dataPointsList = DataPoints(sensor, dataPoints.toList) +: dataPointsList
     }
 
-    // Convert (format) the response to a JSON string.
-    val formattedResponse = new StringBuilder("[")
-
-    val insideOfResponseList = for ((sensor, sensorDataList) <- response) yield {
-      val insideOfResponse = new StringBuilder("{\"target\":\"")
-      insideOfResponse.append(sensor)
-      insideOfResponse.append("\", \"datapoints\":[")
-
-      insideOfResponse.append(
-        sensorDataList.map(
-          _.mkString("[", ",", "]").toString
-        ).mkString(",")
-      )
-
-      insideOfResponse.append("]}")
-      insideOfResponse
-    }
-    formattedResponse.append(insideOfResponseList.mkString(", "))
-    formattedResponse.append("]")
-
-    formattedResponse.toString
+    QueryResponse(dataPointsList)
   }
 
   /**
    * Handle the query route ("/query").
    * From the official documentation: /query should return metrics based on input.
    *
-   * @param request the request. It is a JSON string.
+   * @param request the query request.
    * @return a Standard route (for Akka HTTP). It is the response to the request.
    */
-  private def handleQueryRoute(request: String): StandardRoute = {
-    val requestMap = Try(parseJsonString(request))
-    requestMap match {
-      case Success(_) =>
-        // The request was successfully parsed.
-
-        val response = Try(responseQueryRequest(requestMap.get))
-        response match {
-          case Success(response) => complete(HttpEntity(`application/json`, response))
-          case Failure(error) =>
-            error match {
-              // Error occurred when casting some items of the request.
-              case _: NoSuchElementException => complete(StatusCodes.BadRequest)
-              case _: ClassCastException => complete(StatusCodes.BadRequest)
-            }
-        }
-      case Failure(error) =>
-        // Error occurred when running the "parseJsonString" method.
-        error match {
-          case _: JsonParseException => complete(StatusCodes.BadRequest)
-          case _: JsonEOFException => complete(StatusCodes.BadRequest)
-        }
-    }
+  private def handleQueryRoute(request: QueryRequest): StandardRoute = {
+    val response = responseQueryRequest(request)
+    complete(response)
   }
 
   def main(args: Array[String]) {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
-    implicit val executionContext = system.dispatcher // needed for the future flatMap/ong in the end
+    implicit val executionContext = system.dispatcher
 
     // Create all routes.
     val routes =
@@ -198,7 +110,7 @@ object GrafanaBackend {
         // Search route.
         path("search") {
           post {
-            entity(as[String]) { request =>
+            entity(as[SearchRequest]) { request =>
               DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
                 handleSearchRoute(request)
               }
@@ -208,7 +120,7 @@ object GrafanaBackend {
         // Query route.
         path("query") {
           post {
-            entity(as[String]) { request =>
+            entity(as[QueryRequest]) { request =>
               DebuggingDirectives.logRequestResult("Query route (/query)", Logging.InfoLevel) {
                 handleQueryRoute(request)
               }
