@@ -34,7 +34,14 @@ object DAO extends LazyLogging with TimeFormatHelper
      * @param tagset       The tagset characterizing the time series
      * @return A string representing a CQL query corresponding to the specified shunk
      */
-   def getRawShunkValues(metric: String, shard: String, shunkStart: LocalDateTime, shunkEnd: LocalDateTime, tagset: Map[String, String]) =
+   def getRawShunkValues(
+                           metric: String,
+                           shard: String,
+                           shunkStart: LocalDateTime,
+                           shunkEnd: LocalDateTime,
+                           tagset: Map[String, String],
+                           colname: String
+                        ) =
    {
       /*
        * TODO : Datastax Query Builder replaces any string variable by "?" instead of the actual string value.
@@ -43,7 +50,7 @@ object DAO extends LazyLogging with TimeFormatHelper
 
       val query =
          s"""
-            | SELECT datetime_, value_double_
+            | SELECT datetime_, ${colname}
             | FROM ${rawKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND

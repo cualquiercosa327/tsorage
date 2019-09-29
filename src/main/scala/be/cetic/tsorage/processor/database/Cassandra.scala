@@ -4,12 +4,14 @@ import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Date
 
-import be.cetic.tsorage.processor.ProcessorConfig
+import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig, RawUpdate}
+import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import be.cetic.tsorage.processor.sharder.{DaySharder, MonthSharder}
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
+import spray.json.JsValue
 
 object Cassandra extends LazyLogging {
   private val conf = ProcessorConfig.conf
@@ -35,35 +37,58 @@ object Cassandra extends LazyLogging {
   /**
     * Synchronously submits a raw value in the raw table.
     *
-    * @param metric
-    * @param shard
-    * @param tagset
-    * @param datetime
-    * @param value
+    * @param update The raw update to submit to Cassandra.
     */
-  def submitValue[T](
-                    metric: String,
-                    shard: String,
-                    tagset: Map[String, String],
-                    datetime: LocalDateTime,
-                    valueColumn: String,
-                    value: T): Unit =
+  def submitRawUpdate[T](update: RawUpdate): Unit =
   {
-    val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
+    val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
+    val support = DataTypeSupport.inferSupport(update)
 
     val baseStatement = insertInto(rawKeyspace, "numeric")
-       .value("metric_", metric)
-       .value("shard_", shard)
+       .value("metric_", update.metric)
+       .value("shard_", sharder.shard(update.datetime))
        .value("datetime_", ts)
-       .value(valueColumn, value)
+       .value(support.colname, support.fromJson(update.value))
 
-    val statement = tagset
+
+    val statement = update.tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
        .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
     logger.info(s"Cassandra submits raw value ${statement}")
     session.execute(statement.toString)
   }
+
+  /**
+    * Synchronously submits an aggregated value in the raw table.
+    *
+    * @param update The aggregated update to submit to Cassandra.
+    */
+  def submitAggUpdate[T](update: AggUpdate): Unit =
+  {
+    val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
+    val support = DataTypeSupport.inferSupport(update)
+
+    val baseStatement = insertInto(aggKeyspace, "numeric")
+       .value("metric_", update.metric)
+       .value("shard_", Cassandra.sharder.shard(update.datetime))
+       .value("interval_", update.interval)
+       .value("aggregator_", update.aggregation)
+       .value("datetime_", ts)
+       .value(support.colname, support.fromJson(update.value))
+
+    logger.debug(s"Base statement is ${baseStatement}")
+
+    val statement = update.tagset
+       .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
+       .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+
+    logger.debug(s"Cassandra submits value ${statement}")
+
+    session.execute(statement.toString)
+  }
+
+
 
   /**
     * Synchronously submits a value in the aggregated table.
@@ -88,7 +113,6 @@ object Cassandra extends LazyLogging {
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
-
     val baseStatement = insertInto(aggKeyspace, "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
@@ -96,13 +120,13 @@ object Cassandra extends LazyLogging {
        .value("aggregator_", aggregator)
        .value("datetime_", ts)
        .value(valueColumn, value)
-    logger.info(s"Base statement is ${baseStatement}")
+    logger.debug(s"Base statement is ${baseStatement}")
 
     val statement = tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
        .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
-    logger.info(s"Cassandra submits value ${statement}")
+    logger.debug(s"Cassandra submits value ${statement}")
 
     session.execute(statement.toString)
   }

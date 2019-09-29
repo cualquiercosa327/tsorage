@@ -10,9 +10,9 @@ import akka.stream.alpakka.cassandra.CassandraBatchSettings
 import akka.stream.scaladsl.{Sink, Source}
 import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.kafka.scaladsl.Consumer
+import be.cetic.tsorage.processor.aggregator.data.SupportedValue
 import be.cetic.tsorage.processor.aggregator.time.{DayAggregator, HourAggregator, MinuteAggregator}
 import be.cetic.tsorage.processor.flow.GlobalProcessingGraphFactory
-
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -47,7 +47,7 @@ object Main extends LazyLogging with App
    //  .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
 
-  def inboundMessagesConnector(): Source[Message[Any], _] = Consumer
+  def inboundMessagesConnector[T <: SupportedValue[T]](): Source[Message, _] = Consumer
      .plainSource(consumerSettings, Subscriptions.topics(conf.getString("kafka.topic")))
      .map(record => Message.messageFormat.read(record.value().parseJson))
 
@@ -66,5 +66,5 @@ object Main extends LazyLogging with App
 
   inboundMessagesConnector()
      .via(processorGraph)
-     .runWith(Sink.ignore)
+     .runWith(Sink.foreach( println ))
 }

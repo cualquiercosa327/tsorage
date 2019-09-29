@@ -34,7 +34,7 @@ class KafkaConsumer() extends DefaultJsonProtocol {
 
   val source: Source[ConsumerRecord[String, Array[Byte]], Consumer.Control] = Consumer.plainSource(consumerSettings, subscription)
 
-  def deserializedSource(): Source[Message[_], Consumer.Control] = {
+  def deserializedSource(): Source[Message, Consumer.Control] = {
     source.map { consumerRecord =>
       val value: Array[Byte] = consumerRecord.value()
       val data = Message.messageFormat.read(value.toJson)

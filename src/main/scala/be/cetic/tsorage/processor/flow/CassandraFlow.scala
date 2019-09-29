@@ -76,11 +76,11 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
     * are prepared in the Cassandra database. The retrieved object
     * is the message itself, and the tagname management is a side effect.
     */
-  def notifyTagnames[T]: Message[T] => Message[T] = {
+  def notifyTagnames: Message => Message = {
 
     var cache: Set[String] = Set()
 
-    val f: Message[T] => Message[T] = msg => {
+    val f: Message => Message = msg => {
       val recentTags = msg.tagset.keySet.diff(cache)
       cache = cache ++ recentTags
 
@@ -98,11 +98,12 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
 
   /**
     * Extracts a datetime from an observation.
-    */
+    *
   def observationToTime[T]: Observation[T] => (String, String, LocalDateTime) = observation =>
     (observation.metric, sharder.shard(observation.datetime), observation.datetime)
 
   def rawFlow[T] = AltCassandraFlow.createWithPassThrough[Observation[T]](16,
     getRawInsertPreparedStatement,
     bindRawInsert)
+    */
 }

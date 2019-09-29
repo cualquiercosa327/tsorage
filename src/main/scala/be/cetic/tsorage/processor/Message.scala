@@ -2,38 +2,30 @@ package be.cetic.tsorage.processor
 
 import java.time.LocalDateTime
 
-import be.cetic.tsorage.processor.datatype.{DoubleDataType, DataTypeSupport}
-import spray.json.{DeserializationException, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, DefaultJsonProtocol}
+import spray.json.{DefaultJsonProtocol, DeserializationException, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
 import spray.json._
 
 /**
   * A package message containing observations.
   */
-case class Message[T](
+case class Message(
                         metric: String,
                         tagset: Map[String, String],
-                        values: List[(LocalDateTime, T)],
-                        support: DataTypeSupport[T]
+                        `type`: String,
+                        values: List[(LocalDateTime, JsValue)]
                      ) extends Serializable
-{
-
-}
 
 object Message extends MessageJsonSupport
 {
-   val dataTypeSupports: List[DataTypeSupport[_]] = List(
-      DoubleDataType
-   )
-
-   implicit def messageFormat[T] = new RootJsonFormat[Message[T]] {
-      def write(msg: Message[T]) = new JsObject(Map(
+   implicit def messageFormat = new RootJsonFormat[Message] {
+      def write(msg: Message) = new JsObject(Map(
          "metric" -> msg.metric.toJson,
          "tagset" -> msg.tagset.toJson,
-         "type" -> msg.support.`type`.toJson,
-         "values" -> msg.values.map(value => (value._1, msg.support.asJson(value._2))).toJson
+         "type" -> msg.`type`.toJson,
+         "values" -> msg.values.toJson
       ))
 
-      def read(value: JsValue): Message[T] = value match {
+      def read(value: JsValue): Message = value match {
          case JsObject(fields) => {
             val metric = fields("metric") match {
                case JsString(x) => x
@@ -51,15 +43,11 @@ object Message extends MessageJsonSupport
                case _ => throw DeserializationException("String expected as type.")
             }
 
-            val dataType: DataTypeSupport[T] = dataTypeSupports.find(t => t.`type` == `type`) match {
-               case Some(sdt: DataTypeSupport[T]) => sdt
-               case _ => throw DeserializationException(s"${`type`} is not a supported data type.")
-            }
 
             val values = (fields("values") match {
                case JsArray(observations) => {
                   observations.map(obs => obs match {
-                     case JsArray(element) => ( element(0).convertTo[LocalDateTime] , dataType.fromJson(element(1)))
+                     case JsArray(element) => ( element(0).convertTo[LocalDateTime] , element(1))
                      case _ => throw DeserializationException(s"Invalid values.")
                   })
                }
@@ -67,7 +55,7 @@ object Message extends MessageJsonSupport
                case _ => throw DeserializationException("Array expected values.")
             }).toList
 
-            Message(metric, tagset, values, dataType)
+            Message(metric, tagset, `type`, values)
          }
 
          case _ => throw DeserializationException(s"Message expected; got ${value.compactPrint} instead.")
