@@ -11,7 +11,7 @@ import spray.json.{DeserializationException, JsNumber, JsValue}
 object LongSupport extends DataTypeSupport[Long]
 {
    override val colname = "value_long_"
-   override val codec = new CodecRegistry().codecFor(DataType.cint())
+   override val codec = new CodecRegistry().codecFor(DataType.bigint())
    override val `type` = "long"
 
    override def rawAggregations: List[DataAggregation[Long, _]] = List()

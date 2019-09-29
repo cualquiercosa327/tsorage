@@ -89,6 +89,7 @@ abstract class DataTypeSupport[T] extends LazyLogging
          shard,
          timeAggregator.previousName,
          update.aggregation,
+         colname,
          shunkStart,
          shunkEnd,
          update.tagset

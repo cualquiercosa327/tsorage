@@ -81,6 +81,7 @@ object DAO extends LazyLogging with TimeFormatHelper
                            shard: String,
                            interval: String,
                            aggregator: String,
+                           colname: String,
                            shunkStart: LocalDateTime,
                            shunkEnd: LocalDateTime,
                            tagset: Map[String, String]
@@ -93,7 +94,7 @@ object DAO extends LazyLogging with TimeFormatHelper
 
       val query =
          s"""
-            | SELECT datetime_, value_double_
+            | SELECT datetime_, ${colname}
             | FROM ${aggKeyspace}.numeric
             | WHERE
             |   (metric_ = '${metric}') AND
