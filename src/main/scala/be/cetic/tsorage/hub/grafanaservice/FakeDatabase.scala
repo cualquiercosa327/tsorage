@@ -19,7 +19,7 @@ object FakeDatabase {
   val currentTime = (System.currentTimeMillis / 1000).toInt - (24 * 3600) // 24 hours ago.
   //val currentTime = 1568991600 // Correspond to Friday 20 September 2019 15:00:00.
   //val currentTime = 1568991734 // Correspond to Friday 20 September 2019 15:02:14.
-  val data = List[Data](
+  val data: List[Data] = List[Data](
     Data(currentTime, 20, 100, 80),
     Data(currentTime + (3600 * 1), 21, 90, 79), // Add one hours.
     Data(currentTime + (3600 * 2), 22, 88, 76), // Add two hours.

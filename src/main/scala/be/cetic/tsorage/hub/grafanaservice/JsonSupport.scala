@@ -16,13 +16,15 @@ final case class SearchRequest(target: Option[String])
 final case class SearchResponse(targets: List[String])
 
 /**
- * A target (used by the query request).
+ * A target.
+ * It is used by the query request.
  *
  */
 final case class Target(target: Option[String])
 
 /**
- * A range of time in ISO 8601 date format (used by the query request).
+ * A range of time in ISO 8601 date format.
+ * It is used by the query requests.
  *
  */
 final case class TimeRange(from: String, to: String)
@@ -35,7 +37,8 @@ final case class QueryRequest(targets: List[Target], range: TimeRange,
                               intervalMs: Long, maxDataPoints: Int)
 
 /**
- * Data points for a single target (used by the query response).
+ * Data points for a single target.
+ * It is used by the query responses.
  *
  */
 final case class DataPoints(target: String, datapoints: List[List[BigDecimal]])
@@ -45,6 +48,33 @@ final case class DataPoints(target: String, datapoints: List[List[BigDecimal]])
  *
  */
 final case class QueryResponse(dataPointsList: List[DataPoints])
+
+/**
+ * An annotation.
+ * It is used by the annotation requests and responses.
+ *
+ */
+final case class Annotation(name: String, enable: Boolean, datasource: String, iconColor: Option[String],
+                            query: Option[String])
+
+/**
+ * A request for the annotation route ("/annotations").
+ *
+ */
+final case class AnnotationRequest(annotation: Annotation)
+
+/**
+ * An annotation object (that is, an annotation with a title and a time)
+ * It is used by the annotation responses.
+ *
+ */
+final case class AnnotationObject (annotation: Annotation, title: String, time: Long)
+
+/**
+ * A response for the annotation route ("/annotations").
+ *
+ */
+final case class AnnotationResponse(annotations: List[AnnotationObject])
 
 /**
  * Add the JSON support for the Grafana messages.
@@ -76,4 +106,15 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
     def write(response: QueryResponse): JsValue = response.dataPointsList.toJson
   }
 
+  // Formats for annotation requests.
+  implicit val annotationFormat: RootJsonFormat[Annotation] = jsonFormat5(Annotation)
+  implicit val annotationRequestFormat: RootJsonFormat[AnnotationRequest] = jsonFormat1(AnnotationRequest)
+
+  // Formats for annotation responses.
+  implicit val annotationObjectFormat: RootJsonFormat[AnnotationObject] = jsonFormat3(AnnotationObject)
+  implicit object annotationResponseFormat extends RootJsonFormat[AnnotationResponse] {
+    def read(value: JsValue) = AnnotationResponse(value.convertTo[List[AnnotationObject]])
+
+    def write(response: AnnotationResponse): JsValue = response.annotations.toJson
+  }
 }

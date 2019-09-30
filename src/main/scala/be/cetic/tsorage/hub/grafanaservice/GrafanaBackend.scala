@@ -9,6 +9,8 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.stream.ActorMaterializer
 import akka.http.scaladsl.server.{Directives, StandardRoute}
 import akka.http.scaladsl.server.directives.DebuggingDirectives
+
+import scala.concurrent.ExecutionContextExecutor
 import scala.io.StdIn
 
 object GrafanaBackend extends Directives with JsonSupport {
@@ -23,7 +25,6 @@ object GrafanaBackend extends Directives with JsonSupport {
    * @return the response to the search request (in this case, the name of sensors).
    */
   private def responseSearchRequest(request: SearchRequest): SearchResponse = {
-    //database.sensors.mkString("[\"", "\", \"", "\"]")
     SearchResponse(database.sensors.toList)
   }
 
@@ -66,7 +67,6 @@ object GrafanaBackend extends Directives with JsonSupport {
     for (sensor <- sensors) {
       // Extract data for this sensor.
       val sensorData = database.extractData(sensor, (timestampFrom / 1000).toInt, (timestampTo / 1000).toInt)
-      println(sensorData)
 
       // Retrieve the data points from the sensor data.
       val dataPoints = for ((timestamp, value) <- sensorData)
@@ -91,10 +91,36 @@ object GrafanaBackend extends Directives with JsonSupport {
     complete(response)
   }
 
+  /**
+   * Response to the annotation request ("/annotations").
+   *
+   * @param request the annotation request.
+   * @return the response to the annotation request.
+   */
+  private def responseAnnotationRequest(request: AnnotationRequest): AnnotationResponse = {
+    AnnotationResponse(
+      List(
+        AnnotationObject(request.annotation, "An interesting title", System.currentTimeMillis)
+      )
+    )
+  }
+
+  /**
+   * Handle the annotation route ("/annotations").
+   * From the official documentation: /annotations should return annotations.
+   *
+   * @param request the annotation request.
+   * @return a Standard route (for Akka HTTP). It is the response to the request.
+   */
+  private def handleAnnotationRoute(request: AnnotationRequest): StandardRoute = {
+    val response = responseAnnotationRequest(request)
+    complete(response)
+  }
+
   def main(args: Array[String]) {
-    implicit val system = ActorSystem()
-    implicit val materializer = ActorMaterializer()
-    implicit val executionContext = system.dispatcher
+    implicit val system: ActorSystem = ActorSystem()
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
     // Create all routes.
     val routes =
@@ -123,6 +149,16 @@ object GrafanaBackend extends Directives with JsonSupport {
             entity(as[QueryRequest]) { request =>
               DebuggingDirectives.logRequestResult("Query route (/query)", Logging.InfoLevel) {
                 handleQueryRoute(request)
+              }
+            }
+          }
+        },
+        // Annotation route.
+        path("annotations") {
+          post {
+            entity(as[AnnotationRequest]) { request =>
+              DebuggingDirectives.logRequestResult("Annotation route (/annotations)", Logging.InfoLevel) {
+                handleAnnotationRoute(request)
               }
             }
           }
