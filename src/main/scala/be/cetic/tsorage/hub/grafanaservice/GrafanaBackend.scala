@@ -16,7 +16,7 @@ import scala.io.StdIn
 object GrafanaBackend extends Directives with JsonSupport {
   val host = "localhost"
   val port = 8080
-  val database = FakeDatabase
+  val database: FakeDatabase.type = FakeDatabase
 
   /**
    * Response to the search request ("/search"). In our case, it is the name of the sensors that is returned.
@@ -38,6 +38,34 @@ object GrafanaBackend extends Directives with JsonSupport {
   private def handleSearchRoute(request: SearchRequest): StandardRoute = {
     val response = responseSearchRequest(request)
     complete(response)
+  }
+
+  /**
+   * Drop some data points to ensure that there are at most 'maxNumDataPoints' points.
+   * For example, suppose there are 1000 data points and 'maxNumDataPoints' to 600. Therefore, roughly 400 data points
+   * will be dropped.
+   *
+   * @param dataPoints       the data points.
+   * @param maxNumDataPoints the maximum number of data points to keep.
+   * @return a DataPoints object containing a maximum of 'maxNumDataPoints' data points.
+   */
+  private def dropDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int): DataPoints = {
+    val numDataPoints = dataPoints.datapoints.size
+    if (numDataPoints <= maxNumDataPoints) {
+      // It is not necessary to drop data points.
+      return dataPoints
+    }
+
+    // Here: numDataPoints > maxNumDataPoints.
+
+    val dataPointRatio = numDataPoints / maxNumDataPoints.toDouble
+
+    // Sample one data point out of 'dataPointsRatio'.
+    val dataPointList = dataPoints.datapoints.zipWithIndex.filter { case (_, i) =>
+      i % dataPointRatio < 1
+    }.map(_._1)
+
+    DataPoints(dataPoints.target, dataPointList)
   }
 
   /**
@@ -76,6 +104,11 @@ object GrafanaBackend extends Directives with JsonSupport {
       dataPointsList = DataPoints(sensor, dataPoints.toList) +: dataPointsList
     }
 
+    // Drop some data points.
+    dataPointsList = dataPointsList.map(dataPoints =>
+      dropDataPoints(dataPoints, request.maxDataPoints)
+    )
+
     QueryResponse(dataPointsList)
   }
 
@@ -100,7 +133,7 @@ object GrafanaBackend extends Directives with JsonSupport {
   private def responseAnnotationRequest(request: AnnotationRequest): AnnotationResponse = {
     AnnotationResponse(
       List(
-        AnnotationObject(request.annotation, "An interesting title", System.currentTimeMillis)
+        AnnotationObject(request.annotation, "Marker", System.currentTimeMillis)
       )
     )
   }

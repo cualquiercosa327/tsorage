@@ -47,7 +47,7 @@ object FakeGrafanaClient {
         "panelId":1,
         "range":{
           "from":"2019-09-20T16:00:00.000Z",
-          "to":"2019-09-20T21:30:00.000Z",
+          "to":"2019-09-21T07:30:00.000Z",
           "raw":{
             "from":"now-16h",
             "to":"now"

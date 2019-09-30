@@ -1,6 +1,7 @@
 package be.cetic.tsorage.hub.grafanaservice
 
 import scala.collection.immutable.ListMap
+import scala.collection.mutable.ListBuffer
 
 object FakeDatabase {
 
@@ -16,9 +17,10 @@ object FakeDatabase {
 
   // Construct the database.
   //val currentTime = (System.currentTimeMillis / 1000).toInt
-  val currentTime = (System.currentTimeMillis / 1000).toInt - (24 * 3600) // 24 hours ago.
+  val currentTime: Int = (System.currentTimeMillis / 1000).toInt - (24 * 3600) // 24 hours ago.
   //val currentTime = 1568991600 // Correspond to Friday 20 September 2019 15:00:00.
   //val currentTime = 1568991734 // Correspond to Friday 20 September 2019 15:02:14.
+  /*
   val data: List[Data] = List[Data](
     Data(currentTime, 20, 100, 80),
     Data(currentTime + (3600 * 1), 21, 90, 79), // Add one hours.
@@ -46,6 +48,20 @@ object FakeDatabase {
     Data(currentTime + (3600 * 23), 27, 66, 95),
     Data(currentTime + (3600 * 24), 28, 65, 89)
   )
+  */
+  val random = new scala.util.Random(42)
+  val step = 5 // 5 seconds.
+  val data: List[Data] = (for (i <- 1 to (60 * 60 * 24) / step)
+    yield {
+      val temperature = 10 + random.nextInt((32 - 10) + 1)
+      val pressure = 50 + random.nextInt((110 - 50) + 1)
+      val humidity = random.nextInt(100 + 1)
+      Data(currentTime + (step * i),
+        temperature,
+        pressure,
+        humidity)
+    }
+    ).toList
 
   // Timestamp in seconds.
   // Return a dictionary where keys are timestamp and values are data.
@@ -59,6 +75,6 @@ object FakeDatabase {
       )
       ).toMap
 
-    ListMap(dataExtracted.toSeq.sortBy(_._1):_*)
+    ListMap(dataExtracted.toSeq.sortBy(_._1): _*)
   }
 }

@@ -68,7 +68,7 @@ final case class AnnotationRequest(annotation: Annotation)
  * It is used by the annotation responses.
  *
  */
-final case class AnnotationObject (annotation: Annotation, title: String, time: Long)
+final case class AnnotationObject(annotation: Annotation, title: String, time: Long)
 
 /**
  * A response for the annotation route ("/annotations").
@@ -112,9 +112,11 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
 
   // Formats for annotation responses.
   implicit val annotationObjectFormat: RootJsonFormat[AnnotationObject] = jsonFormat3(AnnotationObject)
+
   implicit object annotationResponseFormat extends RootJsonFormat[AnnotationResponse] {
     def read(value: JsValue) = AnnotationResponse(value.convertTo[List[AnnotationObject]])
 
     def write(response: AnnotationResponse): JsValue = response.annotations.toJson
   }
+
 }
