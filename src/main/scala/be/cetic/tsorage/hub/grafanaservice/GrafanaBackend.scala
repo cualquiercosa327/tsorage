@@ -41,8 +41,59 @@ object GrafanaBackend extends Directives with JsonSupport {
   }
 
   /**
+   * Aggregate some data points to ensure that there are at most 'maxNumDataPoints' points.
+   * For example, suppose there are 3000 data points and 'maxNumDataPoints' is equal to 1000. Therefore, the 3000 data
+   * points will be aggregated into 1000 data points (in this example, every three consecutive data points will be
+   * aggregated).
+   *
+   * @param dataPoints       the data points.
+   * @param maxNumDataPoints the maximum number of data points to keep.
+   * @return a DataPoints object containing a maximum of 'maxNumDataPoints' data points.
+   */
+  private def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int): DataPoints = {
+    val numDataPoints = dataPoints.datapoints.size
+    if (numDataPoints <= maxNumDataPoints) {
+      // It is not necessary to drop data points.
+      return dataPoints
+    }
+
+    // Here: numDataPoints > maxNumDataPoints.
+
+    val dataPointRatio = numDataPoints / maxNumDataPoints.toDouble
+
+    // Aggregate every 'dataPointsRatio' consecutive data points (approximately).
+    var dataPointTempList: List[List[BigDecimal]] = List()
+    val dataPointList = dataPoints.datapoints.zipWithIndex.flatMap {
+      case (singleData, i) =>
+        // Add the data to the temporary list.
+        dataPointTempList = singleData +: dataPointTempList
+
+        if (i % dataPointRatio < 1) {
+          // Get value and timestamp of each data in temporary list.
+          val values = dataPointTempList.flatMap(_.headOption)
+          val timestamps = dataPointTempList.flatMap(_.tail)
+
+          // Aggregate the data contained in the temporary list.
+          val aggregatedData = List[BigDecimal](
+            (values.sum / values.size.toDouble).toLong,
+            (timestamps.sum / timestamps.size.toDouble).toLong
+          )
+
+          // Empty the temporary list.
+          dataPointTempList = List()
+
+          Some(aggregatedData)
+        } else {
+          None
+        }
+    }
+
+    DataPoints(dataPoints.target, dataPointList)
+  }
+
+  /**
    * Drop some data points to ensure that there are at most 'maxNumDataPoints' points.
-   * For example, suppose there are 1000 data points and 'maxNumDataPoints' to 600. Therefore, roughly 400 data points
+   * For example, suppose there are 1000 data points and 'maxNumDataPoints' is equal to 600. Therefore, 400 data points
    * will be dropped.
    *
    * @param dataPoints       the data points.
@@ -61,9 +112,10 @@ object GrafanaBackend extends Directives with JsonSupport {
     val dataPointRatio = numDataPoints / maxNumDataPoints.toDouble
 
     // Sample one data point out of 'dataPointsRatio'.
-    val dataPointList = dataPoints.datapoints.zipWithIndex.filter { case (_, i) =>
-      i % dataPointRatio < 1
-    }.map(_._1)
+    val dataPointList = dataPoints.datapoints.zipWithIndex.flatMap {
+      case (singleData, i) if i % dataPointRatio < 1 => Some(singleData)
+      case _ => None
+    }
 
     DataPoints(dataPoints.target, dataPointList)
   }
