@@ -4,7 +4,6 @@ import akka.NotUsed
 import akka.stream.{ActorMaterializer, Attributes, ClosedShape, FlowShape, Inlet, Outlet}
 import akka.stream.scaladsl.{Flow, GraphDSL}
 import akka.stream.stage.{GraphStage, GraphStageLogic}
-import be.cetic.tsorage.processor.aggregator.data.SupportedValue
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.{Message, Observation, ProcessorConfig, RawUpdate}
 import be.cetic.tsorage.processor.database.Cassandra

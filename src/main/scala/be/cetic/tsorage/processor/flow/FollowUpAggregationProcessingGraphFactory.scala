@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
-import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation, SupportedValue}
+import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation}
 import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
 import be.cetic.tsorage.processor.{AggUpdate, DAO, RawUpdate}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
@@ -34,7 +34,7 @@ object FollowUpAggregationProcessingGraphFactory  extends LazyLogging
      * @param update A representation of a stored/updated aggregated value.
      * @return objects representing the aggregated values that have been updated.
      */
-   private def processAggUpdate[A <: SupportedValue[A]](timeAggregator: TimeAggregator)(update: AggUpdate): AggUpdate = {
+   private def processAggUpdate(timeAggregator: TimeAggregator)(update: AggUpdate): AggUpdate = {
 
       val support: DataTypeSupport[_] = update.`type` match {
          case "double" => DoubleSupport

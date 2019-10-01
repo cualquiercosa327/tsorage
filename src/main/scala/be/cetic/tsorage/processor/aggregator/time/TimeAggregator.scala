@@ -3,7 +3,6 @@ package be.cetic.tsorage.processor.aggregator.time
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.processor.aggregator._
-import be.cetic.tsorage.processor.aggregator.data.SupportedValue
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.{AggUpdate, DAO, RawUpdate}
 import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement}
@@ -19,7 +18,7 @@ abstract class TimeAggregator() extends LazyLogging
      */
    def shunk(dt: LocalDateTime): LocalDateTime
 
-   def shunk[T <: SupportedValue[T]](update: RawUpdate): RawUpdate = RawUpdate(
+   def shunk(update: RawUpdate): RawUpdate = RawUpdate(
       update.metric,
       update.tagset,
       shunk(update.datetime),
@@ -27,7 +26,7 @@ abstract class TimeAggregator() extends LazyLogging
       update.value
    )
 
-   def shunk[A <: SupportedValue[A]](update: AggUpdate): AggUpdate = AggUpdate(
+   def shunk(update: AggUpdate): AggUpdate = AggUpdate(
       update.metric,
       update.tagset,
       update.interval,
