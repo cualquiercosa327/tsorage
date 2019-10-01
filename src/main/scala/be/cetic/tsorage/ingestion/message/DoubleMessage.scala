@@ -37,7 +37,7 @@ case class DoubleMessage(
       PreparedDoubleMessage(
          metric,
          preparedTagsWithHost,
-         "double",
+         "tdouble",
          points.map(point => (
             LocalDateTime.ofEpochSecond(point._1.toLong, 0, ZoneOffset.UTC),
             point._2
