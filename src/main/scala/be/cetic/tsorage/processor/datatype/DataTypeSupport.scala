@@ -29,6 +29,17 @@ abstract class DataTypeSupport[T] extends LazyLogging
    def asJson(value: T): JsValue
    def fromJson(value: JsValue): T
 
+   /**
+     * Converts a value into a string representing this value as a Cassandra literal
+     * @param value The value to convert
+     * @return The literal representation of the value for Cassandra.
+     */
+   def asCassandraLiteral(value: T): String
+   def asCassandraLiteral(value: JsValue): String = asCassandraLiteral(fromJson(value))
+
+   /**
+     * @return The list of all aggregations that must be applied on raw values of the supported type.
+     */
    def rawAggregations: List[DataAggregation[T, _]]
 
    def getRawValues(update: RawUpdate, shunkStart: LocalDateTime, shunkEnd: LocalDateTime): Iterable[(Date, T)] = {
@@ -112,6 +123,7 @@ object DataTypeSupport
    private def inferSupport(`type`: String) = `type` match {
       case "double" => DoubleSupport
       case "long" => LongSupport
+      case "date_double" => DateDoubleSupport
    }
 
    def inferSupport(update: RawUpdate): DataTypeSupport[_] = inferSupport(update.`type`)

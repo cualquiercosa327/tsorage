@@ -1,12 +1,11 @@
 package be.cetic.tsorage.processor.datatype
 import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation}
-import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
 import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec}
 import spray.json.{DeserializationException, JsNumber, JsValue}
 
 /**
-  * A support for the long data type.
+  * A support object for the long data type.
   */
 object LongSupport extends DataTypeSupport[Long]
 {
@@ -31,4 +30,12 @@ object LongSupport extends DataTypeSupport[Long]
    override def findAggregation(update: AggUpdate): DataAggregation[_, Long] = update.aggregation match {
       case "count" => CountAggregation[Long](LongSupport)
    }
+
+   /**
+     * Converts a value into a string representing this value as a Cassandra literal
+     *
+     * @param value The value to convert
+     * @return The literal representation of the value for Cassandra.
+     */
+   override def asCassandraLiteral(value: Long): String = value.toString
 }

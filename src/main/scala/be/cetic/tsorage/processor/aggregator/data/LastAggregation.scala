@@ -1,8 +1,8 @@
 package be.cetic.tsorage.processor.aggregator.data
 
+import java.time.{LocalDateTime, ZoneId}
 import java.util.Date
 
-import be.cetic.tsorage.processor.aggregator.data.tdatex.DateXSupport
 import be.cetic.tsorage.processor.datatype.{DataTypeSupport, DataValue}
 
 /**
@@ -10,12 +10,25 @@ import be.cetic.tsorage.processor.datatype.{DataTypeSupport, DataValue}
   */
 case class LastAggregation[T](
                                 rawSupport: DataTypeSupport[T],
-                                aggSupport: DataTypeSupport[(Date, T)]
-                             ) extends DataAggregation[T, (Date, T)]
+                                aggSupport: DataTypeSupport[(LocalDateTime, T)]
+                             ) extends DataAggregation[T, (LocalDateTime, T)]
 {
+   implicit val localDateOrdering: Ordering[LocalDateTime] = _ compareTo _
+
    override def name: String = "last"
 
-   override def rawAggregation(rawValues: Iterable[(Date, T)]): DataValue[(Date, T)] = DataValue(rawValues.maxBy(_._1), DateXSupport[T]())
+   override def rawAggregation(rawValues: Iterable[(Date, T)]): DataValue[(LocalDateTime, T)] =
+   {
+      val lastObservation = rawValues.maxBy(_._1)
+      val lastDate: LocalDateTime = lastObservation._1
+         .toInstant()
+         .atZone(ZoneId.of("GMT"))
+         .toLocalDateTime();
+      val lastValue: T = lastObservation._2
 
-   override def aggAggregation(aggValues: Iterable[(Date, (Date, T))]): DataValue[(Date, T)] = DataValue(aggValues.map(_._2).maxBy(_._1), DateXSupport[T]())
+      DataValue((lastDate, lastValue), aggSupport)
+   }
+
+   override def aggAggregation(aggValues: Iterable[(Date, (LocalDateTime, T))]): DataValue[(LocalDateTime, T)] =
+      DataValue(aggValues.map(_._2).maxBy(_._1), aggSupport)
 }

@@ -2,12 +2,12 @@ package be.cetic.tsorage.processor.datatype
 
 import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
-import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation}
+import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation, FirstAggregation, LastAggregation}
 import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec}
 import spray.json.{JsNumber, JsValue}
 
 /**
-  * Created by Mathieu Goeminne.
+  * Support object for double data type.
   */
 object DoubleSupport extends DataTypeSupport[Double]
 {
@@ -25,7 +25,9 @@ object DoubleSupport extends DataTypeSupport[Double]
       SumAggregation,
       MaximumAggregation,
       MinimumAggregation,
-      CountAggregation[Double](this)
+      CountAggregation[Double](this),
+      FirstAggregation[Double](this, DateDoubleSupport),
+      LastAggregation[Double](this, DateDoubleSupport)
    )
 
    /**
@@ -39,4 +41,12 @@ object DoubleSupport extends DataTypeSupport[Double]
       case "max" => MaximumAggregation
       case "min" => MinimumAggregation
    }
+
+   /**
+     * Converts a value into a string representing this value as a Cassandra literal
+     *
+     * @param value The value to convert
+     * @return The literal representation of the value for Cassandra.
+     */
+   override def asCassandraLiteral(value: Double): String = value.toString
 }

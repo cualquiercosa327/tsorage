@@ -29,6 +29,7 @@ object Cassandra extends LazyLogging {
     .build
     .connect()
 
+
   val sharder = conf.getString("sharder") match {
     case "day" => DaySharder
     case _ => MonthSharder
@@ -48,7 +49,7 @@ object Cassandra extends LazyLogging {
        .value("metric_", update.metric)
        .value("shard_", sharder.shard(update.datetime))
        .value("datetime_", ts)
-       .value(support.colname, support.fromJson(update.value))
+       .value(support.colname, support.asCassandraLiteral(update.value))
 
 
     val statement = update.tagset
