@@ -13,7 +13,7 @@ final case class SearchRequest(target: Option[String])
  * A response for the search route ("/search").
  *
  */
-final case class SearchResponse(targets: List[String])
+final case class SearchResponse(targets: Seq[String])
 
 /**
  * A target.
@@ -35,7 +35,7 @@ final case class TimeRange(from: String, to: String)
  * A request for the query route ("/query").
  *
  */
-final case class QueryRequest(targets: List[Target], range: TimeRange,
+final case class QueryRequest(targets: Seq[Target], range: TimeRange,
                               intervalMs: Long, maxDataPoints: Int)
 
 /**
@@ -44,13 +44,13 @@ final case class QueryRequest(targets: List[Target], range: TimeRange,
  * It is used by the query responses.
  *
  */
-final case class DataPoints(target: String, datapoints: List[(BigDecimal, Long)])
+final case class DataPoints(target: String, datapoints: Seq[(BigDecimal, Long)])
 
 /**
  * A response for the query route ("/query").
  *
  */
-final case class QueryResponse(dataPointsList: List[DataPoints])
+final case class QueryResponse(dataPointsSeq: Seq[DataPoints])
 
 /**
  * An annotation.
@@ -79,7 +79,7 @@ final case class AnnotationObject(annotation: Annotation, title: String, time: L
  * A response for the annotation route ("/annotations").
  *
  */
-final case class AnnotationResponse(annotations: List[AnnotationObject])
+final case class AnnotationResponse(annotations: Seq[AnnotationObject])
 
 /**
  * Add the JSON support for the Grafana messages.
@@ -93,7 +93,7 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
 
   // Formats for search responses.
   implicit object searchResponseFormat extends RootJsonFormat[SearchResponse] {
-    def read(value: JsValue) = SearchResponse(value.convertTo[List[String]])
+    def read(value: JsValue) = SearchResponse(value.convertTo[Seq[String]])
 
     def write(response: SearchResponse): JsValue = response.targets.toJson
   }
@@ -107,9 +107,9 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val dataPointsFormat: RootJsonFormat[DataPoints] = jsonFormat2(DataPoints)
 
   implicit object queryResponseFormat extends RootJsonFormat[QueryResponse] {
-    def read(value: JsValue) = QueryResponse(value.convertTo[List[DataPoints]])
+    def read(value: JsValue) = QueryResponse(value.convertTo[Seq[DataPoints]])
 
-    def write(response: QueryResponse): JsValue = response.dataPointsList.toJson
+    def write(response: QueryResponse): JsValue = response.dataPointsSeq.toJson
   }
 
   // Formats for annotation requests.
@@ -120,7 +120,7 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val annotationObjectFormat: RootJsonFormat[AnnotationObject] = jsonFormat3(AnnotationObject)
 
   implicit object annotationResponseFormat extends RootJsonFormat[AnnotationResponse] {
-    def read(value: JsValue) = AnnotationResponse(value.convertTo[List[AnnotationObject]])
+    def read(value: JsValue) = AnnotationResponse(value.convertTo[Seq[AnnotationObject]])
 
     def write(response: AnnotationResponse): JsValue = response.annotations.toJson
   }

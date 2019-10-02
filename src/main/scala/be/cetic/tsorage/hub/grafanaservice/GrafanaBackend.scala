@@ -47,20 +47,21 @@ object GrafanaBackend extends Directives with JsonSupport {
    * Each data is composed of a timestamp and a value. Therefore, the ith value of `values` correspond to the ith
    * timestamp of `timestamps`.
    *
-   * @param timestamps a list of timestamps (in milliseconds).
-   * @param values     a list of values.
+   * @param timestamps a sequence of timestamps (in milliseconds).
+   * @param values     a sequence of values.
    * @return the aggregation of timestamps and the aggregation of values.
    * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length or if `timestamps` or
    *                                  `values` does not contain one item.
    */
-  def aggregateDataByDropping(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
+  def aggregateDataByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): (Long, BigDecimal) = {
     if (timestamps.size != values.size) {
-      throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be have the same length.")
+      throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the same " +
+        s"length.")
     }
 
-    if (timestamps.size < 1) { // "timestamps.size" and `values.size` are equal here.
-      throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be contain at least " +
-        s"one item.")
+    if (timestamps.size < 1) { // `timestamps.size` and `values.size` are equal here.
+      throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be contain at " +
+        s"least one item.")
     }
 
     (timestamps.head, values.head)
@@ -72,14 +73,15 @@ object GrafanaBackend extends Directives with JsonSupport {
    * Each data is composed of a timestamp and a value. Therefore, the ith value of `values` correspond to the ith
    * timestamp of `timestamps`.
    *
-   * @param timestamps a list of timestamps (in milliseconds).
-   * @param values     a list of values.
+   * @param timestamps a sequence of timestamps (in milliseconds).
+   * @param values     a sequence of values.
    * @return the aggregation of timestamps and the aggregation of values.
    * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
    */
-  def aggregateDataByAveraging(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
+  def aggregateDataByAveraging(timestamps: Seq[Long], values: Seq[BigDecimal]): (Long, BigDecimal) = {
     if (timestamps.size != values.size) {
-      throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be have the same length.")
+      throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the same " +
+        s"length.")
     }
 
     ((timestamps.sum / timestamps.size.toDouble).toLong,
@@ -96,13 +98,13 @@ object GrafanaBackend extends Directives with JsonSupport {
    * @param dataPoints       the data points.
    * @param maxNumDataPoints the maximum number of data points to keep.
    * @param aggregationFunc  an aggregation function aggregating multiple timestamps/values into a single one. This
-   *                         function takes two parameters: the first one is a list of timestamps (in milliseconds) and
-   *                         the second one is a list of values. it returns a tuple containing the aggregation of
-   *                         timestamps and the aggregation of values.
+   *                         function takes two parameters: the first one is a sequence of timestamps (in
+   *                         milliseconds) and the second one is a sequence of values. it returns a tuple containing
+   *                         the aggregation of timestamps and the aggregation of values.
    * @return a DataPoints object containing a maximum of `maxNumDataPoints` data points.
    */
   def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
-                                  aggregationFunc: (List[Long], List[BigDecimal]) => (Long, BigDecimal)): DataPoints = {
+                          aggregationFunc: (Seq[Long], Seq[BigDecimal]) => (Long, BigDecimal)): DataPoints = {
 
     val numDataPoints = dataPoints.datapoints.size
     if (numDataPoints <= maxNumDataPoints) {
