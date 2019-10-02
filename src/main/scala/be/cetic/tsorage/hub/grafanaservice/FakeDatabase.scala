@@ -67,16 +67,15 @@ object FakeDatabase {
 
   // Timestamp in seconds.
   // Return a dictionary where keys are timestamp and values are data.
-  def extractData(sensorName: String, timestampFrom: Int, timestampTo: Int): Map[Int, Int] = {
-    var dataExtracted = Map[Int, Int]()
+  def extractData(sensorName: String, timestampFrom: Int, timestampTo: Int): List[(Int, Int)] = {
+    var dataExtracted = List[(Int, Int)]()
 
-    dataExtracted = (for (singleData <- data if (timestampFrom <= singleData.time && singleData.time <= timestampTo))
+    dataExtracted = for (singleData <- data if (timestampFrom <= singleData.time && singleData.time <= timestampTo))
       yield (
         singleData.time,
         singleData.getClass.getMethod(sensorName).invoke(singleData).asInstanceOf[Int] // Bruhh, that's ugly.
       )
-      ).toMap
 
-    ListMap(dataExtracted.toSeq.sortBy(_._1): _*)
+    dataExtracted
   }
 }

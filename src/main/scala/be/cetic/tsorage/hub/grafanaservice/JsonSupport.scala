@@ -41,7 +41,7 @@ final case class QueryRequest(targets: List[Target], range: TimeRange,
  * It is used by the query responses.
  *
  */
-final case class DataPoints(target: String, datapoints: List[List[BigDecimal]])
+final case class DataPoints(target: String, datapoints: List[(BigDecimal, Long)])
 
 /**
  * A response for the query route ("/query").

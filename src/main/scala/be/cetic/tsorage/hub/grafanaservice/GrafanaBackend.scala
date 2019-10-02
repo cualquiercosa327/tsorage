@@ -99,6 +99,7 @@ object GrafanaBackend extends Directives with JsonSupport {
    */
   private def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
                                   aggregationFunc: (List[Long], List[BigDecimal]) => (Long, BigDecimal)): DataPoints = {
+
     val numDataPoints = dataPoints.datapoints.size
     if (numDataPoints <= maxNumDataPoints) {
       // It is not necessary to aggregate data points.
@@ -110,7 +111,7 @@ object GrafanaBackend extends Directives with JsonSupport {
     val dataPointRatio = numDataPoints / maxNumDataPoints.toDouble
 
     // Aggregate every 'dataPointsRatio' consecutive data points (approximately).
-    var dataPointTempList: List[List[BigDecimal]] = List()
+    var dataPointTempList: List[(BigDecimal, Long)] = List()
     val dataPointList = dataPoints.datapoints.zipWithIndex.flatMap {
       case (singleData, i) =>
         // Add the data to the temporary list.
@@ -118,8 +119,8 @@ object GrafanaBackend extends Directives with JsonSupport {
 
         if (i % dataPointRatio < 1) {
           // Get value and timestamp of each data in temporary list.
-          val timestamps = dataPointTempList.flatMap(_.tail).map(_.toLong)
-          val values = dataPointTempList.flatMap(_.headOption)
+          val timestamps = dataPointTempList.map(_._2)
+          val values = dataPointTempList.map(_._1)
 
           // Aggregate the data contained in the temporary list.
           val aggregatedData = aggregationFunc(timestamps, values)
@@ -128,7 +129,7 @@ object GrafanaBackend extends Directives with JsonSupport {
           dataPointTempList = List()
 
           // Convert the aggregated data for Grafana.
-          Some(List[BigDecimal](aggregatedData._2, aggregatedData._1))
+          Some(Tuple2[BigDecimal, Long](aggregatedData._2, aggregatedData._1))
         } else {
           None
         }
@@ -167,10 +168,10 @@ object GrafanaBackend extends Directives with JsonSupport {
 
       // Retrieve the data points from the sensor data.
       val dataPoints = for ((timestamp, value) <- sensorData)
-        yield List[BigDecimal](value, timestamp.toLong * 1000)
+        yield Tuple2[BigDecimal, Long](value, timestamp.toLong * 1000)
 
       // Prepend all data points for this sensor to the list of data points.
-      dataPointsList = DataPoints(sensor, dataPoints.toList) +: dataPointsList
+      dataPointsList = DataPoints(sensor, dataPoints) +: dataPointsList
     }
 
     // Aggregate data points.
