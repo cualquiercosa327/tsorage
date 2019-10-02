@@ -158,14 +158,7 @@ object GrafanaBackend extends Directives with JsonSupport {
     val timestampTo = Instant.parse(request.range.to).toEpochMilli
 
     // Get the name of sensors.
-    var sensors = List[String]()
-    for (target <- request.targets) {
-      sensors = target.target match {
-        case Some(name) =>
-          name +: sensors
-        case _ => sensors
-      }
-    }
+    val sensors = request.targets.flatMap(_.target)
 
     // Extract the data from the database in order to response to the request.
     var dataPointsList = List[DataPoints]()
