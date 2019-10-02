@@ -1,13 +1,8 @@
 package be.cetic.tsorage.processor
 
-import java.sql.Timestamp
-import java.time.{LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
-import java.time.format.DateTimeFormatter
-import java.util.Date
+import java.time.LocalDateTime
 
 import com.typesafe.scalalogging.LazyLogging
-
-import collection.JavaConverters._
 
 object DAO extends LazyLogging with TimeFormatHelper
 {

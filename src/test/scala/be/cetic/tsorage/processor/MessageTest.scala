@@ -2,10 +2,8 @@ package be.cetic.tsorage.processor
 
 import java.time.LocalDateTime
 
-import be.cetic.tsorage.processor.aggregator.time.MinuteAggregator
 import org.scalatest.{FlatSpec, Matchers}
-import spray.json.DefaultJsonProtocol
-import spray.json._
+import spray.json.{DefaultJsonProtocol, _}
 
 class MessageTest extends FlatSpec with Matchers with DefaultJsonProtocol
 {

@@ -2,8 +2,7 @@ package be.cetic.tsorage.processor
 
 import java.time.LocalDateTime
 
-import spray.json.{DefaultJsonProtocol, DeserializationException, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
-import spray.json._
+import spray.json.{DeserializationException, JsArray, JsObject, JsString, JsValue, RootJsonFormat, _}
 
 /**
   * A package message containing observations.

@@ -1,10 +1,10 @@
 package be.cetic.tsorage.processor
 
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /**
   * A representation of the Processor configuration

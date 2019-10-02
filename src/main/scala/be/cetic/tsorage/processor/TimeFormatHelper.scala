@@ -1,7 +1,7 @@
 package be.cetic.tsorage.processor
 
-import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, ZoneId, ZonedDateTime}
 
 trait TimeFormatHelper
 {

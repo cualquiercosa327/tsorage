@@ -1,16 +1,8 @@
 package be.cetic.tsorage.processor.flow
 
-import java.sql.Timestamp
-import java.time.{LocalDateTime, ZoneId, ZoneOffset}
-
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.sharder.Sharder
-import be.cetic.tsorage.processor.{Message, Observation, ProcessorConfig}
-import com.datastax.driver.core.querybuilder.Insert
-import com.datastax.driver.core.querybuilder.QueryBuilder.{bindMarker, insertInto}
-import com.datastax.driver.core.{BoundStatement, PreparedStatement}
-import com.datastax.oss.driver.shaded.guava.common.cache.{CacheBuilder, CacheLoader, LoadingCache}
-import com.typesafe.config.ConfigFactory
+import be.cetic.tsorage.processor.{Message, ProcessorConfig}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try

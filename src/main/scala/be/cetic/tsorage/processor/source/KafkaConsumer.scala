@@ -1,13 +1,13 @@
 package be.cetic.tsorage.processor.source
 
-import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.kafka.scaladsl.Consumer
+import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.Source
 import be.cetic.tsorage.processor.Message
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord}
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
-import spray.json.{RootJsonFormat, _}
+import spray.json._
 
 object KafkaConsumer {
   val kafkaConfig = ConfigFactory.load("tsorage.conf").getConfig("kafka")

@@ -4,15 +4,12 @@ import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Date
 
-import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig, RawUpdate}
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import be.cetic.tsorage.processor.sharder.{DaySharder, MonthSharder}
+import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig, RawUpdate}
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
-import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session, UDTValue}
-import com.datastax.oss.driver.api.core.`type`.UserDefinedType
-import com.typesafe.config.ConfigFactory
+import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
 import com.typesafe.scalalogging.LazyLogging
-import spray.json.JsValue
 
 object Cassandra extends LazyLogging {
   private val conf = ProcessorConfig

@@ -1,14 +1,9 @@
 package be.cetic.tsorage.processor.datatype
 
-import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig}
+import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation, FirstAggregation, LastAggregation}
-import be.cetic.tsorage.processor.database.Cassandra
-import com.datastax.driver.core.schemabuilder.UDTType
-import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec, UDTValue, UserType}
-import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
-import com.datastax.oss.driver.api.core.data.UdtValue
-import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
+import com.datastax.driver.core.UDTValue
 import spray.json.{JsNumber, JsValue}
 
 /**

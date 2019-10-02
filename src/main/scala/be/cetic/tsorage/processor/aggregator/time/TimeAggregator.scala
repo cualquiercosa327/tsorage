@@ -2,10 +2,7 @@ package be.cetic.tsorage.processor.aggregator.time
 
 import java.time.LocalDateTime
 
-import be.cetic.tsorage.processor.aggregator._
-import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.{AggUpdate, DAO, RawUpdate}
-import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement}
+import be.cetic.tsorage.processor.{AggUpdate, RawUpdate}
 import com.typesafe.scalalogging.LazyLogging
 
 abstract class TimeAggregator() extends LazyLogging

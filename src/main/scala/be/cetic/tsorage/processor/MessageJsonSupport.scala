@@ -4,7 +4,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat, deserializationError}
 
 trait MessageJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {

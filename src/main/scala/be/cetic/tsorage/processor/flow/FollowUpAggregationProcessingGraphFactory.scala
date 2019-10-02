@@ -1,22 +1,14 @@
 package be.cetic.tsorage.processor.flow
 
-import java.time.LocalDateTime
-
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
-import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation}
-import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
-import be.cetic.tsorage.processor.{AggUpdate, DAO, RawUpdate}
+import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.datatype.{DataTypeSupport, DoubleSupport, LongSupport}
-import be.cetic.tsorage.processor.flow.FirstAggregationProcessingGraphFactory.{logger, processRawUpdate}
-import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement}
+import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContextExecutor
-import scala.collection.JavaConverters._
 
 
 /**
@@ -47,7 +39,7 @@ object FollowUpAggregationProcessingGraphFactory  extends LazyLogging
      * @return A graph representing how the raw values are aggregated to provide aggregated values.
      */
    def createGraph(timeAggregator: TimeAggregator)(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-      import GraphDSL.Implicits._
+
 
       // Define internal flow shapes
 

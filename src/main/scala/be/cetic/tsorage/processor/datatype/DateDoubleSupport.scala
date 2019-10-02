@@ -1,17 +1,12 @@
 package be.cetic.tsorage.processor.datatype
 
-import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset}
 import java.time.format.DateTimeFormatter
+import java.time.{Instant, LocalDateTime, ZoneId}
 import java.util.Date
 
-import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig}
-import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation, FirstAggregation, LastAggregation}
-import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
-import be.cetic.tsorage.processor.datatype.DoubleSupport.{`type`, rawUDTType}
-import com.datastax.driver.core.{CodecRegistry, DataType, ProtocolVersion, TupleType, UDTValue}
-import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
-import com.datastax.oss.driver.api.core.data.UdtValue
-import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
+import be.cetic.tsorage.processor.AggUpdate
+import be.cetic.tsorage.processor.aggregator.data.{DataAggregation, FirstAggregation, LastAggregation}
+import com.datastax.driver.core.UDTValue
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
 
 

@@ -1,9 +1,7 @@
 package be.cetic.tsorage.processor.sharder
 
-import java.time.{LocalDate, LocalDateTime}
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-
-import be.cetic.tsorage.processor.sharder.DaySharder.{range, shard}
 
 /**
   * A sharder is an entity responsible of partitioning time series into "buckets" or "shards",

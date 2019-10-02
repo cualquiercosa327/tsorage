@@ -1,12 +1,8 @@
 package be.cetic.tsorage.processor.datatype
-import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig}
+import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation}
-import be.cetic.tsorage.processor.datatype.DoubleSupport.{`type`, aggUDTType, rawUDTType}
-import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec, UDTValue}
-import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
-import com.datastax.oss.driver.api.core.data.UdtValue
-import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
-import spray.json.{DeserializationException, JsNumber, JsValue}
+import com.datastax.driver.core.UDTValue
+import spray.json.{JsNumber, JsValue}
 
 /**
   * A support object for the long data type.
