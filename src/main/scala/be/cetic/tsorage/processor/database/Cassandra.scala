@@ -8,19 +8,20 @@ import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig, RawUpdate}
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import be.cetic.tsorage.processor.sharder.{DaySharder, MonthSharder}
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
-import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
+import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session, UDTValue}
+import com.datastax.oss.driver.api.core.`type`.UserDefinedType
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsValue
 
 object Cassandra extends LazyLogging {
-  private val conf = ProcessorConfig.conf
+  private val conf = ProcessorConfig
 
-  private val rawKeyspace = conf.getString("cassandra.keyspaces.raw")
-  private val aggKeyspace = conf.getString("cassandra.keyspaces.aggregated")
+  private val rawKS = conf.rawKS
+  private val aggKS = conf.aggKS
 
-  private val cassandraHost = conf.getString("cassandra.host")
-  private val cassandraPort = conf.getInt("cassandra.port")
+  private val cassandraHost = conf.conf.getString("cassandra.host")
+  private val cassandraPort = conf.conf.getInt("cassandra.port")
 
   val session: Session = Cluster.builder
     .addContactPoint(cassandraHost)
@@ -30,7 +31,7 @@ object Cassandra extends LazyLogging {
     .connect()
 
 
-  val sharder = conf.getString("sharder") match {
+  val sharder = conf.conf.getString("sharder") match {
     case "day" => DaySharder
     case _ => MonthSharder
   }
@@ -45,12 +46,11 @@ object Cassandra extends LazyLogging {
     val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
     val support = DataTypeSupport.inferSupport(update)
 
-    val baseStatement = insertInto(rawKeyspace, "numeric")
+    val baseStatement = insertInto(rawKS, "numeric")
        .value("metric_", update.metric)
        .value("shard_", sharder.shard(update.datetime))
        .value("datetime_", ts)
-       .value(support.colname, support.asCassandraLiteral(update.value))
-
+       .value(support.colname, support.asRawUdtValue(update.value))
 
     val statement = update.tagset
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
@@ -70,13 +70,13 @@ object Cassandra extends LazyLogging {
     val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
     val support = DataTypeSupport.inferSupport(update)
 
-    val baseStatement = insertInto(aggKeyspace, "numeric")
+    val baseStatement = insertInto(aggKS, "numeric")
        .value("metric_", update.metric)
        .value("shard_", Cassandra.sharder.shard(update.datetime))
        .value("interval_", update.interval)
        .value("aggregator_", update.aggregation)
        .value("datetime_", ts)
-       .value(support.colname, support.fromJson(update.value))
+       .value(support.colname, support.asAggUdtValue(update.value))
 
     logger.debug(s"Base statement is ${baseStatement}")
 
@@ -84,7 +84,7 @@ object Cassandra extends LazyLogging {
        .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
        .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
-    logger.debug(s"Cassandra submits value ${statement}")
+    logger.debug(s"Cassandra submits agg value ${statement}")
 
     session.execute(statement.toString)
   }
@@ -114,7 +114,7 @@ object Cassandra extends LazyLogging {
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
-    val baseStatement = insertInto(aggKeyspace, "numeric")
+    val baseStatement = insertInto(aggKS, "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
        .value("interval_", period)
@@ -155,7 +155,7 @@ object Cassandra extends LazyLogging {
   {
     val ts = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant)
 
-    val baseStatement = insertInto(aggKeyspace, "numeric")
+    val baseStatement = insertInto(aggKS, "numeric")
        .value("metric_", metric)
        .value("shard_", shard)
        .value("interval_", period)

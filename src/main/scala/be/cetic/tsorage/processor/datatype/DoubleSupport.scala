@@ -1,9 +1,14 @@
 package be.cetic.tsorage.processor.datatype
 
-import be.cetic.tsorage.processor.AggUpdate
+import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig}
 import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation, FirstAggregation, LastAggregation}
-import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec}
+import be.cetic.tsorage.processor.database.Cassandra
+import com.datastax.driver.core.schemabuilder.UDTType
+import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec, UDTValue, UserType}
+import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
+import com.datastax.oss.driver.api.core.data.UdtValue
+import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
 import spray.json.{JsNumber, JsValue}
 
 /**
@@ -12,8 +17,7 @@ import spray.json.{JsNumber, JsValue}
 object DoubleSupport extends DataTypeSupport[Double]
 {
    override val colname = "value_double_"
-   override val codec = new CodecRegistry().codecFor(DataType.cdouble())
-   override val `type` = "double"
+   override def `type` = "tdouble"
 
    override def asJson(value: Double): JsValue = JsNumber(value)
    override def fromJson(value: JsValue): Double = value match {
@@ -43,10 +47,20 @@ object DoubleSupport extends DataTypeSupport[Double]
    }
 
    /**
-     * Converts a value into a string representing this value as a Cassandra literal
+     * Converts a value into a Cassandra UDT Value
      *
      * @param value The value to convert
-     * @return The literal representation of the value for Cassandra.
+     * @return The UDTValue representing the value
      */
-   override def asCassandraLiteral(value: Double): String = value.toString
+   override def asRawUdtValue(value: Double): UDTValue =
+      rawUDTType
+         .newValue()
+         .setDouble("value", value)
+
+   override def asAggUdtValue(value: Double): UDTValue =
+      aggUDTType
+         .newValue()
+         .setDouble("value", value)
+
+   override def fromUDTValue(value: UDTValue): Double = value.getDouble("value")
 }

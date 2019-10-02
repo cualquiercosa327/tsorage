@@ -36,11 +36,7 @@ object FollowUpAggregationProcessingGraphFactory  extends LazyLogging
      */
    private def processAggUpdate(timeAggregator: TimeAggregator)(update: AggUpdate): AggUpdate = {
 
-      val support: DataTypeSupport[_] = update.`type` match {
-         case "double" => DoubleSupport
-         case "long" => LongSupport
-      }
-
+      val support = DataTypeSupport.inferSupport(update)
       support.prepareAggUpdate(update, timeAggregator)
    }
 

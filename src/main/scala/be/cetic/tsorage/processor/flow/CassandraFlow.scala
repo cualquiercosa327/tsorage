@@ -24,53 +24,6 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
 
   private implicit val session = Cassandra.session
 
-  def bindRawInsert[T]: (Observation[T], PreparedStatement) => BoundStatement = (observation: Observation[T], prepared: PreparedStatement) => {
-    val ts = Timestamp.from(observation.datetime.atOffset(ZoneOffset.UTC).toInstant)
-
-    val baseBound = prepared.bind()
-      .setString("metric_", observation.metric)
-      .setString("shard_", sharder.shard(observation.datetime))
-      .setTimestamp("datetime_", ts)
-      .set(observation.support.colname, observation.value, observation.support.codec)
-
-    val folder: (BoundStatement, (String, String)) => BoundStatement = (prev: BoundStatement, tag: (String, String)) => prev.setString(tag._1, tag._2)
-
-    observation.tagset.foldLeft(baseBound)(folder)
-  }
-
-  def getRawInsertPreparedStatement[T]: Observation[T] => PreparedStatement = { obs => {
-    val cache: LoadingCache[Set[String], PreparedStatement] = CacheBuilder.newBuilder()
-       .maximumSize(100)
-       .build(
-         new CacheLoader[Set[String], PreparedStatement] {
-           def load(tags: Set[String]): PreparedStatement = {
-             val tagnames = tags.toList
-             val tagMarkers = tags.map(tag => bindMarker(tag)).toList
-
-             val baseStatement = insertInto(rawKeyspace, "numeric")
-                .value("metric_", bindMarker("metric_"))
-                .value("shard_", bindMarker("shard_"))
-                .value("datetime_", bindMarker("datetime_"))
-                .value(obs.support.colname, bindMarker(obs.support.colname))
-
-             val folder: (Insert, String) => Insert = (base, tagname) => base.value(tagname, bindMarker(tagname))
-             val finalStatement = tags.foldLeft(baseStatement)(folder)
-
-             session.prepare(finalStatement)
-           }
-         }
-       )
-
-    val f: Observation[T] => PreparedStatement = observation => {
-      cache.get(observation.tagset.keySet)
-    }
-
-    f(obs)
-  }
-
-
-  }
-
   /**
     * A function ensuring all tagnames contained in a message
     * are prepared in the Cassandra database. The retrieved object

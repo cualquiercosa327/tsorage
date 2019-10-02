@@ -4,14 +4,16 @@ import java.time.LocalDateTime
 import java.util.Date
 
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation}
-import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement, TypeCodec}
+import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement, TypeCodec, UDTValue, UserType}
 import spray.json._
 import DefaultJsonProtocol._
 import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import be.cetic.tsorage.processor.{AggUpdate, DAO, Message, RawUpdate}
+import be.cetic.tsorage.processor.{AggUpdate, DAO, Message, ProcessorConfig, RawUpdate}
 import be.cetic.tsorage.processor.database.Cassandra
+import be.cetic.tsorage.processor.datatype.DoubleSupport.`type`
 import be.cetic.tsorage.processor.flow.FollowUpAggregationProcessingGraphFactory.logger
+import com.datastax.oss.driver.api.core.data.UdtValue
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
@@ -23,19 +25,33 @@ import scala.collection.JavaConverters._
 abstract class DataTypeSupport[T] extends LazyLogging
 {
    def colname: String
-   def codec: TypeCodec[T]
    def `type`: String
+
+   protected val rawUDTType : UserType = Cassandra.session
+      .getCluster
+      .getMetadata
+      .getKeyspace(ProcessorConfig.rawKS)
+      .getUserType(s"${`type`}")
+
+   protected val aggUDTType : UserType = Cassandra.session
+      .getCluster
+      .getMetadata
+      .getKeyspace(ProcessorConfig.rawKS)
+      .getUserType(s"${`type`}")
 
    def asJson(value: T): JsValue
    def fromJson(value: JsValue): T
 
    /**
-     * Converts a value into a string representing this value as a Cassandra literal
+     * Converts a value into a Cassandra UDT Value
      * @param value The value to convert
-     * @return The literal representation of the value for Cassandra.
+     * @return The UDTValue representing the value
      */
-   def asCassandraLiteral(value: T): String
-   def asCassandraLiteral(value: JsValue): String = asCassandraLiteral(fromJson(value))
+   def asRawUdtValue(value: T): UDTValue
+   def asAggUdtValue(value: T): UDTValue
+
+   def fromUDTValue(value: UDTValue): T
+
 
    /**
      * @return The list of all aggregations that must be applied on raw values of the supported type.
@@ -53,7 +69,7 @@ abstract class DataTypeSupport[T] extends LazyLogging
       statements.par
          .map(statement => Cassandra.session.execute(statement).all().asScala)
          .reduce((l1, l2) => l1 ++ l2)
-         .map(row => (row.getTimestamp("datetime_"), row.get(colname, codec))).toIterable
+         .map(row => (row.getTimestamp("datetime_"), fromUDTValue(row.getUDTValue(colname)))).toIterable
    }
 
    /**
@@ -111,18 +127,22 @@ abstract class DataTypeSupport[T] extends LazyLogging
       val results = statements.par
          .map(statement => Cassandra.session.execute(statement).all().asScala)
          .reduce((l1, l2) => l1 ++ l2)
-         .map(row => (row.getTimestamp("datetime_"), row.get(colname, codec))).toIterable
+         .map(row => (row.getTimestamp("datetime_"), fromUDTValue(row.getUDTValue(colname)))).toIterable
 
       val value = dataAggregation.aggAggregation(results)
       AggUpdate(update.metric, update.tagset, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
    }
+
+   final def asRawUdtValue(value: JsValue): UDTValue = asRawUdtValue(fromJson(value))
+   final def asAggUdtValue(value: JsValue): UDTValue = asAggUdtValue(fromJson(value))
 }
 
 object DataTypeSupport
 {
+   // TODO : replace it by a list traversal
    private def inferSupport(`type`: String) = `type` match {
-      case "double" => DoubleSupport
-      case "long" => LongSupport
+      case "tdouble" => DoubleSupport
+      case "tlong" => LongSupport
       case "date_double" => DateDoubleSupport
    }
 

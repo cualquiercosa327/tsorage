@@ -46,4 +46,7 @@ object ProcessorConfig extends LazyLogging
       val aggs = names.scanLeft(("raw", Option.empty[TimeAggregator])){ case ((previousName, previousAgg), name) => (name, Some(TimeAggregator(name, previousName))) }
       aggs.toList.flatMap(agg => agg._2)
    }
+
+   val rawKS: String = conf.getString("cassandra.keyspaces.raw")
+   val aggKS: String = conf.getString("cassandra.keyspaces.aggregated")
 }

@@ -1,13 +1,17 @@
 package be.cetic.tsorage.processor.datatype
 
-import java.time.{Instant, LocalDateTime, ZoneId}
+import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset}
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
-import be.cetic.tsorage.processor.AggUpdate
+import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig}
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation, FirstAggregation, LastAggregation}
 import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
-import com.datastax.driver.core.{CodecRegistry, DataType, ProtocolVersion, TupleType}
+import be.cetic.tsorage.processor.datatype.DoubleSupport.{`type`, rawUDTType}
+import com.datastax.driver.core.{CodecRegistry, DataType, ProtocolVersion, TupleType, UDTValue}
+import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
+import com.datastax.oss.driver.api.core.data.UdtValue
+import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
 
 
@@ -16,10 +20,7 @@ object DateDoubleSupport extends DataTypeSupport[(LocalDateTime, Double)]
    val format = DateTimeFormatter.ISO_DATE_TIME
 
    override val colname = "value_date_double_"
-   override val codec = new CodecRegistry().codecFor(
-      TupleType.of(ProtocolVersion.NEWEST_SUPPORTED, new CodecRegistry(), DataType.timestamp(), DataType.cdouble())
-   )
-   override val `type` = "date_double"
+   override def `type` = "date_double"
 
    override def asJson(value: (LocalDateTime, Double)): JsValue = JsObject(
       "datetime" -> JsString(format.format(value._1)),
@@ -53,11 +54,29 @@ object DateDoubleSupport extends DataTypeSupport[(LocalDateTime, Double)]
    }
 
    /**
-     * Converts a value into a string representing this value as a Cassandra literal
+     * Converts a value into a Cassandra UDT Value
      *
      * @param value The value to convert
-     * @return The literal representation of the value for Cassandra.
+     * @return The UDTValue representing the value
      */
-   override def asCassandraLiteral(value: (LocalDateTime, Double)): String =
-      s"""{datetime: '${format.format(value._1)}', value: ${value._2}}"""
+   override def asRawUdtValue(value: (LocalDateTime, Double)): UDTValue =
+      rawUDTType
+         .newValue()
+         .setTimestamp("datetime", Date.from( value._1.atZone( ZoneId.of("GMT")).toInstant()))
+         .setDouble("value", value._2)
+
+
+   override def asAggUdtValue(value: (LocalDateTime, Double)): UDTValue =
+      aggUDTType
+         .newValue()
+         .setTimestamp("datetime", Date.from( value._1.atZone( ZoneId.of("GMT")).toInstant()))
+         .setDouble("value", value._2)
+
+   override def fromUDTValue(value: UDTValue): (LocalDateTime, Double) = (
+       Instant
+          .ofEpochMilli(value.getTimestamp("datetime").getTime())
+          .atZone(ZoneId.of("GMT"))
+          .toLocalDateTime(),
+      value.getDouble("value")
+   )
 }

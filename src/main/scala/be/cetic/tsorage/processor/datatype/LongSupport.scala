@@ -1,7 +1,11 @@
 package be.cetic.tsorage.processor.datatype
-import be.cetic.tsorage.processor.AggUpdate
+import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig}
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation}
-import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec}
+import be.cetic.tsorage.processor.datatype.DoubleSupport.{`type`, aggUDTType, rawUDTType}
+import com.datastax.driver.core.{CodecRegistry, DataType, TypeCodec, UDTValue}
+import com.datastax.oss.driver.api.core.`type`.{DataTypes, UserDefinedType}
+import com.datastax.oss.driver.api.core.data.UdtValue
+import com.datastax.oss.driver.internal.core.`type`.UserDefinedTypeBuilder
 import spray.json.{DeserializationException, JsNumber, JsValue}
 
 /**
@@ -10,8 +14,7 @@ import spray.json.{DeserializationException, JsNumber, JsValue}
 object LongSupport extends DataTypeSupport[Long]
 {
    override val colname = "value_long_"
-   override val codec = new CodecRegistry().codecFor(DataType.bigint())
-   override val `type` = "long"
+   override def `type` = "tlong"
 
    override def rawAggregations: List[DataAggregation[Long, _]] = List()
 
@@ -32,10 +35,20 @@ object LongSupport extends DataTypeSupport[Long]
    }
 
    /**
-     * Converts a value into a string representing this value as a Cassandra literal
+     * Converts a value into a Cassandra UDT Value
      *
      * @param value The value to convert
-     * @return The literal representation of the value for Cassandra.
+     * @return The UDTValue representing the value
      */
-   override def asCassandraLiteral(value: Long): String = value.toString
+   override def asRawUdtValue(value: Long): UDTValue =
+      rawUDTType
+         .newValue()
+         .setLong("value", value)
+
+   override def asAggUdtValue(value: Long): UDTValue =
+      aggUDTType
+         .newValue()
+         .setLong("value", value)
+
+   override def fromUDTValue(value: UDTValue): Long = value.getLong("value")
 }
