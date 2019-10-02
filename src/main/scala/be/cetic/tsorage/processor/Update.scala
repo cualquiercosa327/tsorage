@@ -4,16 +4,24 @@ import java.time.LocalDateTime
 
 import spray.json.JsValue
 
+abstract class Update(
+                        val metric: String,
+                        val tagset: Map[String, String],
+                        val datetime: LocalDateTime,
+                        val `type`: String,
+                        val value: JsValue
+                     )
+
 /**
   * Represents a change in a raw observation.
   */
-case class RawUpdate(
-                       metric: String,
-                       tagset: Map[String, String],
-                       datetime: LocalDateTime,
-                       `type`: String,
-                       value: JsValue
-                    )
+class RawUpdate(
+   metric: String,
+   tagset: Map[String, String],
+   datetime: LocalDateTime,
+   `type`: String,
+   value: JsValue
+) extends Update(metric, tagset, datetime, `type`, value)
 
 /**
   * Represents a change in an aggregated observation.
@@ -25,12 +33,12 @@ case class RawUpdate(
   * @param value
   * @param aggregation
   */
-case class AggUpdate(
-                       metric: String,
-                       tagset: Map[String, String],
-                       interval: String,
-                       datetime: LocalDateTime,
-                       `type`: String,
-                       value: JsValue,
-                       aggregation: String
-                    )
+class AggUpdate(
+   metric: String,
+   tagset: Map[String, String],
+   val interval: String,
+   datetime: LocalDateTime,
+   `type`: String,
+   value: JsValue,
+   val aggregation: String
+) extends Update(metric, tagset, datetime, `type`, value)

@@ -5,7 +5,7 @@ import be.cetic.tsorage.processor.{Message, RawUpdate}
 object ObservationFlow
 {
   def messageToRawUpdates(msg: Message): List[RawUpdate] = msg.values.map(
-        obs => RawUpdate(
+        obs => new RawUpdate(
            msg.metric,
            msg.tagset,
            obs._1,

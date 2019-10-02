@@ -20,7 +20,7 @@ case class DataValue[T](val value: T, support: DataTypeSupport[T])
                      datetime: LocalDateTime,
                      dataAggregation: String
                   ): AggUpdate =
-      AggUpdate(
+      new AggUpdate(
          rawUpdate.metric,
          rawUpdate.tagset,
          timeAggregator.name,

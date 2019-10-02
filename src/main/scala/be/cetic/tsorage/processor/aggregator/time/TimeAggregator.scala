@@ -15,7 +15,7 @@ abstract class TimeAggregator() extends LazyLogging
      */
    def shunk(dt: LocalDateTime): LocalDateTime
 
-   def shunk(update: RawUpdate): RawUpdate = RawUpdate(
+   def shunk(update: RawUpdate): RawUpdate = new RawUpdate(
       update.metric,
       update.tagset,
       shunk(update.datetime),
@@ -23,7 +23,7 @@ abstract class TimeAggregator() extends LazyLogging
       update.value
    )
 
-   def shunk(update: AggUpdate): AggUpdate = AggUpdate(
+   def shunk(update: AggUpdate): AggUpdate = new AggUpdate(
       update.metric,
       update.tagset,
       update.interval,

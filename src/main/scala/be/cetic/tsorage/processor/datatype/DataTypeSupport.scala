@@ -125,7 +125,7 @@ abstract class DataTypeSupport[T] extends LazyLogging
          .map(row => (row.getTimestamp("datetime_"), fromUDTValue(row.getUDTValue(colname)))).toIterable
 
       val value = dataAggregation.aggAggregation(results)
-      AggUpdate(update.metric, update.tagset, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
+      new AggUpdate(update.metric, update.tagset, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
    }
 
    final def asRawUdtValue(value: JsValue): UDTValue = asRawUdtValue(fromJson(value))
