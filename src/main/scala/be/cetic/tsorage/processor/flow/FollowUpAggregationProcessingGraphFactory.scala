@@ -3,9 +3,9 @@ package be.cetic.tsorage.processor.flow
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
-import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
+import be.cetic.tsorage.processor.update.AggUpdate
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContextExecutor

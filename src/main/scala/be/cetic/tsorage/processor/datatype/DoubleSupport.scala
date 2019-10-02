@@ -1,8 +1,8 @@
 package be.cetic.tsorage.processor.datatype
 
-import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.data.tdouble.{MaximumAggregation, MinimumAggregation, SumAggregation}
 import be.cetic.tsorage.processor.aggregator.data.{CountAggregation, DataAggregation, FirstAggregation, LastAggregation}
+import be.cetic.tsorage.processor.update.AggUpdate
 import com.datastax.driver.core.UDTValue
 import spray.json.{JsNumber, JsValue}
 

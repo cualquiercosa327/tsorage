@@ -3,7 +3,7 @@ package be.cetic.tsorage.processor.datatype
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import be.cetic.tsorage.processor.{AggUpdate, RawUpdate}
+import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
 import spray.json.JsValue
 
 /**

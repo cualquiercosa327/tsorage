@@ -2,9 +2,9 @@ package be.cetic.tsorage.processor.aggregator.data
 
 import java.util.Date
 
-import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.datatype.{DataTypeSupport, DataValue}
+import be.cetic.tsorage.processor.update.AggUpdate
 
 /**
   * A way to aggregate data values.

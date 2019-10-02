@@ -1,6 +1,7 @@
 package be.cetic.tsorage.processor.flow
 
-import be.cetic.tsorage.processor.{Message, RawUpdate}
+import be.cetic.tsorage.processor.Message
+import be.cetic.tsorage.processor.update.RawUpdate
 
 object ObservationFlow
 {

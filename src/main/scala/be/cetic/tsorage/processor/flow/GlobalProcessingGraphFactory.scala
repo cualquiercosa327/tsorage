@@ -3,8 +3,8 @@ package be.cetic.tsorage.processor.flow
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
-import be.cetic.tsorage.processor.{AggUpdate, RawUpdate}
 import be.cetic.tsorage.processor.aggregator.time.{HourAggregator, MinuteAggregator, TimeAggregator}
+import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
 
 import scala.concurrent.ExecutionContextExecutor
 

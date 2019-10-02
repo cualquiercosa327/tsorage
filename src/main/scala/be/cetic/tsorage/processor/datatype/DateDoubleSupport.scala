@@ -4,8 +4,8 @@ import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDateTime, ZoneId}
 import java.util.Date
 
-import be.cetic.tsorage.processor.AggUpdate
 import be.cetic.tsorage.processor.aggregator.data.{DataAggregation, FirstAggregation, LastAggregation}
+import be.cetic.tsorage.processor.update.AggUpdate
 import com.datastax.driver.core.UDTValue
 import spray.json.{JsNumber, JsObject, JsString, JsValue}
 

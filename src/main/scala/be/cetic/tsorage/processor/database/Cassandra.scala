@@ -6,7 +6,8 @@ import java.util.Date
 
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import be.cetic.tsorage.processor.sharder.{DaySharder, MonthSharder}
-import be.cetic.tsorage.processor.{AggUpdate, ProcessorConfig, RawUpdate}
+import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
+import be.cetic.tsorage.processor.ProcessorConfig
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
 import com.typesafe.scalalogging.LazyLogging

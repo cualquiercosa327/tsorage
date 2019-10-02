@@ -6,7 +6,8 @@ import java.util.Date
 import be.cetic.tsorage.processor.aggregator.data.DataAggregation
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.{AggUpdate, DAO, ProcessorConfig, RawUpdate}
+import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
+import be.cetic.tsorage.processor.{DAO, ProcessorConfig}
 import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement, UDTValue, UserType}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._

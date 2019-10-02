@@ -2,7 +2,7 @@ package be.cetic.tsorage.processor.flow
 
 import akka.stream.scaladsl.Flow
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.{AggUpdate, RawUpdate}
+import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
 import com.typesafe.scalalogging.LazyLogging
 
 
