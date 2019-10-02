@@ -72,7 +72,7 @@ object FakeGrafanaClient {
           }
         ],
         "format":"json",
-        "maxDataPoints":5
+        "maxDataPoints":8
       }
       """.stripMargin)
     //content = HttpEntity(`application/json`, """{"requestId":"Q119","timezone":"","panelId":2,"dashboardId":null,"range":{"from":"2019-09-24T08:13:20.835Z","to":"2019-09-24T14:13:20.835Z","raw":{"from":"now-6h","to":"now"}},"interval":"30s","intervalMs":30000,"targets":[{"target":"humidity","refId":"A","type":"timeserie"}],"maxDataPoints":840,"scopedVars":{"__interval":{"text":"30s","value":"30s"},"__interval_ms":{"text":"30000","value":30000}},"startTime":1569334400839,"rangeRaw":{"from":"now-6h","to":"now"},"adhocFilters":[]}""".stripMargin)

@@ -16,7 +16,7 @@ object FakeDatabase {
   val sensors: Seq[String] = Seq("temperature", "pressure", "humidity")
 
   // Construct the database.
-  //val currentTime = (System.currentTimeMillis / 1000).toInt
+  //val currentTime: Int = (System.currentTimeMillis / 1000).toInt
   val currentTime: Int = (System.currentTimeMillis / 1000).toInt - (24 * 3600) // 24 hours ago.
   //val currentTime = 1568991600 // Correspond to Friday 20 September 2019 15:00:00.
   //val currentTime = 1568991734 // Correspond to Friday 20 September 2019 15:02:14.
@@ -49,6 +49,7 @@ object FakeDatabase {
     Data(currentTime + (3600 * 24), 28, 65, 89)
   )
   */
+  ///*
   val random = new scala.util.Random(42)
   val step = 5 // 5 seconds.
   val data: List[Data] = (for (i <- 1 to (60 * 60 * 24) / step)
@@ -62,6 +63,7 @@ object FakeDatabase {
         humidity)
     }
     ).toList
+  //*/
 
   // Timestamp in seconds.
   // Return a dictionary where keys are timestamp and values are data.

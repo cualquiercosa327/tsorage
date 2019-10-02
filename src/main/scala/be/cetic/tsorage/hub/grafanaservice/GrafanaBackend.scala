@@ -41,19 +41,67 @@ object GrafanaBackend extends Directives with JsonSupport {
   }
 
   /**
-   * Aggregate some data points to ensure that there are at most 'maxNumDataPoints' points.
+   * Aggregate data by keeping only the first one (the remaining data is dropped).
+   * Each data is composed of a timestamp and a value. Therefore, the ith value of 'values' correspond to the ith
+   * timestamp of 'timestamps'.
+   *
+   * @param timestamps a list of timestamps (in milliseconds).
+   * @param values     a list of values.
+   * @return the aggregation of timestamps and the aggregation of values.
+   * @throws IllegalArgumentException if 'timestamps' and 'values' does not have the same length.
+   * @throws IllegalArgumentException if 'timestamps' or 'values' does not contain one item.
+   */
+  private def aggregateDataByDropping(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
+    if (timestamps.size != values.size) {
+      throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be have the same length.")
+    }
+
+    if (timestamps.size < 1) { // "timestamps.size" and 'values.size' are equal here.
+      throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be contain at least " +
+        s"one item.")
+    }
+
+    (timestamps.head, values.head)
+  }
+
+  /**
+   * Aggregate data by averaging them.
+   * Each data is composed of a timestamp and a value. Therefore, the ith value of 'values' correspond to the ith
+   * timestamp of 'timestamps'.
+   *
+   * @param timestamps a list of timestamps (in milliseconds).
+   * @param values     a list of values.
+   * @return the aggregation of timestamps and the aggregation of values.
+   * @throws IllegalArgumentException if 'timestamps' and 'values' does not have the same length.
+   */
+  private def aggregateDataByAveraging(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
+    if (timestamps.size != values.size) {
+      throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be have the same length.")
+    }
+
+    ((timestamps.sum / timestamps.size.toDouble).toLong,
+      (values.sum / values.size.toDouble).toLong)
+  }
+
+  /**
+   * Aggregate data points to ensure that there are at most 'maxNumDataPoints' points.
    * For example, suppose there are 3000 data points and 'maxNumDataPoints' is equal to 1000. Therefore, the 3000 data
    * points will be aggregated into 1000 data points (in this example, every three consecutive data points will be
    * aggregated).
    *
    * @param dataPoints       the data points.
    * @param maxNumDataPoints the maximum number of data points to keep.
+   * @param aggregationFunc  an aggregation function aggregating multiple timestamps/values into a single one. This
+   *                         function takes two parameters: the first one is a list of timestamps (in milliseconds) and
+   *                         the second one is a list of values. it returns a tuple containing the aggregation of
+   *                         timestamps and the aggregation of values.
    * @return a DataPoints object containing a maximum of 'maxNumDataPoints' data points.
    */
-  private def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int): DataPoints = {
+  private def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
+                                  aggregationFunc: (List[Long], List[BigDecimal]) => (Long, BigDecimal)): DataPoints = {
     val numDataPoints = dataPoints.datapoints.size
     if (numDataPoints <= maxNumDataPoints) {
-      // It is not necessary to drop data points.
+      // It is not necessary to aggregate data points.
       return dataPoints
     }
 
@@ -70,51 +118,20 @@ object GrafanaBackend extends Directives with JsonSupport {
 
         if (i % dataPointRatio < 1) {
           // Get value and timestamp of each data in temporary list.
+          val timestamps = dataPointTempList.flatMap(_.tail).map(_.toLong)
           val values = dataPointTempList.flatMap(_.headOption)
-          val timestamps = dataPointTempList.flatMap(_.tail)
 
           // Aggregate the data contained in the temporary list.
-          val aggregatedData = List[BigDecimal](
-            (values.sum / values.size.toDouble).toLong,
-            (timestamps.sum / timestamps.size.toDouble).toLong
-          )
+          val aggregatedData = aggregationFunc(timestamps, values)
 
           // Empty the temporary list.
           dataPointTempList = List()
 
-          Some(aggregatedData)
+          // Convert the aggregated data for Grafana.
+          Some(List[BigDecimal](aggregatedData._2, aggregatedData._1))
         } else {
           None
         }
-    }
-
-    DataPoints(dataPoints.target, dataPointList)
-  }
-
-  /**
-   * Drop some data points to ensure that there are at most 'maxNumDataPoints' points.
-   * For example, suppose there are 1000 data points and 'maxNumDataPoints' is equal to 600. Therefore, 400 data points
-   * will be dropped.
-   *
-   * @param dataPoints       the data points.
-   * @param maxNumDataPoints the maximum number of data points to keep.
-   * @return a DataPoints object containing a maximum of 'maxNumDataPoints' data points.
-   */
-  private def dropDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int): DataPoints = {
-    val numDataPoints = dataPoints.datapoints.size
-    if (numDataPoints <= maxNumDataPoints) {
-      // It is not necessary to drop data points.
-      return dataPoints
-    }
-
-    // Here: numDataPoints > maxNumDataPoints.
-
-    val dataPointRatio = numDataPoints / maxNumDataPoints.toDouble
-
-    // Sample one data point out of 'dataPointsRatio'.
-    val dataPointList = dataPoints.datapoints.zipWithIndex.flatMap {
-      case (singleData, i) if i % dataPointRatio < 1 => Some(singleData)
-      case _ => None
     }
 
     DataPoints(dataPoints.target, dataPointList)
@@ -156,9 +173,9 @@ object GrafanaBackend extends Directives with JsonSupport {
       dataPointsList = DataPoints(sensor, dataPoints.toList) +: dataPointsList
     }
 
-    // Drop some data points.
+    // Aggregate data points.
     dataPointsList = dataPointsList.map(dataPoints =>
-      dropDataPoints(dataPoints, request.maxDataPoints)
+      aggregateDataPoints(dataPoints, request.maxDataPoints, aggregateDataByAveraging)
     )
 
     QueryResponse(dataPointsList)
