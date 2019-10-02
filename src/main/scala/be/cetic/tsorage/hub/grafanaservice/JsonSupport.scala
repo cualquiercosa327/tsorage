@@ -17,6 +17,7 @@ final case class SearchResponse(targets: List[String])
 
 /**
  * A target.
+ *
  * It is used by the query request.
  *
  */
@@ -24,6 +25,7 @@ final case class Target(target: Option[String])
 
 /**
  * A range of time in ISO 8601 date format.
+ *
  * It is used by the query requests.
  *
  */
@@ -38,6 +40,7 @@ final case class QueryRequest(targets: List[Target], range: TimeRange,
 
 /**
  * Data points for a single target.
+ *
  * It is used by the query responses.
  *
  */
@@ -51,6 +54,7 @@ final case class QueryResponse(dataPointsList: List[DataPoints])
 
 /**
  * An annotation.
+ *
  * It is used by the annotation requests and responses.
  *
  */
@@ -64,7 +68,8 @@ final case class Annotation(name: String, enable: Boolean, datasource: String, i
 final case class AnnotationRequest(annotation: Annotation)
 
 /**
- * An annotation object (that is, an annotation with a title and a time)
+ * An annotation object (that is, an annotation with a title and a time).
+ *
  * It is used by the annotation responses.
  *
  */
@@ -78,6 +83,7 @@ final case class AnnotationResponse(annotations: List[AnnotationObject])
 
 /**
  * Add the JSON support for the Grafana messages.
+ *
  * More specifically , this trait contains all formats of Grafana requests and responses.
  *
  */

@@ -30,6 +30,7 @@ object GrafanaBackend extends Directives with JsonSupport {
 
   /**
    * Handle the search route ("/search").
+   *
    * From the official documentation: /search used by the find metric options on the query tab in panels.
    *
    * @param request the search request.
@@ -42,21 +43,22 @@ object GrafanaBackend extends Directives with JsonSupport {
 
   /**
    * Aggregate data by keeping only the first one (the remaining data is dropped).
-   * Each data is composed of a timestamp and a value. Therefore, the ith value of 'values' correspond to the ith
-   * timestamp of 'timestamps'.
+   *
+   * Each data is composed of a timestamp and a value. Therefore, the ith value of `values` correspond to the ith
+   * timestamp of `timestamps`.
    *
    * @param timestamps a list of timestamps (in milliseconds).
    * @param values     a list of values.
    * @return the aggregation of timestamps and the aggregation of values.
-   * @throws IllegalArgumentException if 'timestamps' and 'values' does not have the same length.
-   * @throws IllegalArgumentException if 'timestamps' or 'values' does not contain one item.
+   * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length or if `timestamps` or
+   *                                  `values` does not contain one item.
    */
-  private def aggregateDataByDropping(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
+  def aggregateDataByDropping(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
     if (timestamps.size != values.size) {
       throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be have the same length.")
     }
 
-    if (timestamps.size < 1) { // "timestamps.size" and 'values.size' are equal here.
+    if (timestamps.size < 1) { // "timestamps.size" and `values.size` are equal here.
       throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be contain at least " +
         s"one item.")
     }
@@ -66,15 +68,16 @@ object GrafanaBackend extends Directives with JsonSupport {
 
   /**
    * Aggregate data by averaging them.
-   * Each data is composed of a timestamp and a value. Therefore, the ith value of 'values' correspond to the ith
-   * timestamp of 'timestamps'.
+   *
+   * Each data is composed of a timestamp and a value. Therefore, the ith value of `values` correspond to the ith
+   * timestamp of `timestamps`.
    *
    * @param timestamps a list of timestamps (in milliseconds).
    * @param values     a list of values.
    * @return the aggregation of timestamps and the aggregation of values.
-   * @throws IllegalArgumentException if 'timestamps' and 'values' does not have the same length.
+   * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
    */
-  private def aggregateDataByAveraging(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
+  def aggregateDataByAveraging(timestamps: List[Long], values: List[BigDecimal]): (Long, BigDecimal) = {
     if (timestamps.size != values.size) {
       throw new IllegalArgumentException(s"Invalid list length, $timestamps and $values must be have the same length.")
     }
@@ -84,8 +87,9 @@ object GrafanaBackend extends Directives with JsonSupport {
   }
 
   /**
-   * Aggregate data points to ensure that there are at most 'maxNumDataPoints' points.
-   * For example, suppose there are 3000 data points and 'maxNumDataPoints' is equal to 1000. Therefore, the 3000 data
+   * Aggregate data points to ensure that there are at most `maxNumDataPoints` points.
+   *
+   * For example, suppose there are 3000 data points and `maxNumDataPoints` is equal to 1000. Therefore, the 3000 data
    * points will be aggregated into 1000 data points (in this example, every three consecutive data points will be
    * aggregated).
    *
@@ -95,9 +99,9 @@ object GrafanaBackend extends Directives with JsonSupport {
    *                         function takes two parameters: the first one is a list of timestamps (in milliseconds) and
    *                         the second one is a list of values. it returns a tuple containing the aggregation of
    *                         timestamps and the aggregation of values.
-   * @return a DataPoints object containing a maximum of 'maxNumDataPoints' data points.
+   * @return a DataPoints object containing a maximum of `maxNumDataPoints` data points.
    */
-  private def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
+  def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
                                   aggregationFunc: (List[Long], List[BigDecimal]) => (Long, BigDecimal)): DataPoints = {
 
     val numDataPoints = dataPoints.datapoints.size
@@ -110,7 +114,7 @@ object GrafanaBackend extends Directives with JsonSupport {
 
     val dataPointRatio = numDataPoints / maxNumDataPoints.toDouble
 
-    // Aggregate every 'dataPointsRatio' consecutive data points (approximately).
+    // Aggregate every `dataPointsRatio` consecutive data points (approximately).
     var dataPointTempList: List[(BigDecimal, Long)] = List()
     val dataPointList = dataPoints.datapoints.zipWithIndex.flatMap {
       case (singleData, i) =>
@@ -140,6 +144,7 @@ object GrafanaBackend extends Directives with JsonSupport {
 
   /**
    * Response to the query request ("/query").
+   *
    * To do this, the database is queried taking into account the parameters.
    *
    * @param request the query request.
@@ -184,6 +189,7 @@ object GrafanaBackend extends Directives with JsonSupport {
 
   /**
    * Handle the query route ("/query").
+   *
    * From the official documentation: /query should return metrics based on input.
    *
    * @param request the query request.
@@ -210,6 +216,7 @@ object GrafanaBackend extends Directives with JsonSupport {
 
   /**
    * Handle the annotation route ("/annotations").
+   *
    * From the official documentation: /annotations should return annotations.
    *
    * @param request the annotation request.

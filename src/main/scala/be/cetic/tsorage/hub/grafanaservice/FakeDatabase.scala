@@ -1,11 +1,8 @@
 package be.cetic.tsorage.hub.grafanaservice
 
-import scala.collection.immutable.ListMap
-import scala.collection.mutable.ListBuffer
-
 object FakeDatabase {
 
-  // Very bad programming but it's just to perform some tests.
+  // Very bad programming but it is just to perform some tests.
 
   case class Data(time: Int, temperature: Int, pressure: Int, humidity: Int)
 
@@ -73,7 +70,7 @@ object FakeDatabase {
     dataExtracted = for (singleData <- data if (timestampFrom <= singleData.time && singleData.time <= timestampTo))
       yield (
         singleData.time,
-        singleData.getClass.getMethod(sensorName).invoke(singleData).asInstanceOf[Int] // Bruhh, that's ugly.
+        singleData.getClass.getMethod(sensorName).invoke(singleData).asInstanceOf[Int] // Bruhh, this is ugly.
       )
 
     dataExtracted
