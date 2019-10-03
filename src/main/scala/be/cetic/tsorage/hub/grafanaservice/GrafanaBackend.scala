@@ -42,54 +42,62 @@ object GrafanaBackend extends Directives with JsonSupport {
   }
 
   /**
-   * Aggregate data by keeping only the first one (the remaining data is dropped).
+   * Aggregate data points by keeping only the first one (the remaining data is dropped).
    *
    * Each data is composed of a timestamp and a value. Therefore, the ith value of `values` correspond to the ith
    * timestamp of `timestamps`.
    *
    * @param timestamps a sequence of timestamps (in milliseconds).
    * @param values     a sequence of values.
-   * @return the aggregation of timestamps and the aggregation of values.
-   * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length or if `timestamps` or
-   *                                  `values` does not contain one item.
+   * @return the aggregation of timestamps and the aggregation of values if `timestamps` and `values` are nonempty.
+   *         Otherwise, return None.
+   * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
    */
-  def aggregateDataByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): (Long, BigDecimal) = {
+  def aggregateDataPointsByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): Option[(Long, BigDecimal)] = {
     if (timestamps.size != values.size) {
       throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the same " +
         s"length.")
     }
 
     if (timestamps.size < 1) { // `timestamps.size` and `values.size` are equal here.
-      throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be contain at " +
-        s"least one item.")
+      return None
     }
 
-    (timestamps.head, values.head)
+    Some(timestamps.head, values.head)
   }
 
   /**
-   * Aggregate data by averaging them.
+   * Aggregate data points by averaging them.
    *
    * Each data is composed of a timestamp and a value. Therefore, the ith value of `values` correspond to the ith
    * timestamp of `timestamps`.
    *
    * @param timestamps a sequence of timestamps (in milliseconds).
    * @param values     a sequence of values.
-   * @return the aggregation of timestamps and the aggregation of values.
+   * @return the aggregation of timestamps and the aggregation of values if `timestamps` and `values` are nonempty.
+   *         Otherwise, return None.
    * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
    */
-  def aggregateDataByAveraging(timestamps: Seq[Long], values: Seq[BigDecimal]): (Long, BigDecimal) = {
+  def aggregateDataPointsByAveraging(timestamps: Seq[Long], values: Seq[BigDecimal]): Option[(Long, BigDecimal)] = {
     if (timestamps.size != values.size) {
       throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the same " +
         s"length.")
     }
 
-    ((timestamps.sum / timestamps.size.toDouble).toLong,
-      (values.sum / values.size.toDouble).toLong)
+    if (timestamps.size < 1) { // `timestamps.size` and `values.size` are equal here.
+      return None
+    }
+
+    Some(
+      (timestamps.sum / timestamps.size.toDouble).toLong,
+      (values.sum / values.size.toDouble).toLong
+    )
   }
 
   /**
-   * Aggregate data points to ensure that there are at most `maxNumDataPoints` points.
+   * Handle the "max data points" feature for Grafana (reducing of the number of data points to `maxNumDataPoints`).
+   *
+   * In our case, this function aggregates data points to ensure that there are at most `maxNumDataPoints` points.
    *
    * For example, suppose there are 3000 data points and `maxNumDataPoints` is equal to 1000. Therefore, the 3000 data
    * points will be aggregated into 1000 data points (in this example, every three consecutive data points will be
@@ -99,12 +107,13 @@ object GrafanaBackend extends Directives with JsonSupport {
    * @param maxNumDataPoints the maximum number of data points to keep.
    * @param aggregationFunc  an aggregation function aggregating multiple timestamps/values into a single one. This
    *                         function takes two parameters: the first one is a sequence of timestamps (in
-   *                         milliseconds) and the second one is a sequence of values. it returns a tuple containing
-   *                         the aggregation of timestamps and the aggregation of values.
+   *                         milliseconds) and the second one is a sequence of values. It returns a tuple containing
+   *                         the aggregation of timestamps and the aggregation of values if the sequence of
+   *                         timestamps and the sequence of values are nonempty. It returns None otherwise.
    * @return a DataPoints object containing a maximum of `maxNumDataPoints` data points.
    */
-  def aggregateDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
-                          aggregationFunc: (Seq[Long], Seq[BigDecimal]) => (Long, BigDecimal)): DataPoints = {
+  def handleMaxDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
+                          aggregationFunc: (Seq[Long], Seq[BigDecimal]) => Option[(Long, BigDecimal)]): DataPoints = {
 
     val numDataPoints = dataPoints.datapoints.size
     if (numDataPoints <= maxNumDataPoints) {
@@ -134,8 +143,12 @@ object GrafanaBackend extends Directives with JsonSupport {
           // Empty the temporary list.
           dataPointTempList = List()
 
-          // Convert the aggregated data for Grafana.
-          Some(Tuple2[BigDecimal, Long](aggregatedData._2, aggregatedData._1))
+          aggregatedData match {
+            case Some((aggregatedTimestamp, aggregatedValue)) =>
+              // Convert the aggregated data for Grafana.
+              Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
+            case _ => None
+          }
         } else {
           None
         }
@@ -174,9 +187,9 @@ object GrafanaBackend extends Directives with JsonSupport {
       dataPointsList = DataPoints(sensor, dataPoints) +: dataPointsList
     }
 
-    // Aggregate data points.
+    // Handle the "max data points" feature.
     dataPointsList = dataPointsList.map(dataPoints =>
-      aggregateDataPoints(dataPoints, request.maxDataPoints, aggregateDataByAveraging)
+      handleMaxDataPoints(dataPoints, request.maxDataPoints, aggregateDataPointsByAveraging)
     )
 
     QueryResponse(dataPointsList)
