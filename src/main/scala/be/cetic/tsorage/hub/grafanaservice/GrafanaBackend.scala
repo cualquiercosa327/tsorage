@@ -97,13 +97,16 @@ object GrafanaBackend extends Directives with JsonSupport {
   /**
    * Handle the "max data points" feature for Grafana (reducing of the number of data points to `maxNumDataPoints`).
    *
-   * In our case, this function aggregates data points to ensure that there are at most `maxNumDataPoints` points.
+   * In our case, this function aggregates data points to ensure that there are at most `maxNumDataPoints` points. To
+   * do this, a aggregation function is used (`aggregationFunc`).
    *
-   * For example, suppose there are 3000 data points and `maxNumDataPoints` is equal to 1000. Therefore, the 3000 data
+   * Supposition: `dataPoints` is sorted by timestamp in ascending order.
+   *
+   * Example: suppose there are 3000 data points and `maxNumDataPoints` is equal to 1000. Therefore, the 3000 data
    * points will be aggregated into 1000 data points (in this example, every three consecutive data points will be
    * aggregated).
    *
-   * @param dataPoints       the data points.
+   * @param dataPoints       the data points sorted by timestamps in ascending order.
    * @param maxNumDataPoints the maximum number of data points to keep.
    * @param aggregationFunc  an aggregation function aggregating multiple timestamps/values into a single one. This
    *                         function takes two parameters: the first one is a sequence of timestamps (in
@@ -132,7 +135,7 @@ object GrafanaBackend extends Directives with JsonSupport {
         // Add the data to the temporary list.
         dataPointTempList = singleData +: dataPointTempList
 
-        if (i % dataPointRatio < 1) {
+        if (i % dataPointRatio < 1 || i == numDataPoints - 1) {
           // Get value and timestamp of each data in temporary list.
           val timestamps = dataPointTempList.map(_._2)
           val values = dataPointTempList.map(_._1)
@@ -141,6 +144,75 @@ object GrafanaBackend extends Directives with JsonSupport {
           val aggregatedData = aggregationFunc(timestamps, values)
 
           // Empty the temporary list.
+          dataPointTempList = List()
+
+          aggregatedData match {
+            case Some((aggregatedTimestamp, aggregatedValue)) =>
+              // Convert the aggregated data for Grafana.
+              Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
+            case _ => None
+          }
+        } else {
+          None
+        }
+    }
+
+    DataPoints(dataPoints.target, dataPointList)
+  }
+
+  /**
+   * Handle the "interval" feature for Grafana (data points are `intervalMax` milliseconds apart).
+   *
+   * In our case, this function aggregates all data points within an `intervalMax` milliseconds interval. To do this,
+   * a aggregation function is used (`aggregationFunc`).
+   *
+   * Supposition: `dataPoints` is sorted by timestamp in ascending order.
+   *
+   * @param dataPoints      the data points sorted by timestamps in ascending order.
+   * @param interval        the interval in milliseconds.
+   * @param aggregationFunc an aggregation function aggregating multiple timestamps/values into a single one. This
+   *                        function takes two parameters: the first one is a sequence of timestamps (in
+   *                        milliseconds) and the second one is a sequence of values. It returns a tuple containing
+   *                        the aggregation of timestamps and the aggregation of values if the sequence of
+   *                        timestamps and the sequence of values are nonempty. It returns None otherwise.
+   * @return a DataPoints object containing a maximum of `maxNumDataPoints` data points.
+   */
+  def handleInterval(dataPoints: DataPoints, interval: Long,
+                     aggregationFunc: (Seq[Long], Seq[BigDecimal]) => Option[(Long, BigDecimal)]): DataPoints = {
+
+    val intervalSizeMax = interval // Just use another name for this in order to better understand the code.
+
+    val numDataPoints = dataPoints.datapoints.size
+
+    // Aggregate all data points within an `intervalMax` milliseconds interval.
+    var previousTimestamp: Long = 0
+    var intervalSize: Long = 0
+    var dataPointTempList: List[(BigDecimal, Long)] = List()
+    val dataPointList = dataPoints.datapoints.zipWithIndex.flatMap {
+      case (singleData, i) =>
+        // Add the data to the temporary list.
+        dataPointTempList = singleData +: dataPointTempList
+
+        // Extract the timestamp of this data.
+        val currentTimestamp = singleData._2
+
+        // Compute the difference between the current timestamp and the previous one and add it to `intervalSize`.
+        val timestampDiff = currentTimestamp - previousTimestamp
+        intervalSize += timestampDiff
+
+        // Update the previous timestamp.
+        previousTimestamp = currentTimestamp
+
+        if (intervalSize > intervalSizeMax || i == numDataPoints - 1) {
+          // Get value and timestamp of each data in temporary list.
+          val timestamps = dataPointTempList.map(_._2)
+          val values = dataPointTempList.map(_._1)
+
+          // Aggregate the data contained in the temporary list.
+          val aggregatedData = aggregationFunc(timestamps, values)
+
+          // Reset some variables.
+          intervalSize = 0
           dataPointTempList = List()
 
           aggregatedData match {
@@ -187,7 +259,12 @@ object GrafanaBackend extends Directives with JsonSupport {
       dataPointsList = DataPoints(sensor, dataPoints) +: dataPointsList
     }
 
-    // Handle the "max data points" feature.
+    // Handle the "interval" feature for Grafana.
+    dataPointsList = dataPointsList.map(dataPoints =>
+      handleInterval(dataPoints, request.intervalMs, aggregateDataPointsByAveraging)
+    )
+
+    // Handle the "max data points" feature for Grafana.
     dataPointsList = dataPointsList.map(dataPoints =>
       handleMaxDataPoints(dataPoints, request.maxDataPoints, aggregateDataPointsByAveraging)
     )
