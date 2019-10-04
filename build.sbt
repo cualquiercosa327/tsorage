@@ -2,7 +2,7 @@ name := "tsorage-processor"
 
 version := "0.1"
 
-scalaVersion := "2.12.0"
+scalaVersion := "2.12.10"
 
 libraryDependencies += "com.datastax.oss" % "java-driver-core" % "4.1.0"
 
