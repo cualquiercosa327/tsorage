@@ -29,10 +29,10 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
       val recentTags = msg.tagset.keySet.diff(cache)
       cache = cache ++ recentTags
 
-      recentTags.map(tag => s"""ALTER TABLE ${rawKeyspace}.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
+      recentTags.map(tag => s"""ALTER TABLE ${rawKeyspace}.observations ADD "${tag.replace("\"", "\"\"")}" text;""")
         .foreach(t => Try(session.execute(t)))
 
-      recentTags.map(tag => s"""ALTER TABLE ${aggKeyspace}.numeric ADD "${tag.replace("\"", "\"\"")}" text;""")
+      recentTags.map(tag => s"""ALTER TABLE ${aggKeyspace}.observations ADD "${tag.replace("\"", "\"\"")}" text;""")
         .foreach(t => Try(session.execute(t)))
 
       msg

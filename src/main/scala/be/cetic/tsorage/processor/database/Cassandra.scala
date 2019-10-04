@@ -45,7 +45,7 @@ object Cassandra extends LazyLogging {
 
     val support = DataTypeSupport.inferSupport(update)
 
-    val baseStatement = insertInto(rawKS, "numeric")
+    val baseStatement = insertInto(rawKS, "observations")
        .value("metric_", update.metric)
        .value("shard_", sharder.shard(update.datetime))
        .value("datetime_", ts)
@@ -70,7 +70,7 @@ object Cassandra extends LazyLogging {
     val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
     val support = DataTypeSupport.inferSupport(update)
 
-    val baseStatement = insertInto(aggKS, "numeric")
+    val baseStatement = insertInto(aggKS, "observations")
        .value("metric_", update.metric)
        .value("shard_", Cassandra.sharder.shard(update.datetime))
        .value("interval_", update.interval)
