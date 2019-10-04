@@ -36,7 +36,7 @@ final case class TimeRange(from: String, to: String)
  *
  */
 final case class QueryRequest(targets: Seq[Target], range: TimeRange,
-                              intervalMs: Long, maxDataPoints: Int)
+                              intervalMs: Option[Long], maxDataPoints: Option[Int])
 
 /**
  * Data points for a single target.

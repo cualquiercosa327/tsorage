@@ -161,9 +161,9 @@ object GrafanaBackend extends Directives with JsonSupport {
   }
 
   /**
-   * Handle the "interval" feature for Grafana (data points are `intervalMax` milliseconds apart).
+   * Handle the "interval" feature for Grafana (data points are `interval` milliseconds apart).
    *
-   * In our case, this function aggregates all data points within an `intervalMax` milliseconds interval. To do this,
+   * In our case, this function aggregates all data points within an `interval` milliseconds interval. To do this,
    * a aggregation function is used (`aggregationFunc`).
    *
    * Supposition: `dataPoints` is sorted by timestamp in ascending order.
@@ -259,15 +259,23 @@ object GrafanaBackend extends Directives with JsonSupport {
       dataPointsList = DataPoints(sensor, dataPoints) +: dataPointsList
     }
 
-    // Handle the "interval" feature for Grafana.
-    dataPointsList = dataPointsList.map(dataPoints =>
-      handleInterval(dataPoints, request.intervalMs, aggregateDataPointsByAveraging)
-    )
+    // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
+    request.intervalMs match {
+      case Some(interval) =>
+        dataPointsList = dataPointsList.map(dataPoints =>
+          handleInterval(dataPoints, interval, aggregateDataPointsByAveraging)
+        )
+      case _ =>
+    }
 
-    // Handle the "max data points" feature for Grafana.
-    dataPointsList = dataPointsList.map(dataPoints =>
-      handleMaxDataPoints(dataPoints, request.maxDataPoints, aggregateDataPointsByAveraging)
-    )
+    // Handle the "max data points" feature for Grafana (if the request contains a field "maxDataPoints").
+    request.maxDataPoints match {
+      case Some(maxDataPoints) =>
+        dataPointsList = dataPointsList.map(dataPoints =>
+          handleMaxDataPoints(dataPoints, maxDataPoints, aggregateDataPointsByAveraging)
+        )
+      case _ =>
+    }
 
     QueryResponse(dataPointsList)
   }
