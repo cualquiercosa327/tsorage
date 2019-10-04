@@ -27,9 +27,7 @@ object FollowUpAggregationProcessingGraphFactory  extends LazyLogging
      * @return objects representing the aggregated values that have been updated.
      */
    private def processAggUpdate(timeAggregator: TimeAggregator)(update: AggUpdate): AggUpdate = {
-
-      val support = DataTypeSupport.inferSupport(update)
-      support.prepareAggUpdate(update, timeAggregator)
+      DataTypeSupport.inferSupport(update)prepareAggUpdate(update, timeAggregator)
    }
 
    /**
@@ -39,7 +37,6 @@ object FollowUpAggregationProcessingGraphFactory  extends LazyLogging
      * @return A graph representing how the raw values are aggregated to provide aggregated values.
      */
    def createGraph(timeAggregator: TimeAggregator)(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-
 
       // Define internal flow shapes
 

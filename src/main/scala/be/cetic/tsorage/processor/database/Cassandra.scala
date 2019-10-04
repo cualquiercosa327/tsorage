@@ -42,6 +42,7 @@ object Cassandra extends LazyLogging {
   def submitRawUpdate[T](update: RawUpdate): Unit =
   {
     val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
+
     val support = DataTypeSupport.inferSupport(update)
 
     val baseStatement = insertInto(rawKS, "numeric")
@@ -56,6 +57,7 @@ object Cassandra extends LazyLogging {
 
     logger.info(s"Cassandra submits raw value ${statement}")
     session.execute(statement.toString)
+
   }
 
   /**

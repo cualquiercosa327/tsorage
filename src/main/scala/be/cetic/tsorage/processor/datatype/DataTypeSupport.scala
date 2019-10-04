@@ -135,12 +135,14 @@ abstract class DataTypeSupport[T] extends LazyLogging
 
 object DataTypeSupport
 {
-   // TODO : replace it by a list traversal
-   private def inferSupport(`type`: String) = `type` match {
-      case "tdouble" => DoubleSupport
-      case "tlong" => LongSupport
-      case "date_double" => DateDoubleSupport
-   }
+   val availableSupports: Map[String, DataTypeSupport[_]] = List(
+      DoubleSupport,
+      LongSupport,
+      DateDoubleSupport
+   ).map(support => support.`type` -> support).toMap
+
+   private def inferSupport(`type`: String) =
+      availableSupports(`type`)
 
    def inferSupport(update: RawUpdate): DataTypeSupport[_] = inferSupport(update.`type`)
 
