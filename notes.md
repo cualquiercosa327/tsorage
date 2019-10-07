@@ -43,3 +43,17 @@ To consume Kafka messages on the console :
 ```
 kafka-console-consumer --bootstrap-server localhost:9092 --topic raw --new-consumer --from-beginning
 ```
+
+
+To run Cassandra:
+
+```
+cd /apache-cassandra/bin
+export JAVA_HOME=`/usr/libexec/java_home -v 1.8`; ./cassandra
+```
+
+To truncate a topic:
+
+```
+kafka-topics --bootstrap-server localhost:9092 --delete --topic raw
+```

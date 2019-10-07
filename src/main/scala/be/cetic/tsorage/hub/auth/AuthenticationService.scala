@@ -1,15 +1,21 @@
 package be.cetic.tsorage.hub.auth
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.actor.ActorRef
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
-import akka.http.scaladsl.server.Directives.{as, complete, concat, decodeRequest, entity, parameter, path, post, withoutSizeLimit}
-import akka.stream.ActorMaterializer
+import akka.http.scaladsl.server.directives.HeaderDirectives
+import akka.http.scaladsl.server.{Directive, Directives}
+import akka.pattern.ask
+import akka.util.Timeout
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
 import com.typesafe.config.ConfigFactory
+import io.swagger.v3.oas.annotations.enums.ParameterIn
+import io.swagger.v3.oas.annotations.media.{Content, Schema}
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.{Operation, Parameter}
+import javax.ws.rs.{Consumes, POST, Path, Produces}
 import spray.json._
 
-
+import scala.concurrent.ExecutionContext
 import scala.io.StdIn
 /**
  * A service for managing the authentication.
@@ -36,38 +42,58 @@ import scala.io.StdIn
  *
  * {"user": {"id": 421, "name": "Mathieu Goeminne"} }
  */
-object AuthenticationService extends MessageJsonSupport
+@Path("/auth")
+@Consumes(value = Array("application/json"))
+@Produces(value = Array("application/json"))
+class AuthenticationService(implicit executionContext: ExecutionContext) extends Directives with MessageJsonSupport
 {
-   def main(args: Array[String]): Unit =
-   {
-      implicit val system = ActorSystem("authentication")
-      implicit val materializer = ActorMaterializer()
-      implicit val executionContext = system.dispatcher
+   val conf = ConfigFactory.load("auth.conf")
+   val authenticator = AuthenticationBackend(conf.getConfig("backend"))
 
-      val conf = ConfigFactory.load("auth.conf")
-      val authenticator = AuthenticationBackend(conf.getConfig("backend"))
+   @POST
+   @Operation(
+      summary = "Authenticates a user",
+      description = "Returns a representation of the user if the submitted token is valid, or nothing otherwise",
+      tags = Array("Authentication"),
+      parameters = Array(
+         new Parameter(
+            name = "api_key",
+            description = "A key token",
+            example = "4b8639ed-0e90-4b3f-8a45-e87c22d17887",
+            in = ParameterIn.QUERY
+         )
+   /*      new Parameter(
+            name="test2",
+            in = ParameterIn.DEFAULT,
+            style=ParameterStyle.FORM
+         ) */
+      ),
 
-      val route =
-
-         path("auth")
+      responses = Array(
+         new ApiResponse(
+            responseCode = "200",
+            description = "A representation of the user associated with the submitted token",
+            content = Array(new Content(schema = new Schema(implementation = classOf[AuthenticationResponse])))
+         ),
+         new ApiResponse(
+            responseCode = "500",
+            description = "Internal server error"
+         ),
+         new ApiResponse(
+            responseCode = "400",
+            description = "The request content was malformed"
+         )
+      )
+   )
+   def postAuth = path("auth") {
+      post
+      {
+         entity(as[AuthenticationQuery])
          {
-            post
-            {
-                  entity(as[AuthenticationQuery])
-                  {
-                     query => complete(HttpEntity(ContentTypes.`application/json`, authenticator.check(query.api_key).toJson.compactPrint))
-                  }
-            }
+            query => complete(HttpEntity(ContentTypes.`application/json`, authenticator.check(query.api_key).toJson.compactPrint))
          }
-
-      val bindingFuture = Http().bindAndHandle(route, "localhost", conf.getInt("port"))
-
-      println(s"Server online at http://localhost:${conf.getInt("port")}/\nPress RETURN to stop...")
-      StdIn.readLine() // let it run until user presses return
-      bindingFuture
-         .flatMap(_.unbind()) // trigger unbinding from the port
-         .onComplete(_ => {
-            system.terminate()
-         }) // and shutdown when done
+      }
    }
+
+   val route = postAuth
 }
