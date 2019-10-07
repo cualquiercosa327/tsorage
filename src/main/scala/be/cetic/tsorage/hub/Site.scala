@@ -8,6 +8,7 @@ import akka.http.scaladsl.server.{Directives, RouteConcatenation}
 import akka.stream.ActorMaterializer
 import be.cetic.tsorage.hub.auth.{AuthenticationQuery, AuthenticationService}
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
+import be.cetic.tsorage.hub.metric.MetricHttpService
 import com.typesafe.config.ConfigFactory
 
 import scala.io.StdIn
@@ -27,11 +28,13 @@ object Site extends RouteConcatenation with Directives
       val conf = ConfigFactory.load("auth.conf")
 
       val authRoute = new AuthenticationService().route
+      val metricRoutes = new MetricHttpService().routes
+
       val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
          getFromResourceDirectory("swagger-ui") ~
          pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
-      val routes = (authRoute ~ swaggerRoute)
+      val routes = (authRoute ~ metricRoutes ~ swaggerRoute)
 
       val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
 
