@@ -24,7 +24,7 @@ object GrafanaBackend extends Directives with JsonSupport {
    * @param request the search request.
    * @return the response to the search request (in this case, the name of sensors).
    */
-  private def responseSearchRequest(request: SearchRequest): SearchResponse = {
+  private def responseSearchRequest(request: Option[SearchRequest]): SearchResponse = {
     SearchResponse(database.sensors.toList)
   }
 
@@ -36,7 +36,7 @@ object GrafanaBackend extends Directives with JsonSupport {
    * @param request the search request.
    * @return a Standard route (for Akka HTTP). It is the response to the request.
    */
-  private def handleSearchRoute(request: SearchRequest): StandardRoute = {
+  private def handleSearchRoute(request: Option[SearchRequest]): StandardRoute = {
     val response = responseSearchRequest(request)
     complete(response)
   }
@@ -338,13 +338,20 @@ object GrafanaBackend extends Directives with JsonSupport {
         },
         // Search route.
         path("search") {
-          post {
-            entity(as[SearchRequest]) { request =>
+          concat(
+            get {
               DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
-                handleSearchRoute(request)
+                handleSearchRoute(None)
+              }
+            },
+            post {
+              entity(as[SearchRequest]) { request =>
+                DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
+                  handleSearchRoute(Some(request))
+                }
               }
             }
-          }
+          )
         },
         // Query route.
         path("query") {
@@ -365,6 +372,24 @@ object GrafanaBackend extends Directives with JsonSupport {
               }
             }
           }
+        },
+        // Documentation route.
+        path("api-docs") {
+          DebuggingDirectives.logRequestResult("Documentation route (/api-docs)", Logging.InfoLevel) {
+            getFromResource("swagger-ui/index.html") ~ getFromResourceDirectory("swagger-ui")
+          }
+        },
+        // Documentation path.
+        pathPrefix("api-docs") {
+          concat(
+            // Documentation file route.
+            path("swagger.yaml") {
+              DebuggingDirectives.logRequestResult("Documentation file route (/api-docs/swagger.yaml)",
+                Logging.InfoLevel) {
+                getFromResource("swagger.yaml")
+              }
+            }
+          )
         }
       )
 
