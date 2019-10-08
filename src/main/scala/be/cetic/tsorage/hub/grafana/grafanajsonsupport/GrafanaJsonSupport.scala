@@ -1,85 +1,7 @@
-package be.cetic.tsorage.hub.grafana
+package be.cetic.tsorage.hub.grafana.grafanajsonsupport
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
-
-/**
- * A request for the search route ("/search").
- *
- */
-final case class SearchRequest(target: Option[String])
-
-/**
- * A response for the search route ("/search").
- *
- */
-final case class SearchResponse(targets: Seq[String])
-
-/**
- * A target.
- *
- * It is used by the query request.
- *
- */
-final case class Target(target: Option[String])
-
-/**
- * A range of time in ISO 8601 date format.
- *
- * It is used by the query requests.
- *
- */
-final case class TimeRange(from: String, to: String)
-
-/**
- * A request for the query route ("/query").
- *
- */
-final case class QueryRequest(targets: Seq[Target], range: TimeRange,
-                              intervalMs: Option[Long], maxDataPoints: Option[Int])
-
-/**
- * Data points for a single target.
- *
- * It is used by the query responses.
- *
- */
-final case class DataPoints(target: String, datapoints: Seq[(BigDecimal, Long)])
-
-/**
- * A response for the query route ("/query").
- *
- */
-final case class QueryResponse(dataPointsSeq: Seq[DataPoints])
-
-/**
- * An annotation.
- *
- * It is used by the annotation requests and responses.
- *
- */
-final case class Annotation(name: String, enable: Boolean, datasource: String, iconColor: Option[String],
-                            query: Option[String])
-
-/**
- * A request for the annotation route ("/annotations").
- *
- */
-final case class AnnotationRequest(annotation: Annotation)
-
-/**
- * An annotation object (that is, an annotation with a title and a time).
- *
- * It is used by the annotation responses.
- *
- */
-final case class AnnotationObject(annotation: Annotation, title: String, time: Long)
-
-/**
- * A response for the annotation route ("/annotations").
- *
- */
-final case class AnnotationResponse(annotations: Seq[AnnotationObject])
 
 /**
  * Add the JSON support for the Grafana messages.
@@ -87,7 +9,7 @@ final case class AnnotationResponse(annotations: Seq[AnnotationObject])
  * More specifically , this trait contains all formats of Grafana requests and responses.
  *
  */
-trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
+trait GrafanaJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   // Formats for search requests.
   implicit val searchRequestFormat: RootJsonFormat[SearchRequest] = jsonFormat1(SearchRequest)
 
