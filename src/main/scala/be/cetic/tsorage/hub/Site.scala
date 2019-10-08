@@ -47,7 +47,7 @@ object Site extends RouteConcatenation with Directives
          getFromResourceDirectory("swagger-ui") ~
          pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
-      val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ testConnectionRoute ~swaggerRoute)
+      val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ testConnectionRoute ~ swaggerRoute)
 
       val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
 
