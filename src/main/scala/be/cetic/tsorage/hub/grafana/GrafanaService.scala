@@ -14,8 +14,6 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.io.StdIn
 
 class GrafanaService extends Directives with JsonSupport {
-  val host = "localhost"
-  val port = 8080
   val database: FakeDatabase.type = FakeDatabase
 
   /**
@@ -374,7 +372,7 @@ class GrafanaService extends Directives with JsonSupport {
    *
    * @return the annotation route.
    */
-  def postAnnoation: Route = path("annotations") {
+  def postAnnotation: Route = path("annotations") {
     post {
       entity(as[AnnotationRequest]) { request =>
         DebuggingDirectives.logRequestResult("Annotation route (/annotations)", Logging.InfoLevel) {
@@ -384,7 +382,7 @@ class GrafanaService extends Directives with JsonSupport {
     }
   }
 
-  val postAnnoationRoute: Route = postAnnoation
+  val postAnnotationRoute: Route = postAnnotation
 
-  val routes: Route = concat(getMetricNamesRoute, postMetricNamesRoute, postQueryRoute, postAnnoationRoute)
+  val routes: Route = concat(getMetricNamesRoute, postMetricNamesRoute, postQueryRoute, postAnnotationRoute)
 }
