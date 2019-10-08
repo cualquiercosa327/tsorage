@@ -2,10 +2,15 @@ package be.cetic.tsorage.hub.grafana.backend
 
 import java.time.Instant
 
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
 import be.cetic.tsorage.hub.grafana.FakeDatabase
-import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
-  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
+import be.cetic.tsorage.hub.grafana.jsonsupport.{
+  AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
+  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse
+}
+
+import scala.util.{Failure, Success, Try}
 
 object GrafanaBackend extends Directives with GrafanaJsonSupport {
   val database: FakeDatabase.type = FakeDatabase
@@ -227,15 +232,21 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    * To do this, the database is queried taking into account the parameters.
    *
    * @param request the query request.
-   * @return the response to the query request.
+   * @return the response to the query request. If the request contains at least one metric that does not appear in
+   *         the database, then `Failure(java.lang.IllegalArgumentException)` is returned.
    */
-  def responseQueryRequest(request: QueryRequest): QueryResponse = {
+  def responseQueryRequest(request: QueryRequest): Try[QueryResponse] = {
     // Convert date time (ISO 8601) to timestamp in milliseconds.
     val timestampFrom = Instant.parse(request.range.from).toEpochMilli
     val timestampTo = Instant.parse(request.range.to).toEpochMilli
 
     // Get the name of metrics.
     val metrics = request.targets.flatMap(_.target)
+
+    if (!metrics.toSet.subsetOf(database.metrics.toSet)) {
+      return Failure(new IllegalArgumentException(s"${request.targets} contains at least one metric that does not " +
+        s"appear in the database."))
+    }
 
     // Extract the data from the database in order to response to the request.
     var dataPointsList = List[DataPoints]()
@@ -269,7 +280,7 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
       case _ =>
     }
 
-    QueryResponse(dataPointsList)
+    Success(QueryResponse(dataPointsList))
   }
 
   /**
@@ -282,7 +293,11 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    */
   def handleQueryRoute(request: QueryRequest): StandardRoute = {
     val response = responseQueryRequest(request)
-    complete(response)
+    response match {
+      case Success(resp) => complete(resp)
+      case Failure(_: IllegalArgumentException) => complete(StatusCodes.MethodNotAllowed -> "Invalid input.")
+      case _ => complete(StatusCodes.InternalServerError -> "Unexpected error.")
+    }
   }
 
   /**
