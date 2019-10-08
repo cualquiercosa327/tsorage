@@ -1,4 +1,4 @@
-package be.cetic.tsorage.hub.grafana.grafanajsonsupport
+package be.cetic.tsorage.hub.grafana.jsonsupport
 
 /**
  * A request for the query route ("/query").

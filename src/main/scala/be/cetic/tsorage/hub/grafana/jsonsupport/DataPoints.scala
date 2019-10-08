@@ -1,4 +1,4 @@
-package be.cetic.tsorage.hub.grafana.grafanajsonsupport
+package be.cetic.tsorage.hub.grafana.jsonsupport
 
 /**
  * Data points for a single target.

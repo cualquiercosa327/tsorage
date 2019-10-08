@@ -1,4 +1,4 @@
-package be.cetic.tsorage.hub.grafana.grafanajsonsupport
+package be.cetic.tsorage.hub.grafana.jsonsupport
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._

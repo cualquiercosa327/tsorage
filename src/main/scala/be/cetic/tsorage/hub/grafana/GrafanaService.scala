@@ -5,7 +5,7 @@ import java.time.Instant
 import akka.event.Logging
 import akka.http.scaladsl.server.{Directives, Route, StandardRoute}
 import akka.http.scaladsl.server.directives.DebuggingDirectives
-import be.cetic.tsorage.hub.grafana.grafanajsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse,
+import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse,
   DataPoints, GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
 
 class GrafanaService extends Directives with GrafanaJsonSupport {
