@@ -21,8 +21,8 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    * @param request the search request.
    * @return the response to the search request (in this case, the name of metrics).
    */
-  def responseSearchRequest(request: Option[SearchRequest]): SearchResponse = {
-    SearchResponse(database.metrics.toList)
+  def responseSearchRequest(request: Option[SearchRequest]): Try[SearchResponse] = {
+    Success(SearchResponse(database.metrics.toList))
   }
 
   /**
@@ -35,7 +35,10 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    */
   def handleSearchRoute(request: Option[SearchRequest]): StandardRoute = {
     val response = responseSearchRequest(request)
-    complete(response)
+    response match {
+      case Success(resp) => complete(resp)
+      case _ => complete(StatusCodes.InternalServerError -> "Unexpected error.")
+    }
   }
 
   /**
@@ -47,20 +50,21 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    * @param timestamps a sequence of timestamps (in milliseconds).
    * @param values     a sequence of values.
    * @return the aggregation of timestamps and the aggregation of values if `timestamps` and `values` are nonempty.
-   *         Otherwise, return None.
+   *         Otherwise, return None. If `timestamps` and `values` does not have the same length, then
+   *         *         `Failure(java.lang.IllegalArgumentException)` is returned.
    * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
    */
-  def aggregateDataPointsByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): Option[(Long, BigDecimal)] = {
+  def aggregateDataPointsByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): Try[Option[(Long, BigDecimal)]] = {
     if (timestamps.size != values.size) {
-      throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the same " +
-        s"length.")
+      return Failure(new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the" +
+        s" same length."))
     }
 
     if (timestamps.size < 1) { // `timestamps.size` and `values.size` are equal here.
-      return None
+      return Success(None)
     }
 
-    Some(timestamps.head, values.head)
+    Success(Some(timestamps.head, values.head))
   }
 
   /**
@@ -72,22 +76,25 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    * @param timestamps a sequence of timestamps (in milliseconds).
    * @param values     a sequence of values.
    * @return the aggregation of timestamps and the aggregation of values if `timestamps` and `values` are nonempty.
-   *         Otherwise, return None.
-   * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
+   *         Otherwise, return None. If `timestamps` and `values` does not have the same length, then
+   *         `Failure(java.lang.IllegalArgumentException)` is returned.
    */
-  def aggregateDataPointsByAveraging(timestamps: Seq[Long], values: Seq[BigDecimal]): Option[(Long, BigDecimal)] = {
+  def aggregateDataPointsByAveraging(timestamps: Seq[Long],
+                                     values: Seq[BigDecimal]): Try[Option[(Long, BigDecimal)]] = {
     if (timestamps.size != values.size) {
-      throw new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the same " +
-        s"length.")
+      return Failure(new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the" +
+        s" same length."))
     }
 
     if (timestamps.size < 1) { // `timestamps.size` and `values.size` are equal here.
-      return None
+      return Success(None)
     }
 
-    Some(
-      (timestamps.sum / timestamps.size.toDouble).toLong,
-      (values.sum / values.size.toDouble).toLong
+    Success(
+      Some(
+        (timestamps.sum / timestamps.size.toDouble).toLong,
+        (values.sum / values.size.toDouble).toLong
+      )
     )
   }
 
@@ -109,11 +116,13 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    *                         function takes two parameters: the first one is a sequence of timestamps (in
    *                         milliseconds) and the second one is a sequence of values. It returns a tuple containing
    *                         the aggregation of timestamps and the aggregation of values if the sequence of
-   *                         timestamps and the sequence of values are nonempty. It returns None otherwise.
+   *                         timestamps and the sequence of values are nonempty. It returns None otherwise. If an
+   *                         error occurs, then `Failure(...)` is returned.
    * @return a DataPoints object containing a maximum of `maxNumDataPoints` data points.
    */
   def handleMaxDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
-                          aggregationFunc: (Seq[Long], Seq[BigDecimal]) => Option[(Long, BigDecimal)]): DataPoints = {
+                          aggregationFunc: (Seq[Long], Seq[BigDecimal]) =>
+                            Try[Option[(Long, BigDecimal)]]): DataPoints = {
 
     val numDataPoints = dataPoints.datapoints.size
     if (numDataPoints <= maxNumDataPoints) {
@@ -144,10 +153,13 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
           dataPointTempList = List()
 
           aggregatedData match {
-            case Some((aggregatedTimestamp, aggregatedValue)) =>
-              // Convert the aggregated data for Grafana.
-              Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
-            case _ => None
+            case Success(data) =>
+              data match {
+                case Some((aggregatedTimestamp, aggregatedValue)) =>
+                  // Convert the aggregated data for Grafana.
+                  Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
+                case _ => None
+              }
           }
         } else {
           None
@@ -171,11 +183,12 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    *                        function takes two parameters: the first one is a sequence of timestamps (in
    *                        milliseconds) and the second one is a sequence of values. It returns a tuple containing
    *                        the aggregation of timestamps and the aggregation of values if the sequence of
-   *                        timestamps and the sequence of values are nonempty. It returns None otherwise.
+   *                        timestamps and the sequence of values are nonempty. It returns None otherwise. If an
+   *                        error occurs, then `Failure(...)` is returned.
    * @return a DataPoints object containing a maximum of `maxNumDataPoints` data points.
    */
   def handleInterval(dataPoints: DataPoints, interval: Long,
-                     aggregationFunc: (Seq[Long], Seq[BigDecimal]) => Option[(Long, BigDecimal)]): DataPoints = {
+                     aggregationFunc: (Seq[Long], Seq[BigDecimal]) => Try[Option[(Long, BigDecimal)]]): DataPoints = {
 
     val intervalSizeMax = interval // Just use another name for this in order to better understand the code.
 
@@ -213,10 +226,13 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
           dataPointTempList = List()
 
           aggregatedData match {
-            case Some((aggregatedTimestamp, aggregatedValue)) =>
-              // Convert the aggregated data for Grafana.
-              Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
-            case _ => None
+            case Success(data) =>
+              data match {
+                case Some((aggregatedTimestamp, aggregatedValue)) =>
+                  // Convert the aggregated data for Grafana.
+                  Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
+                case _ => None
+              }
           }
         } else {
           None
@@ -306,10 +322,10 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    * @param request the annotation request.
    * @return the response to the annotation request.
    */
-  def responseAnnotationRequest(request: AnnotationRequest): AnnotationResponse = {
-    AnnotationResponse(
-      List(
-        AnnotationObject(request.annotation, "Marker", System.currentTimeMillis)
+  def responseAnnotationRequest(request: AnnotationRequest): Try[AnnotationResponse] = {
+    Success(
+      AnnotationResponse(
+        List(AnnotationObject(request.annotation, "Marker", System.currentTimeMillis))
       )
     )
   }
@@ -324,6 +340,9 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    */
   def handleAnnotationRoute(request: AnnotationRequest): StandardRoute = {
     val response = responseAnnotationRequest(request)
-    complete(response)
+    response match {
+      case Success(resp) => complete(resp)
+      case _ => complete(StatusCodes.InternalServerError -> "Unexpected error.")
+    }
   }
 }
