@@ -9,8 +9,8 @@ object FakeDatabase {
   // Name of attributes.
   val attributes: Seq[String] = Seq("time", "temperature", "pressure", "humidity")
 
-  // Sensor names.
-  val sensors: Seq[String] = Seq("temperature", "pressure", "humidity")
+  // Metric names.
+  val metrics: Seq[String] = Seq("temperature", "pressure", "humidity")
 
   // Construct the database.
   //val currentTime: Int = (System.currentTimeMillis / 1000).toInt
@@ -64,13 +64,13 @@ object FakeDatabase {
 
   // Timestamp in seconds.
   // Return a dictionary where keys are timestamp and values are data.
-  def extractData(sensorName: String, timestampFrom: Int, timestampTo: Int): List[(Int, Int)] = {
+  def extractData(metricName: String, timestampFrom: Int, timestampTo: Int): List[(Int, Int)] = {
     var dataExtracted = List[(Int, Int)]()
 
     dataExtracted = for (singleData <- data if (timestampFrom <= singleData.time && singleData.time <= timestampTo))
       yield (
         singleData.time,
-        singleData.getClass.getMethod(sensorName).invoke(singleData).asInstanceOf[Int] // Bruhh, this is ugly.
+        singleData.getClass.getMethod(metricName).invoke(singleData).asInstanceOf[Int] // Bruhh, this is ugly.
       )
 
     dataExtracted

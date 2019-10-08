@@ -19,13 +19,13 @@ class GrafanaService extends Directives with JsonSupport {
   val database: FakeDatabase.type = FakeDatabase
 
   /**
-   * Response to the search request ("/search"). In our case, it is the name of the sensors that is returned.
+   * Response to the search request ("/search"). In our case, it is the name of the metrics that is returned.
    *
    * @param request the search request.
-   * @return the response to the search request (in this case, the name of sensors).
+   * @return the response to the search request (in this case, the name of metrics).
    */
   private def responseSearchRequest(request: Option[SearchRequest]): SearchResponse = {
-    SearchResponse(database.sensors.toList)
+    SearchResponse(database.metrics.toList)
   }
 
   /**
@@ -242,21 +242,21 @@ class GrafanaService extends Directives with JsonSupport {
     val timestampFrom = Instant.parse(request.range.from).toEpochMilli
     val timestampTo = Instant.parse(request.range.to).toEpochMilli
 
-    // Get the name of sensors.
-    val sensors = request.targets.flatMap(_.target)
+    // Get the name of metrics.
+    val metrics = request.targets.flatMap(_.target)
 
     // Extract the data from the database in order to response to the request.
     var dataPointsList = List[DataPoints]()
-    for (sensor <- sensors) {
-      // Extract data for this sensor.
-      val sensorData = database.extractData(sensor, (timestampFrom / 1000).toInt, (timestampTo / 1000).toInt)
+    for (metric <- metrics) {
+      // Extract data for this metric.
+      val metricData = database.extractData(metric, (timestampFrom / 1000).toInt, (timestampTo / 1000).toInt)
 
-      // Retrieve the data points from the sensor data.
-      val dataPoints = for ((timestamp, value) <- sensorData)
+      // Retrieve the data points from the metric data.
+      val dataPoints = for ((timestamp, value) <- metricData)
         yield Tuple2[BigDecimal, Long](value, timestamp.toLong * 1000)
 
-      // Prepend all data points for this sensor to the list of data points.
-      dataPointsList = DataPoints(sensor, dataPoints) +: dataPointsList
+      // Prepend all data points for this metric to the list of data points.
+      dataPointsList = DataPoints(metric, dataPoints) +: dataPointsList
     }
 
     // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
@@ -321,11 +321,11 @@ class GrafanaService extends Directives with JsonSupport {
   }
 
   /**
-   * Search route. It allows to get the name of all sensors.
+   * Search route. It allows to get the name of all metrics.
    *
    * @return the search route.
    */
-  def getSensorNames: Route = path("search") {
+  def getMetricNames: Route = path("search") {
     get {
       DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
         handleSearchRoute(None)
@@ -333,14 +333,14 @@ class GrafanaService extends Directives with JsonSupport {
     }
   }
 
-  val getSensorNamesRoute: Route = getSensorNames
+  val getMetricNamesRoute: Route = getMetricNames
 
   /**
-   * Search route. It allows to get the name of all sensors.
+   * Search route. It allows to get the name of all metrics.
    *
    * @return the search route.
    */
-  def postSensorNames: Route = path("search") {
+  def postMetricNames: Route = path("search") {
     post {
       entity(as[SearchRequest]) { request =>
         DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
@@ -350,7 +350,7 @@ class GrafanaService extends Directives with JsonSupport {
     }
   }
 
-  val postSensorNamesRoute: Route = postSensorNames
+  val postMetricNamesRoute: Route = postMetricNames
 
   /**
    * Query route. It allows to query the database.
@@ -386,5 +386,5 @@ class GrafanaService extends Directives with JsonSupport {
 
   val postAnnoationRoute: Route = postAnnoation
 
-  val routes: Route = concat(getSensorNamesRoute, postSensorNamesRoute, postQueryRoute, postAnnoationRoute)
+  val routes: Route = concat(getMetricNamesRoute, postMetricNamesRoute, postQueryRoute, postAnnoationRoute)
 }
