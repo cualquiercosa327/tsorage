@@ -2,16 +2,9 @@ package be.cetic.tsorage.hub.grafana
 
 import java.time.Instant
 
-import akka.actor.ActorSystem
 import akka.event.Logging
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.StatusCodes
-import akka.stream.ActorMaterializer
 import akka.http.scaladsl.server.{Directives, Route, StandardRoute}
 import akka.http.scaladsl.server.directives.DebuggingDirectives
-
-import scala.concurrent.ExecutionContextExecutor
-import scala.io.StdIn
 
 class GrafanaService extends Directives with JsonSupport {
   val database: FakeDatabase.type = FakeDatabase
