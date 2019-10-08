@@ -56,8 +56,8 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    */
   def aggregateDataPointsByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): Try[Option[(Long, BigDecimal)]] = {
     if (timestamps.size != values.size) {
-      return Failure(new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the" +
-        s" same length."))
+      return Failure(new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must have the " +
+        s"same length."))
     }
 
     if (timestamps.size < 1) { // `timestamps.size` and `values.size` are equal here.
@@ -82,8 +82,8 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
   def aggregateDataPointsByAveraging(timestamps: Seq[Long],
                                      values: Seq[BigDecimal]): Try[Option[(Long, BigDecimal)]] = {
     if (timestamps.size != values.size) {
-      return Failure(new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must be have the" +
-        s" same length."))
+      return Failure(new IllegalArgumentException(s"Invalid sequence length, $timestamps and $values must have the " +
+        s"same length."))
     }
 
     if (timestamps.size < 1) { // `timestamps.size` and `values.size` are equal here.
@@ -160,6 +160,7 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
                   Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
                 case _ => None
               }
+            case _ => None
           }
         } else {
           None
@@ -233,6 +234,7 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
                   Some(Tuple2[BigDecimal, Long](aggregatedValue, aggregatedTimestamp))
                 case _ => None
               }
+            case _ => None
           }
         } else {
           None
@@ -248,27 +250,34 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    * To do this, the database is queried taking into account the parameters.
    *
    * @param request the query request.
-   * @return the response to the query request. If the request contains at least one metric that does not appear in
-   *         the database, then `Failure(java.lang.IllegalArgumentException)` is returned.
+   * @return the response to the query request. If the timestamps are not in ISO 8601 format, or if the request
+   *         contains at least one metric that does not appear in the database, or if `request.intervalMs` is less
+   *         than 1, or if `request.intervalMs` is less than 1, then `Failure(java.lang.IllegalArgumentException)` is
+   *         returned.
    */
   def responseQueryRequest(request: QueryRequest): Try[QueryResponse] = {
     // Convert date time (ISO 8601) to timestamp in milliseconds.
-    val timestampFrom = Instant.parse(request.range.from).toEpochMilli
-    val timestampTo = Instant.parse(request.range.to).toEpochMilli
+    val timestampFrom = Try(Instant.parse(request.range.from).toEpochMilli)
+    val timestampTo = Try(Instant.parse(request.range.to).toEpochMilli)
+
+    if (timestampFrom.isFailure || timestampTo.isFailure) {
+      return Failure(new IllegalArgumentException(s"${request.range.from} and ${request.range.to} must be in ISO 8601" +
+        s" format."))
+    }
 
     // Get the name of metrics.
     val metrics = request.targets.flatMap(_.target)
 
+    // Check if all metrics in `metrics` exist.
     if (!metrics.toSet.subsetOf(database.metrics.toSet)) {
-      return Failure(new IllegalArgumentException(s"${request.targets} contains at least one metric that does not " +
-        s"appear in the database."))
+      return Failure(new IllegalArgumentException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
     // Extract the data from the database in order to response to the request.
     var dataPointsList = List[DataPoints]()
     for (metric <- metrics) {
       // Extract data for this metric.
-      val metricData = database.extractData(metric, (timestampFrom / 1000).toInt, (timestampTo / 1000).toInt)
+      val metricData = database.extractData(metric, (timestampFrom.get / 1000).toInt, (timestampTo.get / 1000).toInt)
 
       // Retrieve the data points from the metric data.
       val dataPoints = for ((timestamp, value) <- metricData)
@@ -281,6 +290,11 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
     // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
     request.intervalMs match {
       case Some(interval) =>
+        if (interval < 1) {
+          return Failure(new IllegalArgumentException(s"${request.intervalMs} must be positive and strictly greater " +
+            s"than 0."))
+        }
+
         dataPointsList = dataPointsList.map(dataPoints =>
           handleInterval(dataPoints, interval, aggregateDataPointsByAveraging)
         )
@@ -290,6 +304,11 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
     // Handle the "max data points" feature for Grafana (if the request contains a field "maxDataPoints").
     request.maxDataPoints match {
       case Some(maxDataPoints) =>
+        if (maxDataPoints < 1) {
+          return Failure(new IllegalArgumentException(s"${request.maxDataPoints} must be positive and strictly " +
+            s"greater than 0."))
+        }
+
         dataPointsList = dataPointsList.map(dataPoints =>
           handleMaxDataPoints(dataPoints, maxDataPoints, aggregateDataPointsByAveraging)
         )
