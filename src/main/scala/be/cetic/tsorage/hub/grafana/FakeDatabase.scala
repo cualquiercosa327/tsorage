@@ -1,4 +1,4 @@
-package be.cetic.tsorage.hub.grafanaservice
+package be.cetic.tsorage.hub.grafana
 
 object FakeDatabase {
 

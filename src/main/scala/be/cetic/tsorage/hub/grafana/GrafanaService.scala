@@ -1,4 +1,4 @@
-package be.cetic.tsorage.hub.grafanaservice
+package be.cetic.tsorage.hub.grafana
 
 import java.time.Instant
 
@@ -7,13 +7,13 @@ import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes
 import akka.stream.ActorMaterializer
-import akka.http.scaladsl.server.{Directives, StandardRoute}
+import akka.http.scaladsl.server.{Directives, Route, StandardRoute}
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.io.StdIn
 
-object GrafanaBackend extends Directives with JsonSupport {
+class GrafanaService extends Directives with JsonSupport {
   val host = "localhost"
   val port = 8080
   val database: FakeDatabase.type = FakeDatabase
@@ -31,7 +31,7 @@ object GrafanaBackend extends Directives with JsonSupport {
   /**
    * Handle the search route ("/search").
    *
-   * From the official documentation: /search used by the find metric options on the query tab in panels.
+   * From the Grafana's official documentation: /search used by the find metric options on the query tab in panels.
    *
    * @param request the search request.
    * @return a Standard route (for Akka HTTP). It is the response to the request.
@@ -283,7 +283,7 @@ object GrafanaBackend extends Directives with JsonSupport {
   /**
    * Handle the query route ("/query").
    *
-   * From the official documentation: /query should return metrics based on input.
+   * From the Grafana's official documentation: /query should return metrics based on input.
    *
    * @param request the query request.
    * @return a Standard route (for Akka HTTP). It is the response to the request.
@@ -310,7 +310,7 @@ object GrafanaBackend extends Directives with JsonSupport {
   /**
    * Handle the annotation route ("/annotations").
    *
-   * From the official documentation: /annotations should return annotations.
+   * From the Grafana's official documentation: /annotations should return annotations.
    *
    * @param request the annotation request.
    * @return a Standard route (for Akka HTTP). It is the response to the request.
@@ -320,86 +320,71 @@ object GrafanaBackend extends Directives with JsonSupport {
     complete(response)
   }
 
-  def main(args: Array[String]) {
-    implicit val system: ActorSystem = ActorSystem()
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-    implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-
-    // Create all routes.
-    val routes =
-      concat(
-        // Route to test the connection.
-        path("") {
-          get {
-            DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
-              complete(StatusCodes.OK)
-            }
-          }
-        },
-        // Search route.
-        path("search") {
-          concat(
-            get {
-              DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
-                handleSearchRoute(None)
-              }
-            },
-            post {
-              entity(as[SearchRequest]) { request =>
-                DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
-                  handleSearchRoute(Some(request))
-                }
-              }
-            }
-          )
-        },
-        // Query route.
-        path("query") {
-          post {
-            entity(as[QueryRequest]) { request =>
-              DebuggingDirectives.logRequestResult("Query route (/query)", Logging.InfoLevel) {
-                handleQueryRoute(request)
-              }
-            }
-          }
-        },
-        // Annotation route.
-        path("annotations") {
-          post {
-            entity(as[AnnotationRequest]) { request =>
-              DebuggingDirectives.logRequestResult("Annotation route (/annotations)", Logging.InfoLevel) {
-                handleAnnotationRoute(request)
-              }
-            }
-          }
-        },
-        // Documentation route.
-        path("api-docs") {
-          DebuggingDirectives.logRequestResult("Documentation route (/api-docs)", Logging.InfoLevel) {
-            getFromResource("swagger-ui/index.html") ~ getFromResourceDirectory("swagger-ui")
-          }
-        },
-        // Documentation path.
-        pathPrefix("api-docs") {
-          concat(
-            // Documentation file route.
-            path("swagger.yaml") {
-              DebuggingDirectives.logRequestResult("Documentation file route (/api-docs/swagger.yaml)",
-                Logging.InfoLevel) {
-                getFromResource("swagger.yaml")
-              }
-            }
-          )
-        }
-      )
-
-    // Bind and handle all routes to the host and the port.
-    val bindingFuture = Http().bindAndHandle(routes, host, port)
-
-    println(s"Server online at http://$host:$port/\nPress RETURN to stop...")
-    StdIn.readLine() // let it run until user presses return
-    bindingFuture
-      .flatMap(_.unbind()) // trigger unbinding from the port
-      .onComplete(_ => system.terminate()) // and shutdown when done
+  /**
+   * Search route. It allows to get the name of all sensors.
+   *
+   * @return the search route.
+   */
+  def getSensorNames: Route = path("search") {
+    get {
+      DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
+        handleSearchRoute(None)
+      }
+    }
   }
+
+  val getSensorNamesRoute: Route = getSensorNames
+
+  /**
+   * Search route. It allows to get the name of all sensors.
+   *
+   * @return the search route.
+   */
+  def postSensorNames: Route = path("search") {
+    post {
+      entity(as[SearchRequest]) { request =>
+        DebuggingDirectives.logRequestResult("Search route (/search)", Logging.InfoLevel) {
+          handleSearchRoute(Some(request))
+        }
+      }
+    }
+  }
+
+  val postSensorNamesRoute: Route = postSensorNames
+
+  /**
+   * Query route. It allows to query the database.
+   *
+   * @return the query route.
+   */
+  def postQuery: Route = path("query") {
+    post {
+      entity(as[QueryRequest]) { request =>
+        DebuggingDirectives.logRequestResult("Query route (/query)", Logging.InfoLevel) {
+          handleQueryRoute(request)
+        }
+      }
+    }
+  }
+
+  val postQueryRoute: Route = postQuery
+
+  /**
+   * Annotation route.
+   *
+   * @return the annotation route.
+   */
+  def postAnnoation: Route = path("annotations") {
+    post {
+      entity(as[AnnotationRequest]) { request =>
+        DebuggingDirectives.logRequestResult("Annotation route (/annotations)", Logging.InfoLevel) {
+          handleAnnotationRoute(request)
+        }
+      }
+    }
+  }
+
+  val postAnnoationRoute: Route = postAnnoation
+
+  val routes: Route = concat(getSensorNamesRoute, postSensorNamesRoute, postQueryRoute, postAnnoationRoute)
 }
