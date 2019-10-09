@@ -47,6 +47,28 @@ object Cassandra extends LazyLogging
       )
    )
 
+   private def removeReverseStaticTag(metric: String, tagName: String, tagValue: String) =
+   {
+      val boundedRemove = removeReverseStaticTagsetStatement
+         .bind()
+         .setList("metric", List(metric).asJava)
+         .setString("tagname", tagName)
+         .setString("tagvalue", tagValue)
+
+      session.executeAsync(boundedRemove)
+   }
+
+   private def addReverseStaticTag(metric: String, tagName: String, tagValue: String) =
+   {
+      val boundedAdd = addReverseStaticTagsetStatement
+         .bind()
+         .setList("metric", List(metric).asJava)
+         .setString("tagname", tagName)
+         .setString("tagvalue", tagValue)
+
+      session.executeAsync(boundedAdd)
+   }
+
    /**
     * @param metric  A metric.
     * @return  The static tagset associated with the metric, if this metric exists in the database, None otherwise.
@@ -81,13 +103,7 @@ object Cassandra extends LazyLogging
       def updateReverseTagset(previousTagset: Map[String, String]) =
       {
          tags.foreach(tag => {
-            val boundedAdd = addReverseStaticTagsetStatement
-               .bind()
-               .setList("metric", List(metric).asJava)
-               .setString("tagname", tag._1)
-               .setString("tagvalue", tag._2)
-
-            session.executeAsync(boundedAdd)
+            addReverseStaticTag(metric, tag._1, tag._2)
 
             val valueHasChanged = previousTagset
                .get(tag._1)
@@ -95,15 +111,7 @@ object Cassandra extends LazyLogging
                .getOrElse(false)
 
             if(valueHasChanged)
-            {
-               val boundedRemove = removeReverseStaticTagsetStatement
-                  .bind()
-                  .setList("metric", List(metric).asJava)
-                  .setString("tagname", tag._1)
-                  .setString("tagvalue", previousTagset(tag._1))
-
-               session.executeAsync(boundedRemove)
-            }
+               removeReverseStaticTag(metric, tag._1, previousTagset(tag._1))
          })
       }
 
@@ -114,5 +122,32 @@ object Cassandra extends LazyLogging
          updateTagset()
          updateReverseTagset(previousTagset)
       }
+   }
+
+
+
+   /**
+    * Replaces an optional static tagset by a new one.
+    *
+    * @param metric  The metric associated with the tagset.
+    * @param tagset  The new tagset associated with the metric.
+    */
+   def setStaticTagset(metric: String, tagset: Map[String, String]): Unit =
+   {
+      val previousTagset = getStaticTagset(metric).getOrElse(Map.empty)
+
+      val statement = QueryBuilder.update(keyspace, "tagset")
+         .`with`(QueryBuilder.set("tagset", tagset.asJava))
+         .where(
+            QueryBuilder.eq("metric", metric)
+         )
+
+      session.executeAsync(statement)
+
+      tagset.foreach(tag => {
+         if(previousTagset contains tag._1)
+            removeReverseStaticTag(metric, tag._1, previousTagset(tag._1))
+         addReverseStaticTag(metric, tag._1, tag._2)
+      })
    }
 }

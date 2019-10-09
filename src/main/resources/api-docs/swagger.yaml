@@ -151,6 +151,39 @@ paths:
           description: "Invalid input."
         "5XX":
           description: "Unexpected error."
+    put:
+      summary: "Sets the static tags of a specified metric."
+      description: "Sets the static tags of a specified metric. All preexisting tags are deleted."
+      operationId: "putMetricTagset"
+      tags:
+        - metric
+      requestBody:
+        description: "tagset to be associated with the metric."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              example: {"owner": "cetic", "quality": "good"}
+      parameters:
+        - in: "path"
+          name: "metricId"
+          description: "The id of the considered metric."
+          required: true
+          schema:
+            type: "string"
+            example: "my_metric"
+      responses:
+        "204":
+          description: "Successful operation."
+        "400":
+          description: "Bad request. Metric ID must be a string."
+        "401":
+          description: "Authorization information is missing or invalid."
+        "405":
+          description: "Invalid input."
+        "5XX":
+          description: "Unexpected error."
 
   /search:
     get:

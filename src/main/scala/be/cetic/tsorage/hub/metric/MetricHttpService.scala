@@ -49,6 +49,20 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
       }
    }
 
-   val staticTagsetRoute = getStaticTagset
-   val routes = getStaticTagset ~ patchStaticTagset
+   def putStaticTagset = path("metric" / """(\w+)""".r / "tagset") {
+      metricId =>
+         put
+         {
+            entity(as[Map[String, String]])
+            {
+               query => {
+                  logger.info(s"Set static tagset for ${metricId}: ${query}")
+                  Cassandra.setStaticTagset(metricId, query)
+                  complete(StatusCodes.NoContent, HttpEntity.Empty)
+               }
+            }
+         }
+   }
+
+   val routes = getStaticTagset ~ patchStaticTagset ~ putStaticTagset
 }
