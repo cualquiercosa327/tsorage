@@ -4,7 +4,7 @@ info:
   description: "This is the TSorage µservice Hub.  You can find out more about Tsorage Hub
     at
     [https://github.com/cetic/tsorage-hub](https://github.com/cetic/tsorage-hub)."
-  version: "1.0.2"
+  version: "0.1"
   termsOfService: ""
   contact:
     email: "mathieu.goeminne@cetic.be"
