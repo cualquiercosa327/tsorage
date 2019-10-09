@@ -1,10 +1,9 @@
 package be.cetic.tsorage.hub
 
-import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
+import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.querybuilder.QueryBuilder._
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Row, Session}
-import com.datastax.oss.driver.api.querybuilder.select.SelectFrom
 import com.typesafe.config.ConfigFactory
-import com.datastax.oss.driver.api.querybuilder.QueryBuilder._
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
@@ -34,16 +33,39 @@ object Cassandra extends LazyLogging
     */
    def getStaticTagset(metric: String): Option[Map[String, String]] =
    {
-      val statement = selectFrom(keyspace, "tagset")
-         .column("tagset")
-         .whereColumn("metric").isEqualTo(literal(metric))
-         .build()
+      val statement = QueryBuilder.select("tagset")
+         .from(keyspace, "tagset")
+         .where(QueryBuilder.eq("metric", metric))
 
-      val result = Option(session.execute(statement.getQuery).one())
+      val result = Option(session.execute(statement).one())
       val prepared = result.map(r => r.getMap("tagset", classOf[String], classOf[String]).asScala.toMap)
 
       logger.debug(s"Static tagset retrieved for ${metric}: ${prepared}")
 
       prepared
+   }
+
+   def updateStaticTagset(metric: String, tags: Map[String, String]) = {
+      val tagset = tags.toList
+
+      def updateTagset() =
+      {
+         val tagsetStatement = QueryBuilder.update(keyspace, "tagset")
+            .`with`(QueryBuilder.putAll("tagset", tags.asJava))
+            .where(QueryBuilder.eq("metric", metric))
+            .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+
+         session.executeAsync(tagsetStatement)
+      }
+
+      def updateReverseTagset() = {
+         // TODO
+      }
+
+      if(!tagset.isEmpty)
+      {
+         updateTagset()
+         updateReverseTagset()
+      }
    }
 }

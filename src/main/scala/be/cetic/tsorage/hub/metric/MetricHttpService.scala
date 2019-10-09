@@ -18,8 +18,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext) extends Dir
    /**
     * @return  The static tagset associated with a metric.
     */
-   def getStaticTagset = path("metric" / """(\w+)""".r / "tagset")
-      {
+   def getStaticTagset = path("metric" / """(\w+)""".r / "tagset")  {
          metricId =>
          get
          {
@@ -32,6 +31,20 @@ class MetricHttpService(implicit executionContext: ExecutionContext) extends Dir
          }
       }
 
+   def patchStaticTagset = path("metric" / """(\w+)""".r / "tagset") {
+      metricId =>
+      patch
+      {
+         entity(as[Map[String, String]])
+         {
+            query => {
+               println(query)
+               complete(HttpEntity(ContentTypes.`application/json`,s"hello there ${metricId}".toJson.compactPrint))
+            }
+         }
+      }
+   }
+
    val staticTagsetRoute = getStaticTagset
-   val routes = staticTagsetRoute
+   val routes = getStaticTagset ~ patchStaticTagset
 }
