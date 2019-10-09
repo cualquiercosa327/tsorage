@@ -250,10 +250,10 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    * To do this, the database is queried taking into account the parameters.
    *
    * @param request the query request.
-   * @return the response to the query request. If the timestamps are not in ISO 8601 format, or if the request
-   *         contains at least one metric that does not appear in the database, or if `request.intervalMs` is less
-   *         than 1, or if `request.intervalMs` is less than 1, then `Failure(java.lang.IllegalArgumentException)` is
-   *         returned.
+   * @return the response to the query request. If the request contains at least one metric that does not appear in
+   *         the database, then `Failure(java.lang.NoSuchElementException)` is returned. If the timestamps are not in
+   *         ISO 8601 format, or if `request.intervalMs` is less than 1, or if `request.intervalMs` is less than 1,
+   *         then `Failure(java.lang.IllegalArgumentException)` is returned.
    */
   def responseQueryRequest(request: QueryRequest): Try[QueryResponse] = {
     // Convert date time (ISO 8601) to timestamp in milliseconds.
@@ -270,7 +270,7 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
 
     // Check if all metrics in `metrics` exist.
     if (!metrics.toSet.subsetOf(database.metrics.toSet)) {
-      return Failure(new IllegalArgumentException(s"All metrics in ${request.targets} must appear in the database."))
+      return Failure(new NoSuchElementException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
     // Extract the data from the database in order to response to the request.
@@ -328,11 +328,17 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    */
   def handleQueryRoute(request: QueryRequest): StandardRoute = {
     val response = responseQueryRequest(request)
-    response match {
+    val c = response match {
       case Success(resp) => complete(resp)
+      case Failure(_: NoSuchElementException) =>
+        complete(StatusCodes.NotFound ->
+          """One or more metrics with the specified names was not found in the
+            |database.""".stripMargin)
       case Failure(_: IllegalArgumentException) => complete(StatusCodes.MethodNotAllowed -> "Invalid input.")
       case _ => complete(StatusCodes.InternalServerError -> "Unexpected error.")
     }
+
+    c
   }
 
   /**

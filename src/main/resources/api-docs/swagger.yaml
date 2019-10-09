@@ -186,6 +186,10 @@ paths:
                 $ref: "#/components/schemas/QueryResponse"
         "400":
           description: "Bad request."
+        "404":
+          description: "One or more metrics with the specified names was not found in the database."
+        "405":
+          description: "Invalid input."
         "5XX":
           description: "Unexpected error."
   
