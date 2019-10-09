@@ -1,6 +1,6 @@
 package be.cetic.tsorage.hub
 
-import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.querybuilder.{BindMarker, QueryBuilder}
 import com.datastax.driver.core.querybuilder.QueryBuilder._
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Row, Session}
 import com.typesafe.config.ConfigFactory
@@ -27,6 +27,26 @@ object Cassandra extends LazyLogging
       .build
       .connect()
 
+   private val removeReverseStaticTagsetStatement = session.prepare(
+      QueryBuilder.update(keyspace, "reverse_tagset")
+         .`with`(QueryBuilder.removeAll("metrics", QueryBuilder.bindMarker("metric")))
+         .where(
+            QueryBuilder.eq("tagname", QueryBuilder.bindMarker("tagname"))
+         ).and(
+            QueryBuilder.eq("tagvalue", QueryBuilder.bindMarker("tagvalue"))
+         )
+   )
+
+   private val addReverseStaticTagsetStatement = session.prepare(
+      QueryBuilder.update(keyspace, "reverse_tagset")
+         .`with`(QueryBuilder.addAll("metrics", QueryBuilder.bindMarker("metric")))
+         .where(
+            QueryBuilder.eq("tagname", QueryBuilder.bindMarker("tagname"))
+         ).and(
+         QueryBuilder.eq("tagvalue", QueryBuilder.bindMarker("tagvalue"))
+      )
+   )
+
    /**
     * @param metric  A metric.
     * @return  The static tagset associated with the metric, if this metric exists in the database, None otherwise.
@@ -50,22 +70,49 @@ object Cassandra extends LazyLogging
 
       def updateTagset() =
       {
-         val tagsetStatement = QueryBuilder.update(keyspace, "tagset")
+         val statement = QueryBuilder.update(keyspace, "tagset")
             .`with`(QueryBuilder.putAll("tagset", tags.asJava))
             .where(QueryBuilder.eq("metric", metric))
             .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
-         session.executeAsync(tagsetStatement)
+         session.executeAsync(statement)
       }
 
-      def updateReverseTagset() = {
-         // TODO
+      def updateReverseTagset(previousTagset: Map[String, String]) =
+      {
+         tags.foreach(tag => {
+            val boundedAdd = addReverseStaticTagsetStatement
+               .bind()
+               .setList("metric", List(metric).asJava)
+               .setString("tagname", tag._1)
+               .setString("tagvalue", tag._2)
+
+            session.executeAsync(boundedAdd)
+
+            val valueHasChanged = previousTagset
+               .get(tag._1)
+               .map(previousValue => previousValue != tag._2)
+               .getOrElse(false)
+
+            if(valueHasChanged)
+            {
+               val boundedRemove = removeReverseStaticTagsetStatement
+                  .bind()
+                  .setList("metric", List(metric).asJava)
+                  .setString("tagname", tag._1)
+                  .setString("tagvalue", previousTagset(tag._1))
+
+               session.executeAsync(boundedRemove)
+            }
+         })
       }
 
       if(!tagset.isEmpty)
       {
+         val previousTagset = getStaticTagset(metric).getOrElse(Map.empty)
+
          updateTagset()
-         updateReverseTagset()
+         updateReverseTagset(previousTagset)
       }
    }
 }

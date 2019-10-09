@@ -5,6 +5,7 @@ import be.cetic.tsorage.hub.auth.{AuthenticationQuery, MessageJsonSupport}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives
 import be.cetic.tsorage.hub.Cassandra
+import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
 import scala.concurrent.ExecutionContext
@@ -13,7 +14,9 @@ import scala.util.matching.Regex
 /**
  * A service for managing metrics.
  */
-class MetricHttpService(implicit executionContext: ExecutionContext) extends Directives with MessageJsonSupport
+class MetricHttpService(implicit executionContext: ExecutionContext)
+   extends Directives
+      with MessageJsonSupport with LazyLogging
 {
    /**
     * @return  The static tagset associated with a metric.
@@ -38,7 +41,8 @@ class MetricHttpService(implicit executionContext: ExecutionContext) extends Dir
          entity(as[Map[String, String]])
          {
             query => {
-               println(query)
+               logger.info(s"Update static tagset for ${metricId}: ${query}")
+               Cassandra.updateStaticTagset(metricId, query)
                complete(StatusCodes.NoContent, HttpEntity.Empty)
             }
          }
