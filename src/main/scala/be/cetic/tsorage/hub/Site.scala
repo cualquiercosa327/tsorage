@@ -21,6 +21,18 @@ import scala.io.StdIn
  */
 object Site extends RouteConcatenation with Directives
 {
+   // Route to test the connection with the server.
+   val testConnectionRoute = path("") {
+      get {
+         DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
+            complete(StatusCodes.OK)
+         }
+      }
+   }
+
+   val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
+     getFromResourceDirectory("swagger-ui") ~
+     pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
    def main(args: Array[String]): Unit =
    {
@@ -33,19 +45,6 @@ object Site extends RouteConcatenation with Directives
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
       val grafanaRoutes = new GrafanaService().routes
-
-      // Route to test the connection with the server.
-      val testConnectionRoute = path("") {
-         get {
-            DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
-               complete(StatusCodes.OK)
-            }
-         }
-      }
-
-      val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
-         getFromResourceDirectory("swagger-ui") ~
-         pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
       val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ testConnectionRoute ~ swaggerRoute)
 
