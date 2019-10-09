@@ -4,17 +4,13 @@ import java.time.Instant
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
-import be.cetic.tsorage.hub.grafana.FakeDatabase
-import be.cetic.tsorage.hub.grafana.jsonsupport.{
-  AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
-  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse
-}
+import be.cetic.tsorage.hub.grafana.Database
+import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
+  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
 
 import scala.util.{Failure, Success, Try}
 
-object GrafanaBackend extends Directives with GrafanaJsonSupport {
-  val database: FakeDatabase.type = FakeDatabase
-
+class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupport {
   /**
    * Response to the search request ("/search"). In our case, it is the name of the metrics that is returned.
    *

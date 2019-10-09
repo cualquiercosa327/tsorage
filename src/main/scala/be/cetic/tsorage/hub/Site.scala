@@ -6,11 +6,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, path, post}
 import akka.http.scaladsl.server.directives.DebuggingDirectives
-import akka.http.scaladsl.server.{Directives, RouteConcatenation}
+import akka.http.scaladsl.server.{Directives, Route, RouteConcatenation}
 import akka.stream.ActorMaterializer
 import be.cetic.tsorage.hub.auth.{AuthenticationQuery, AuthenticationService}
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
-import be.cetic.tsorage.hub.grafana.GrafanaService
+import be.cetic.tsorage.hub.grafana.{FakeDatabase, GrafanaService}
 import be.cetic.tsorage.hub.metric.MetricHttpService
 import com.typesafe.config.ConfigFactory
 
@@ -22,7 +22,7 @@ import scala.io.StdIn
 object Site extends RouteConcatenation with Directives
 {
    // Route to test the connection with the server.
-   val testConnectionRoute = path("") {
+   val testConnectionRoute: Route = path("") {
       get {
          DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
             complete(StatusCodes.OK)
@@ -30,7 +30,7 @@ object Site extends RouteConcatenation with Directives
       }
    }
 
-   val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
+   val swaggerRoute: Route = path("swagger") { getFromResource("swagger-ui/index.html") } ~
      getFromResourceDirectory("swagger-ui") ~
      pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
@@ -44,7 +44,7 @@ object Site extends RouteConcatenation with Directives
 
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
-      val grafanaRoutes = new GrafanaService().routes
+      val grafanaRoutes = new GrafanaService(FakeDatabase).routes // TODO: to be changed by a real Cassandra database.
 
       val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ testConnectionRoute ~ swaggerRoute)
 

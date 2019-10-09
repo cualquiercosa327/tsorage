@@ -1,6 +1,6 @@
 package be.cetic.tsorage.hub.grafana
 
-object FakeDatabase {
+object FakeDatabase extends Database {
 
   // Very bad programming but it is just to perform some tests.
 

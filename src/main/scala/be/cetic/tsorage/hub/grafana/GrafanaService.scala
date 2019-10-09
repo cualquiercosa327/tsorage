@@ -8,8 +8,9 @@ import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationRequest, GrafanaJsonS
 
 import scala.concurrent.ExecutionContext
 
-class GrafanaService(implicit executionContext: ExecutionContext) extends Directives with GrafanaJsonSupport {
-  val grafanaRequestHandler = GrafanaBackend
+class GrafanaService(database: Database)(implicit executionContext: ExecutionContext) extends Directives
+  with GrafanaJsonSupport {
+  val grafanaRequestHandler = new GrafanaBackend(database)
 
   /**
    * Search route. It allows to get the name of all metrics.
