@@ -147,8 +147,6 @@ paths:
           description: "Bad request. Metric ID must be a string."
         "401":
           description: "Authorization information is missing or invalid."
-        "404":
-          description: "A metric with the specified ID was not found."
         "405":
           description: "Invalid input."
         "5XX":
