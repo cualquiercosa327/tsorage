@@ -39,7 +39,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext) extends Dir
          {
             query => {
                println(query)
-               complete(HttpEntity(ContentTypes.`application/json`,s"hello there ${metricId}".toJson.compactPrint))
+               complete(StatusCodes.NoContent, HttpEntity.Empty)
             }
          }
       }

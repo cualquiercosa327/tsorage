@@ -1,13 +1,16 @@
 package be.cetic.tsorage.hub
 
 import akka.actor.ActorSystem
+import akka.event.Logging
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{as, complete, entity, path, post}
+import akka.http.scaladsl.server.directives.DebuggingDirectives
 import akka.http.scaladsl.server.{Directives, RouteConcatenation}
 import akka.stream.ActorMaterializer
 import be.cetic.tsorage.hub.auth.{AuthenticationQuery, AuthenticationService}
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
+import be.cetic.tsorage.hub.grafana.GrafanaService
 import be.cetic.tsorage.hub.metric.MetricHttpService
 import com.typesafe.config.ConfigFactory
 
@@ -29,12 +32,22 @@ object Site extends RouteConcatenation with Directives
 
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
+      val grafanaRoutes = new GrafanaService().routes
+
+      // Route to test the connection with the server.
+      val testConnectionRoute = path("") {
+         get {
+            DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
+               complete(StatusCodes.OK)
+            }
+         }
+      }
 
       val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
          getFromResourceDirectory("swagger-ui") ~
          pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
-      val routes = (authRoute ~ metricRoutes ~ swaggerRoute)
+      val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ testConnectionRoute ~ swaggerRoute)
 
       val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
 
@@ -46,5 +59,4 @@ object Site extends RouteConcatenation with Directives
             system.terminate()
          }) // and shutdown when done
    }
-
 }
