@@ -328,7 +328,7 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
    */
   def handleQueryRoute(request: QueryRequest): StandardRoute = {
     val response = responseQueryRequest(request)
-    val c = response match {
+    response match {
       case Success(resp) => complete(resp)
       case Failure(_: NoSuchElementException) =>
         complete(StatusCodes.NotFound ->
@@ -337,8 +337,6 @@ object GrafanaBackend extends Directives with GrafanaJsonSupport {
       case Failure(_: IllegalArgumentException) => complete(StatusCodes.MethodNotAllowed -> "Invalid input.")
       case _ => complete(StatusCodes.InternalServerError -> "Unexpected error.")
     }
-
-    c
   }
 
   /**
