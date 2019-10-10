@@ -20,22 +20,31 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
   //val database: Database = new FakeDatabase(1568991600) // Correspond to Friday 20 September 2019 15:00:00.
   val database: Database = new FakeDatabase(1568991734) // Correspond to Friday 20 September 2019 15:02:14.
   val grafanaService = new GrafanaService(database)
+  val grafanaConnectionTestRoute: Route = grafanaService.grafanaConnectionTestRoute
   val getMetricNamesRoute: Route = grafanaService.getMetricNamesRoute
   val postMetricNamesRoute: Route = grafanaService.postMetricNamesRoute
   val postQueryRoute: Route = grafanaService.postQueryRoute
   val postAnnotationRoute: Route = grafanaService.postAnnotationRoute
 
   "The Grafana service" should {
+    // Grafana connection test route.
+    "return OK for GET requests to the Grafana root path" in {
+      Get("/v1/api/grafana") ~> grafanaConnectionTestRoute ~> check {
+        status shouldEqual StatusCodes.OK
+      }
+    }
+
     // Search route.
     "return the name of all metrics for GET/POST requests to the search path" in {
-      Get("/search") ~> getMetricNamesRoute ~> check {
+      Get("/v1/api/grafana/search") ~> getMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
         response.targets.toSet shouldEqual database.metrics.toSet
       }
 
       val request = SearchRequest(Some("Temperature"))
-      Post("/search", HttpEntity(`application/json`, request.toJson.toString)) ~> postMetricNamesRoute ~> check {
+      Post("/v1/api/grafana/search", HttpEntity(`application/json`, request.toJson.toString)) ~>
+        postMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
         response.targets.toSet shouldEqual database.metrics.toSet
@@ -49,7 +58,8 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
         None, Some(1000)
       )
-      Post("/query", HttpEntity(`application/json`, request.toJson.toString)) ~> postQueryRoute ~> check {
+      Post("/v1/api/grafana/query", HttpEntity(`application/json`, request.toJson.toString)) ~> postQueryRoute ~>
+        check {
         val response = responseAs[QueryResponse]
 
         // Test the metric names.
@@ -102,16 +112,20 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
         None, Some(-1)
       )
-      Post("/query", HttpEntity(`application/json`, request1.toJson.toString)) ~> postQueryRoute ~> check {
-        status shouldEqual StatusCodes.NotFound
-      }
-      Post("/query", HttpEntity(`application/json`, request2.toJson.toString)) ~> postQueryRoute ~> check {
-        status shouldEqual StatusCodes.MethodNotAllowed
-      }
-      Post("/query", HttpEntity(`application/json`, request3.toJson.toString)) ~> postQueryRoute ~> check {
-        status shouldEqual StatusCodes.MethodNotAllowed
-      }
-      Post("/query", HttpEntity(`application/json`, request4.toJson.toString)) ~> postQueryRoute ~> check {
+      Post("/v1/api/grafana/query", HttpEntity(`application/json`, request1.toJson.toString)) ~> postQueryRoute ~>
+        check {
+          status shouldEqual StatusCodes.NotFound
+        }
+      Post("/v1/api/grafana/query", HttpEntity(`application/json`, request2.toJson.toString)) ~> postQueryRoute ~>
+        check {
+          status shouldEqual StatusCodes.MethodNotAllowed
+        }
+      Post("/v1/api/grafana/query", HttpEntity(`application/json`, request3.toJson.toString)) ~> postQueryRoute ~>
+        check {
+          status shouldEqual StatusCodes.MethodNotAllowed
+        }
+      Post("/v1/api/grafana/query", HttpEntity(`application/json`, request4.toJson.toString)) ~> postQueryRoute ~>
+        check {
         status shouldEqual StatusCodes.MethodNotAllowed
       }
     }
@@ -120,7 +134,8 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
     "return an annotation for POST requests to the annotation path" in {
       val annotation = Annotation("my_annotation", enable = true, "SimpleJson", Some("rgba(255, 96, 96, 1)"), None)
       val request = AnnotationRequest(annotation)
-      Post("/annotations", HttpEntity(`application/json`, request.toJson.toString)) ~> postAnnotationRoute ~> check {
+      Post("/v1/api/grafana/annotations", HttpEntity(`application/json`, request.toJson.toString)) ~>
+        postAnnotationRoute ~> check {
         val response = responseAs[AnnotationResponse]
 
         response.annotations.head.annotation shouldEqual annotation

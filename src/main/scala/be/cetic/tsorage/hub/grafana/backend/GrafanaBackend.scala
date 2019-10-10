@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 
 class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupport {
   /**
-   * Response to the search request ("/search"). In our case, it is the name of the metrics that is returned.
+   * Response to the search request (/v1/api/grafana/search). In our case, it is the name of the metrics that is returned.
    *
    * @param request the search request.
    * @return the response to the search request (in this case, the name of metrics).
@@ -24,7 +24,7 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
   }
 
   /**
-   * Handle the search route ("/search").
+   * Handle the search route (/v1/api/grafana/search).
    *
    * From the Grafana's official documentation: /search used by the find metric options on the query tab in panels.
    *
@@ -243,7 +243,7 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
   }
 
   /**
-   * Response to the query request ("/query").
+   * Response to the query request (/v1/api/grafana/query).
    *
    * To do this, the database is queried taking into account the parameters.
    *
@@ -317,7 +317,7 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
   }
 
   /**
-   * Handle the query route ("/query").
+   * Handle the query route (/v1/api/grafana/query).
    *
    * From the Grafana's official documentation: /query should return metrics based on input.
    *
@@ -338,7 +338,7 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
   }
 
   /**
-   * Response to the annotation request ("/annotations").
+   * Response to the annotation request (/v1/api/grafana/annotations).
    *
    * @param request the annotation request.
    * @return the response to the annotation request.
@@ -352,7 +352,7 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
   }
 
   /**
-   * Handle the annotation route ("/annotations").
+   * Handle the annotation route (/v1/api/grafana/annotations).
    *
    * From the Grafana's official documentation: /annotations should return annotations.
    *

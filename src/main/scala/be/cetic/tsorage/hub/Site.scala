@@ -22,7 +22,7 @@ import scala.io.StdIn
 object Site extends RouteConcatenation with Directives
 {
    // Route to test the connection with the server.
-   val testConnectionRoute: Route = path("") {
+   val connectionTestRoute: Route = path("") {
       get {
          DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
             complete(StatusCodes.OK)
@@ -46,7 +46,7 @@ object Site extends RouteConcatenation with Directives
       val metricRoutes = new MetricHttpService().routes
       val grafanaRoutes = new GrafanaService(new FakeDatabase()).routes // TODO: to be changed by a real Cassandra database.
 
-      val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ testConnectionRoute ~ swaggerRoute)
+      val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ connectionTestRoute ~ swaggerRoute)
 
       val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
 

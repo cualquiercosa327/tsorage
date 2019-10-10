@@ -8,13 +8,13 @@ import org.scalatest.{Matchers, WordSpec}
 import scala.io.Source
 
 class SiteTest extends WordSpec with Matchers with ScalatestRouteTest {
-  val testConnectionRoute: Route = Site.testConnectionRoute
+  val connectionTestRoute: Route = Site.connectionTestRoute
   val swaggerRoute: Route = Site.swaggerRoute
 
   "The service" should {
-    // Test connection route.
+    // Connection test route.
     "return OK for GET requests to the root path" in {
-      Get() ~> testConnectionRoute ~> check {
+      Get() ~> connectionTestRoute ~> check {
         status shouldEqual StatusCodes.OK
       }
     }
