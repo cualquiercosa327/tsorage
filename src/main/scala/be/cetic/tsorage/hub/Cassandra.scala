@@ -87,6 +87,11 @@ object Cassandra extends LazyLogging
       prepared
    }
 
+   /**
+    * Updates a subset of the static tags associated with a metric.
+    * @param metric
+    * @param tags
+    */
    def updateStaticTagset(metric: String, tags: Map[String, String]) = {
       val tagset = tags.toList
 
@@ -95,7 +100,7 @@ object Cassandra extends LazyLogging
          val statement = QueryBuilder.update(keyspace, "tagset")
             .`with`(QueryBuilder.putAll("tagset", tags.asJava))
             .where(QueryBuilder.eq("metric", metric))
-            .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+            .setConsistencyLevel(ConsistencyLevel.ONE)
 
          session.executeAsync(statement)
       }
@@ -140,17 +145,19 @@ object Cassandra extends LazyLogging
          .`with`(QueryBuilder.set("tagset", tagset.asJava))
          .where(
             QueryBuilder.eq("metric", metric)
-         )
+         ).setConsistencyLevel(ConsistencyLevel.ONE)
 
       session.executeAsync(statement)
 
-      tagset.foreach(tag => {
-         if(previousTagset contains tag._1)
-            removeReverseStaticTag(metric, tag._1, previousTagset(tag._1))
-         addReverseStaticTag(metric, tag._1, tag._2)
-      })
+      previousTagset.foreach(tag => removeReverseStaticTag(metric, tag._1, tag._2))
+      tagset.foreach(tag => addReverseStaticTag(metric, tag._1, tag._2))
    }
 
+   /**
+    * Retrieves the names of all the stored metrics.
+    * For the moment, this list is limited to the metrics for which a static tagset has been defined, even if this tagset is empty. In the future, this limitation may be removed.
+    * @return  The names of all the metrics having a defined static tagset.
+    */
    def getAllMetrics() =
    {
       val statement = QueryBuilder
@@ -158,6 +165,9 @@ object Cassandra extends LazyLogging
          .distinct()
          .from(keyspace, "tagset")
 
-      session.execute(statement).iterator().asScala.map(row => row.getString("metric")).toSet
+      session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
    }
+
+   def getMetricsWithStaticTagset(tagset: Map[String, String]) = getAllMetrics()
+
 }
