@@ -38,7 +38,9 @@ tags:
       url: "https://grafana.com/grafana/plugins/grafana-simple-json-datasource"
   - name: "metric"
     description: "Metrics management"
-  
+  - name: "tag"
+    description: "Tags associated with metrics (static tags) or with specific observations (dynamic tags)"
+
 paths:
   /:
     get:
@@ -82,13 +84,37 @@ paths:
         "5XX":
           description: "Unexpected error."
 
+  /metric:
+    get:
+      summary: "Lists all the reachable metrics."
+      description: "Lists all the metrics that have at least one static tag.
+      Aside of reachable metrics, the system may store and retrieve observations for 'hidden' metrics.
+      The definition of 'reachable' could be extended in the future in order to cover more metrics."
+      operationId: "getMetrics"
+      tags:
+        - metric
+      responses:
+        "200":
+          description: "Successful operation. A list of metrics is returned."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                example: ["pump.temperature", "pump.debit", "pump.current"]
+        "401":
+          description: "Authorization information is missing or invalid."
+        "5XX":
+          description: "Unexpected error."
+
+
   /metric/{metricId}/tagset:
     get:
-      summary: "Lists the static tagset associated with a metric"
+      summary: "Lists the static tagset associated with a metric."
       description: "Lists the static tagset associated with a metric."
       operationId: "getMetricTagset"
       tags:
         - metric
+        - tag
       parameters:
         - in: "path"
           name: "metricId"

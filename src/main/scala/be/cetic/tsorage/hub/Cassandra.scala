@@ -150,4 +150,14 @@ object Cassandra extends LazyLogging
          addReverseStaticTag(metric, tag._1, tag._2)
       })
    }
+
+   def getAllMetrics() =
+   {
+      val statement = QueryBuilder
+         .select("metric")
+         .distinct()
+         .from(keyspace, "tagset")
+
+      session.execute(statement).iterator().asScala.map(row => row.getString("metric")).toSet
+   }
 }

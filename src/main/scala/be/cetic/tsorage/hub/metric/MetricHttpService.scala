@@ -34,6 +34,9 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
          }
       }
 
+   /**
+    * Changes some static tags of a particular metric.
+    */
    def patchStaticTagset = path("metric" / """(\w+)""".r / "tagset") {
       metricId =>
       patch
@@ -49,6 +52,9 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
       }
    }
 
+   /**
+    * Exhaustively sets the static tagset of a metric. Any tag that is not in the submitted list is discarded.
+    */
    def putStaticTagset = path("metric" / """(\w+)""".r / "tagset") {
       metricId =>
          put
@@ -64,5 +70,16 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
          }
    }
 
-   val routes = getStaticTagset ~ patchStaticTagset ~ putStaticTagset
+   /**
+    * Provide a list of all reachable metric.
+    */
+   def getMetrics = path("metric") {
+      get
+      {
+         val result = Cassandra.getAllMetrics()
+         complete(HttpEntity(ContentTypes.`application/json`, result.toJson.compactPrint))
+      }
+   }
+
+   val routes = getStaticTagset ~ patchStaticTagset ~ putStaticTagset ~ getMetrics
 }
