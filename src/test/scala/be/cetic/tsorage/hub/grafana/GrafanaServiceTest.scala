@@ -56,11 +56,15 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         val metrics = response.dataPointsSeq.map(_.target) // Get the name of metrics.
         metrics.toSet shouldEqual request.targets.flatMap(_.target).toSet
 
-        // Test if data in the response is within the correct time interval.
+        // Test data.
         val timestampFrom = Instant.parse(request.range.from).toEpochMilli
         val timestampTo = Instant.parse(request.range.to).toEpochMilli
-        response.dataPointsSeq.foreach {
-          _.datapoints.foreach {
+        response.dataPointsSeq.foreach { dataPoints =>
+          // Test if there are some data.
+          dataPoints.datapoints.size should be > 5
+
+          // Test if data in the response is within the correct time interval.
+          dataPoints.datapoints.foreach {
             _._2 should (be >= timestampFrom and be <= timestampTo)
           }
         }
