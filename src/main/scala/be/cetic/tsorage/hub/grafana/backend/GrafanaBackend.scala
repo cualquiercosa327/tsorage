@@ -5,8 +5,10 @@ import java.time.Instant
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
 import be.cetic.tsorage.hub.grafana.Database
-import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
-  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
+import be.cetic.tsorage.hub.grafana.jsonsupport.{
+  AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
+  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse
+}
 
 import scala.util.{Failure, Success, Try}
 
@@ -97,14 +99,14 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
   /**
    * Handle the "max data points" feature for Grafana (reducing of the number of data points to `maxNumDataPoints`).
    *
-   * In our case, this function aggregates data points to ensure that there are at most `maxNumDataPoints` points. To
-   * do this, a aggregation function is used (`aggregationFunc`).
+   * In our case, this function aggregates data points to ensure that there are at most roughly `maxNumDataPoints`
+   * points. To do this, a aggregation function is used (`aggregationFunc`).
    *
    * Supposition: `dataPoints` is sorted by timestamp in ascending order.
    *
    * Example: suppose there are 3000 data points and `maxNumDataPoints` is equal to 1000. Therefore, the 3000 data
-   * points will be aggregated into 1000 data points (in this example, every three consecutive data points will be
-   * aggregated).
+   * points will be aggregated into about 1000 data points (in this example, every three consecutive data points will
+   * be aggregated).
    *
    * @param dataPoints       the data points sorted by timestamps in ascending order.
    * @param maxNumDataPoints the maximum number of data points to keep.
@@ -114,7 +116,7 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
    *                         the aggregation of timestamps and the aggregation of values if the sequence of
    *                         timestamps and the sequence of values are nonempty. It returns None otherwise. If an
    *                         error occurs, then `Failure(...)` is returned.
-   * @return a DataPoints object containing a maximum of `maxNumDataPoints` data points.
+   * @return a DataPoints object containing at most roughly `maxNumDataPoints` data points.
    */
   def handleMaxDataPoints(dataPoints: DataPoints, maxNumDataPoints: Int,
                           aggregationFunc: (Seq[Long], Seq[BigDecimal]) =>
