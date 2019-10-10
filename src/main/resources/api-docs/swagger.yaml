@@ -84,15 +84,26 @@ paths:
         "5XX":
           description: "Unexpected error."
 
-  /metric:
+  /metrics/search:
     get:
-      summary: "Lists all the reachable metrics."
-      description: "Lists all the metrics that have at least one static tag.
-      Aside of reachable metrics, the system may store and retrieve observations for 'hidden' metrics.
-      The definition of 'reachable' could be extended in the future in order to cover more metrics."
-      operationId: "getMetrics"
+      summary: "Lists all the metrics having the specified static tags."
+      description: "Lists all the metrics having the specified tags. Only static tags are taken into account.
+
+      If no tags are specified, the system retrieves all the metrics having at least one static tag (this limitation may be removed in a future version),
+      which may lead to a big response."
+      operationId: "getMetricSearch"
       tags:
         - metric
+      parameters:
+        - in: "query"
+          name: "params"
+          schema:
+            type: "object"
+            additionalProperties:
+              type: "string"
+          example:
+            owner: "cetic"
+            unit: "degree Celcius"
       responses:
         "200":
           description: "Successful operation. A list of metrics is returned."
@@ -103,6 +114,8 @@ paths:
                 example: ["pump.temperature", "pump.debit", "pump.current"]
         "401":
           description: "Authorization information is missing or invalid."
+        "405":
+          description: "Invalid input."
         "5XX":
           description: "Unexpected error."
 
@@ -138,10 +151,6 @@ paths:
           description: "Bad request. Metric ID must be a string."
         "401":
           description: "Authorization information is missing or invalid."
-        "404":
-          description: "A metric with the specified ID was not found."
-        "405":
-          description: "Invalid input."
         "5XX":
           description: "Unexpected error."
     patch:

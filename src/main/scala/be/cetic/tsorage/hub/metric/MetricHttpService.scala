@@ -29,11 +29,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
          get
          {
             val results = Cassandra.getStaticTagset(metricId)
-
-            results match {
-               case Some(r) => complete(HttpEntity(ContentTypes.`application/json`, r.toJson.compactPrint))
-               case None => complete(StatusCodes.NotFound)
-            }
+            complete(HttpEntity(ContentTypes.`application/json`, results.toJson.compactPrint))
          }
       }
 

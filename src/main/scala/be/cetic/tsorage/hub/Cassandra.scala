@@ -27,130 +27,61 @@ object Cassandra extends LazyLogging
       .build
       .connect()
 
-   private val removeReverseStaticTagsetStatement = session.prepare(
-      QueryBuilder.update(keyspace, "reverse_tagset")
-         .`with`(QueryBuilder.removeAll("metrics", QueryBuilder.bindMarker("metric")))
-         .where(
-            QueryBuilder.eq("tagname", QueryBuilder.bindMarker("tagname"))
-         ).and(
-            QueryBuilder.eq("tagvalue", QueryBuilder.bindMarker("tagvalue"))
-         )
-   )
-
-   private val addReverseStaticTagsetStatement = session.prepare(
-      QueryBuilder.update(keyspace, "reverse_tagset")
-         .`with`(QueryBuilder.addAll("metrics", QueryBuilder.bindMarker("metric")))
-         .where(
-            QueryBuilder.eq("tagname", QueryBuilder.bindMarker("tagname"))
-         ).and(
-         QueryBuilder.eq("tagvalue", QueryBuilder.bindMarker("tagvalue"))
-      )
-   )
-
-   private def removeReverseStaticTag(metric: String, tagName: String, tagValue: String) =
-   {
-      val boundedRemove = removeReverseStaticTagsetStatement
-         .bind()
-         .setList("metric", List(metric).asJava)
-         .setString("tagname", tagName)
-         .setString("tagvalue", tagValue)
-
-      session.executeAsync(boundedRemove)
-   }
-
-   private def addReverseStaticTag(metric: String, tagName: String, tagValue: String) =
-   {
-      val boundedAdd = addReverseStaticTagsetStatement
-         .bind()
-         .setList("metric", List(metric).asJava)
-         .setString("tagname", tagName)
-         .setString("tagvalue", tagValue)
-
-      session.executeAsync(boundedAdd)
-   }
-
    /**
     * @param metric  A metric.
-    * @return  The static tagset associated with the metric, if this metric exists in the database, None otherwise.
+    * @return  The static tagset associated with the metric.
+    *          An empty map is returned if there is no static tagset associated with the metric.
     */
-   def getStaticTagset(metric: String): Option[Map[String, String]] =
+   def getStaticTagset(metric: String): Map[String, String] =
    {
-      val statement = QueryBuilder.select("tagset")
-         .from(keyspace, "tagset")
+      val statement = QueryBuilder.select("tagname", "tagvalue")
+         .from(keyspace, "static_tagset")
          .where(QueryBuilder.eq("metric", metric))
 
-      val result = Option(session.execute(statement).one())
-      val prepared = result.map(r => r.getMap("tagset", classOf[String], classOf[String]).asScala.toMap)
+      val result = session
+         .execute(statement)
+         .iterator().asScala
+         .map(row => row.getString("tagname") -> row.getString("tagvalue"))
+         .toMap
 
-      logger.debug(s"Static tagset retrieved for ${metric}: ${prepared}")
+      logger.debug(s"Static tagset retrieved for ${metric}: ${result}")
 
-      prepared
+      result
    }
 
    /**
     * Updates a subset of the static tags associated with a metric.
-    * @param metric
-    * @param tags
+    * @param metric  The metric to update.
+    * @param tags    The static tags to update.
     */
    def updateStaticTagset(metric: String, tags: Map[String, String]) = {
-      val tagset = tags.toList
-
-      def updateTagset() =
-      {
-         val statement = QueryBuilder.update(keyspace, "tagset")
-            .`with`(QueryBuilder.putAll("tagset", tags.asJava))
+      tags.foreach(tag => {
+         val statement = QueryBuilder.update(keyspace, "static_tagset")
+            .`with`(QueryBuilder.set("tagvalue", tag._2))
             .where(QueryBuilder.eq("metric", metric))
+            .and(QueryBuilder.eq("tagname", tag._1))
             .setConsistencyLevel(ConsistencyLevel.ONE)
 
          session.executeAsync(statement)
-      }
-
-      def updateReverseTagset(previousTagset: Map[String, String]) =
-      {
-         tags.foreach(tag => {
-            addReverseStaticTag(metric, tag._1, tag._2)
-
-            val valueHasChanged = previousTagset
-               .get(tag._1)
-               .map(previousValue => previousValue != tag._2)
-               .getOrElse(false)
-
-            if(valueHasChanged)
-               removeReverseStaticTag(metric, tag._1, previousTagset(tag._1))
-         })
-      }
-
-      if(!tagset.isEmpty)
-      {
-         val previousTagset = getStaticTagset(metric).getOrElse(Map.empty)
-
-         updateTagset()
-         updateReverseTagset(previousTagset)
-      }
+      })
    }
 
-
-
    /**
-    * Replaces an optional static tagset by a new one.
+    * Replaces a static tagset by a new one. Any previous static tag is deleted.
     *
     * @param metric  The metric associated with the tagset.
     * @param tagset  The new tagset associated with the metric.
     */
    def setStaticTagset(metric: String, tagset: Map[String, String]): Unit =
    {
-      val previousTagset = getStaticTagset(metric).getOrElse(Map.empty)
+      val deleteStatement = QueryBuilder.delete()
+         .from(keyspace, "static_tagset")
+         .where(QueryBuilder.eq("metric", metric))
+         .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      val statement = QueryBuilder.update(keyspace, "tagset")
-         .`with`(QueryBuilder.set("tagset", tagset.asJava))
-         .where(
-            QueryBuilder.eq("metric", metric)
-         ).setConsistencyLevel(ConsistencyLevel.ONE)
+      session.execute(deleteStatement)
 
-      session.executeAsync(statement)
-
-      previousTagset.foreach(tag => removeReverseStaticTag(metric, tag._1, tag._2))
-      tagset.foreach(tag => addReverseStaticTag(metric, tag._1, tag._2))
+      updateStaticTagset(metric, tagset)
    }
 
    /**
@@ -163,7 +94,8 @@ object Cassandra extends LazyLogging
       val statement = QueryBuilder
          .select("metric")
          .distinct()
-         .from(keyspace, "tagset")
+         .from(keyspace, "static_statement")
+         .setConsistencyLevel(ConsistencyLevel.ONE)
 
       session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
    }
@@ -173,17 +105,17 @@ object Cassandra extends LazyLogging
     * @param tagvalue   The value of a static tag.
     * @return  The names of all the metrics having the specified static tag.
     */
-   def getMetricsWithStaticTag(tagname: String, tagvalue: String): Set[String] =
+   def getMetricsWithStaticTag(tagname: String, tagvalue: String) =
    {
-      val statement = QueryBuilder.select("metrics")
-         .from(keyspace, "reverse_tagset")
+      val statement = QueryBuilder.select("metric")
+         .from(keyspace, "reverse_static_tagset")
          .where(QueryBuilder.eq("tagname", tagname))
          .and(QueryBuilder.eq("tagvalue", tagvalue))
          .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      Option(session.execute(statement).one())
-         .map(row => row.getSet("metrics", classOf[String]).asScala.toSet)
-         .getOrElse(Set.empty)
+      session.execute(statement).asScala
+         .map(row => row.getString("metric"))
+         .toSet
    }
 
    /**
