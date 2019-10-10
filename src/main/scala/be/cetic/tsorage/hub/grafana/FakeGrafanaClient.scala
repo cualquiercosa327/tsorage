@@ -18,8 +18,8 @@ object FakeGrafanaClient {
 
     val conf = ConfigFactory.load("auth.conf")
 
-    // Test the "/" route.
-    var uri = s"http://localhost:${conf.getInt("port")}/" // The "/" route.
+    // Test the connection test route for Grafana (/v1/api/grafana).
+    var uri = s"http://localhost:${conf.getInt("port")}/v1/api/grafana" // Grafana connection test route.
     var responseFuture: Future[HttpResponse] = Http().singleRequest(HttpRequest(uri = uri))
     responseFuture
       .onComplete {
@@ -27,7 +27,7 @@ object FakeGrafanaClient {
         case Failure(failure) => failure.printStackTrace()
       }
 
-    // Test the search route ("/search")
+    // Test the search route (/v1/api/grafana/search).
     var content = HttpEntity(`application/json`,
       """
       {
@@ -35,7 +35,7 @@ object FakeGrafanaClient {
       }
       """.stripMargin)
 
-    uri = s"http://localhost:${conf.getInt("port")}/search" // The search route.
+    uri = s"http://localhost:${conf.getInt("port")}/v1/api/grafana/search" // Search route.
     responseFuture = Http().singleRequest(HttpRequest(HttpMethods.POST, uri = uri, entity = content))
     responseFuture
       .onComplete {
@@ -43,7 +43,7 @@ object FakeGrafanaClient {
         case Failure(failure) => failure.printStackTrace()
       }
 
-    // Test the query route ("/query")
+    // Test the query route (/v1/api/grafana/query).
     content = HttpEntity(`application/json`,
       """
       {
@@ -80,7 +80,7 @@ object FakeGrafanaClient {
       """.stripMargin)
     //content = HttpEntity(`application/json`, """{"requestId":"Q119","timezone":"","panelId":2,"dashboardId":null,"range":{"from":"2019-09-24T08:13:20.835Z","to":"2019-09-24T14:13:20.835Z","raw":{"from":"now-6h","to":"now"}},"interval":"30s","intervalMs":30000,"targets":[{"target":"humidity","refId":"A","type":"timeserie"}],"maxDataPoints":840,"scopedVars":{"__interval":{"text":"30s","value":"30s"},"__interval_ms":{"text":"30000","value":30000}},"startTime":1569334400839,"rangeRaw":{"from":"now-6h","to":"now"},"adhocFilters":[]}""".stripMargin)
 
-    uri = s"http://localhost:${conf.getInt("port")}/query" // "/query" route.
+    uri = s"http://localhost:${conf.getInt("port")}/v1/api/grafana/query" // Query route.
     responseFuture = Http().singleRequest(HttpRequest(HttpMethods.POST, uri = uri, entity = content))
     responseFuture
       .onComplete {
@@ -89,7 +89,7 @@ object FakeGrafanaClient {
       }
 
 
-    // Test the annotation route ("/annotations").
+    // Test the annotation route (/v1/api/grafana/annotations).
     content = HttpEntity(`application/json`,
       """
       {
@@ -110,7 +110,7 @@ object FakeGrafanaClient {
       }
       """.stripMargin)
 
-    uri = s"http://localhost:${conf.getInt("port")}/annotations" // The annotation route.
+    uri = s"http://localhost:${conf.getInt("port")}/v1/api/grafana/annotations" // Annotation route.
     responseFuture = Http().singleRequest(HttpRequest(HttpMethods.POST, uri = uri, entity = content))
     responseFuture
       .onComplete {

@@ -42,7 +42,7 @@ paths:
     get:
       summary: "Test the connection with the server"
       description: "Tests the connection with the server. If the server is on, `code 200` is returned."
-      operationId: "testConnection"
+      operationId: "connectionTest"
       responses:
         "200":
           description: "The server is on."
@@ -120,8 +120,26 @@ paths:
           description: "Invalid input."
         "5XX":
           description: "Unexpected error."
+  
+  /v1/api/grafana:
+    get:
+      summary: "Test the connection with the server for Grafana"
+      description: "Allows Grafana to test the connection with the server. If the server is on, `code 200` is returned."
+      operationId: "grafanaConnectionTest"
+      tags:
+        - grafana
+      responses:
+        "200":
+          description: "The server is on."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+                example: "OK"
+        "5XX":
+          description: "Unexpected error."
 
-  /search:
+  /v1/api/grafana/search:
     get:
       summary: "Get the metric names"
       description: "Retrieves the name of all metrics." # TODO
@@ -163,7 +181,7 @@ paths:
         "5XX":
           description: "Unexpected error."
 
-  /query:
+  /v1/api/grafana/query:
     post:
       summary: "Query the database"
       description: "Makes a query on the database depending on some parameters. It is used to retrieve data points within a given time range for given metrics." # TODO
