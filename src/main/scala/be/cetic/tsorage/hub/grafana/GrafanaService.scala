@@ -6,21 +6,26 @@ import akka.http.scaladsl.server.{Directives, Route}
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import be.cetic.tsorage.hub.grafana.backend.GrafanaBackend
 import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationRequest, GrafanaJsonSupport, QueryRequest, SearchRequest}
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 
 class GrafanaService(database: Database)(implicit executionContext: ExecutionContext) extends Directives
-  with GrafanaJsonSupport {
+  with GrafanaJsonSupport
+{
   val grafanaRequestHandler = new GrafanaBackend(database)
+  private val conf = ConfigFactory.load("hub.conf")
+  private val apiVersion = conf.getString("api.version")
+  private val apiPrefix = conf.getString("api.prefix")
 
   /**
    * Grafana connection test route for Grafana. It allows Grafana to test the connection with the server.
    *
    * @return the Grafana connection test route.
    */
-  def grafanaConnectionTest: Route = path("v1" / "api" / "grafana") {
+  def grafanaConnectionTest: Route = path("api"/ apiVersion / "grafana") {
     get {
-      DebuggingDirectives.logRequestResult("Grafana connection test route (/v1/api/grafana)", Logging.InfoLevel) {
+      DebuggingDirectives.logRequestResult(s"Grafana connection test route (${apiPrefix}/grafana)", Logging.InfoLevel) {
         complete(StatusCodes.OK)
       }
     }
@@ -33,9 +38,9 @@ class GrafanaService(database: Database)(implicit executionContext: ExecutionCon
    *
    * @return the search route.
    */
-  def getMetricNames: Route = path("v1" / "api" / "grafana" / "search") {
+  def getMetricNames: Route = path("api"/ apiVersion / "grafana" / "search") {
     get {
-      DebuggingDirectives.logRequestResult("Search route (/v1/api/grafana/search)", Logging.InfoLevel) {
+      DebuggingDirectives.logRequestResult(s"Search route (${apiPrefix}/grafana/search)", Logging.InfoLevel) {
         grafanaRequestHandler.handleSearchRoute(None)
       }
     }
@@ -48,10 +53,10 @@ class GrafanaService(database: Database)(implicit executionContext: ExecutionCon
    *
    * @return the search route.
    */
-  def postMetricNames: Route = path("v1" / "api" / "grafana" / "search") {
+  def postMetricNames: Route = path("api"/ apiVersion / "grafana" / "search") {
     post {
       entity(as[SearchRequest]) { request =>
-        DebuggingDirectives.logRequestResult("Search route (/v1/api/grafana/search)", Logging.InfoLevel) {
+        DebuggingDirectives.logRequestResult(s"Search route (${apiPrefix}/grafana/search)", Logging.InfoLevel) {
           grafanaRequestHandler.handleSearchRoute(Some(request))
         }
       }
@@ -65,10 +70,10 @@ class GrafanaService(database: Database)(implicit executionContext: ExecutionCon
    *
    * @return the query route.
    */
-  def postQuery: Route = path("v1" / "api" / "grafana" / "query") {
+  def postQuery: Route = path("api"/ apiVersion / "grafana" / "query") {
     post {
       entity(as[QueryRequest]) { request =>
-        DebuggingDirectives.logRequestResult("Query route (/v1/api/grafana/query)", Logging.InfoLevel) {
+        DebuggingDirectives.logRequestResult(s"Query route (${apiPrefix}/grafana/query)", Logging.InfoLevel) {
           grafanaRequestHandler.handleQueryRoute(request)
         }
       }
@@ -82,10 +87,10 @@ class GrafanaService(database: Database)(implicit executionContext: ExecutionCon
    *
    * @return the annotation route.
    */
-  def postAnnotation: Route = path("v1" / "api" / "grafana" / "annotations") {
+  def postAnnotation: Route = path("api"/ apiVersion / "grafana" / "annotations") {
     post {
       entity(as[AnnotationRequest]) { request =>
-        DebuggingDirectives.logRequestResult("Annotation route (/v1/api/grafana/annotations)", Logging.InfoLevel) {
+        DebuggingDirectives.logRequestResult(s"Annotation route (${apiPrefix}/grafana/annotations)", Logging.InfoLevel) {
           grafanaRequestHandler.handleAnnotationRoute(request)
         }
       }

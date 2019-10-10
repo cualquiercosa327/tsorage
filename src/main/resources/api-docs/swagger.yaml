@@ -12,7 +12,7 @@ info:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
 servers:
-  - url: "{protocol}://localhost:{port}/"
+  - url: "{protocol}://localhost:{port}/api/v1"
     description: "Internal staging server for testing (uses test data)" # TODO
     variables:
       protocol:
@@ -121,7 +121,7 @@ paths:
         "5XX":
           description: "Unexpected error."
   
-  /v1/api/grafana:
+  /grafana:
     get:
       summary: "Test the connection with the server for Grafana"
       description: "Allows Grafana to test the connection with the server. If the server is on, `code 200` is returned."
@@ -139,7 +139,7 @@ paths:
         "5XX":
           description: "Unexpected error."
 
-  /v1/api/grafana/search:
+  /grafana/search:
     get:
       summary: "Get the metric names"
       description: "Retrieves the name of all metrics." # TODO
@@ -181,7 +181,7 @@ paths:
         "5XX":
           description: "Unexpected error."
 
-  /v1/api/grafana/query:
+  /grafana/query:
     post:
       summary: "Query the database"
       description: "Makes a query on the database depending on some parameters. It is used to retrieve data points within a given time range for given metrics." # TODO
@@ -208,21 +208,6 @@ paths:
           description: "One or more metrics with the specified names was not found in the database."
         "405":
           description: "Invalid input."
-        "5XX":
-          description: "Unexpected error."
-  
-  /swagger:
-    get:
-      summary: "Get the API's documentation"
-      description: "Retrieves the documentation of the API." # TODO
-      operationId: "swagger"
-      responses:
-        "200":
-          description: "Documentation of the API." # TODO
-          content:
-            text/plain:
-              schema:
-                type: "string"
         "5XX":
           description: "Unexpected error."
 

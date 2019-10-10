@@ -3,7 +3,7 @@ package be.cetic.tsorage.hub.auth
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.directives.HeaderDirectives
-import akka.http.scaladsl.server.{Directive, Directives}
+import akka.http.scaladsl.server.{Directive, Directives, RouteConcatenation}
 import akka.pattern.ask
 import akka.util.Timeout
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
@@ -37,12 +37,12 @@ import scala.io.StdIn
  *
  * {"user": {"id": 421, "name": "Mathieu Goeminne"} }
  */
-class AuthenticationService(implicit executionContext: ExecutionContext) extends Directives with MessageJsonSupport
+class AuthenticationService(implicit executionContext: ExecutionContext) extends Directives with MessageJsonSupport with RouteConcatenation
 {
    val conf = ConfigFactory.load("hub.conf")
    val authenticator = AuthenticationBackend(conf.getConfig("backend"))
 
-   def postAuth = path("auth") {
+   def postAuth = path("api" / conf.getString("api.version") / "auth") {
       post
       {
          entity(as[AuthenticationQuery])

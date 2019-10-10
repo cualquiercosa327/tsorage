@@ -21,10 +21,12 @@ import scala.io.StdIn
  */
 object Site extends RouteConcatenation with Directives
 {
+   private val conf = ConfigFactory.load("hub.conf")
+
    // Route to test the connection with the server.
-   val connectionTestRoute: Route = path("") {
+   val connectionTestRoute: Route = path("api" / conf.getString("api.version")) {
       get {
-         DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
+         DebuggingDirectives.logRequestResult(s"Connection test route (${conf.getString("api.prefix")})", Logging.InfoLevel) {
             complete(StatusCodes.OK)
          }
       }
@@ -40,7 +42,7 @@ object Site extends RouteConcatenation with Directives
       implicit val materializer = ActorMaterializer()
       implicit val executionContext = system.dispatcher
 
-      val conf = ConfigFactory.load("hub.conf")
+
 
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
