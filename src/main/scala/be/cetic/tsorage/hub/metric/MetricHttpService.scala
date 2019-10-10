@@ -8,6 +8,7 @@ import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import be.cetic.tsorage.hub.Cassandra
 import be.cetic.tsorage.hub.grafana.jsonsupport.AnnotationRequest
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
@@ -21,10 +22,12 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
    extends Directives
       with MessageJsonSupport with LazyLogging
 {
+   private val conf = ConfigFactory.load("hub.conf")
+
    /**
     * @return  The static tagset associated with a metric.
     */
-   def getStaticTagset = path("metric" / """(\w+)""".r / "tagset")  {
+   def getStaticTagset = path("api" / conf.getString("api.version") / "metric" / """(\w+)""".r / "tagset")  {
          metricId =>
          get
          {
@@ -36,7 +39,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
    /**
     * Changes some static tags of a particular metric.
     */
-   def patchStaticTagset = path("metric" / """(\w+)""".r / "tagset") {
+   def patchStaticTagset = path("api" / conf.getString("api.version") / "metric" / """(\w+)""".r / "tagset") {
       metricId =>
       patch
       {
@@ -54,7 +57,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
    /**
     * Exhaustively sets the static tagset of a metric. Any tag that is not in the submitted list is discarded.
     */
-   def putStaticTagset = path("metric" / """(\w+)""".r / "tagset") {
+   def putStaticTagset = path("api" / conf.getString("api.version") /"metric" / """(\w+)""".r / "tagset") {
       metricId =>
          put
          {
@@ -72,8 +75,9 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
    /**
     * Provide a list of all reachable metric.
     */
-   def getMetricSearch = path("metrics" / "search") {
+   def getMetricSearch = path("api" / conf.getString("api.version") / "metric" / "search") {
       get {
+
          parameterMap{
             params => {
                DebuggingDirectives.logRequest(s"Metric Search with static taget ${params}", Logging.InfoLevel) {

@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
  */
 object Cassandra extends LazyLogging
 {
-   private val conf = ConfigFactory.load("auth.conf")
+   private val conf = ConfigFactory.load("hub.conf")
 
    private val cassandraHost = conf.getString("cassandra.host")
    private val cassandraPort = conf.getInt("cassandra.port")

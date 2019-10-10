@@ -4,7 +4,7 @@ info:
   description: "This is the TSorage µservice Hub.  You can find out more about Tsorage Hub
     at
     [https://github.com/cetic/tsorage-hub](https://github.com/cetic/tsorage-hub)."
-  version: "1.0.2"
+  version: "0.1"
   termsOfService: ""
   contact:
     email: "mathieu.goeminne@cetic.be"
@@ -12,7 +12,7 @@ info:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
 servers:
-  - url: "{protocol}://localhost:{port}/"
+  - url: "{protocol}://localhost:{port}/api/v1"
     description: "Internal staging server for testing (uses test data)" # TODO
     variables:
       protocol:
@@ -46,7 +46,7 @@ paths:
     get:
       summary: "Test the connection with the server"
       description: "Tests the connection with the server. If the server is on, `code 200` is returned."
-      operationId: "testConnection"
+      operationId: "connectionTest"
       responses:
         "200":
           description: "The server is on."
@@ -84,7 +84,7 @@ paths:
         "5XX":
           description: "Unexpected error."
 
-  /metrics/search:
+  /metric/search:
     get:
       summary: "Lists all the metrics having the specified static tags."
       description: "Lists all the metrics having the specified tags. Only static tags are taken into account.
@@ -219,8 +219,26 @@ paths:
           description: "Invalid input."
         "5XX":
           description: "Unexpected error."
+  
+  /grafana:
+    get:
+      summary: "Test the connection with the server for Grafana"
+      description: "Allows Grafana to test the connection with the server. If the server is on, `code 200` is returned."
+      operationId: "grafanaConnectionTest"
+      tags:
+        - grafana
+      responses:
+        "200":
+          description: "The server is on."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+                example: "OK"
+        "5XX":
+          description: "Unexpected error."
 
-  /search:
+  /grafana/search:
     get:
       summary: "Get the metric names"
       description: "Retrieves the name of all metrics." # TODO
@@ -262,7 +280,7 @@ paths:
         "5XX":
           description: "Unexpected error."
 
-  /query:
+  /grafana/query:
     post:
       summary: "Query the database"
       description: "Makes a query on the database depending on some parameters. It is used to retrieve data points within a given time range for given metrics." # TODO
@@ -289,21 +307,6 @@ paths:
           description: "One or more metrics with the specified names was not found in the database."
         "405":
           description: "Invalid input."
-        "5XX":
-          description: "Unexpected error."
-  
-  /swagger:
-    get:
-      summary: "Get the API's documentation"
-      description: "Retrieves the documentation of the API." # TODO
-      operationId: "swagger"
-      responses:
-        "200":
-          description: "Documentation of the API." # TODO
-          content:
-            text/plain:
-              schema:
-                type: "string"
         "5XX":
           description: "Unexpected error."
 
