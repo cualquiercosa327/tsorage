@@ -16,7 +16,7 @@ object FakeGrafanaClient {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-    val conf = ConfigFactory.load("auth.conf")
+    val conf = ConfigFactory.load("hub.conf")
 
     // Test the connection test route for Grafana (/v1/api/grafana).
     var uri = s"http://localhost:${conf.getInt("port")}/v1/api/grafana" // Grafana connection test route.

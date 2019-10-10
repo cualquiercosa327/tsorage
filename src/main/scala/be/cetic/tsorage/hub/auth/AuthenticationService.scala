@@ -39,7 +39,7 @@ import scala.io.StdIn
  */
 class AuthenticationService(implicit executionContext: ExecutionContext) extends Directives with MessageJsonSupport
 {
-   val conf = ConfigFactory.load("auth.conf")
+   val conf = ConfigFactory.load("hub.conf")
    val authenticator = AuthenticationBackend(conf.getConfig("backend"))
 
    def postAuth = path("auth") {

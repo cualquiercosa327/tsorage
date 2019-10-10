@@ -40,7 +40,7 @@ object Site extends RouteConcatenation with Directives
       implicit val materializer = ActorMaterializer()
       implicit val executionContext = system.dispatcher
 
-      val conf = ConfigFactory.load("auth.conf")
+      val conf = ConfigFactory.load("hub.conf")
 
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
