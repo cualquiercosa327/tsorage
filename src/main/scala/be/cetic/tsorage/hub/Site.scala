@@ -44,7 +44,7 @@ object Site extends RouteConcatenation with Directives
 
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
-      val grafanaRoutes = new GrafanaService(FakeDatabase).routes // TODO: to be changed by a real Cassandra database.
+      val grafanaRoutes = new GrafanaService(new FakeDatabase()).routes // TODO: to be changed by a real Cassandra database.
 
       val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ testConnectionRoute ~ swaggerRoute)
 
