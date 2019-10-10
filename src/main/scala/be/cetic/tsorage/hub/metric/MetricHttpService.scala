@@ -1,10 +1,13 @@
 package be.cetic.tsorage.hub.metric
 
+import akka.event.Logging
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import be.cetic.tsorage.hub.auth.{AuthenticationQuery, MessageJsonSupport}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives
+import akka.http.scaladsl.server.directives.DebuggingDirectives
 import be.cetic.tsorage.hub.Cassandra
+import be.cetic.tsorage.hub.grafana.jsonsupport.AnnotationRequest
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
@@ -73,13 +76,19 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
    /**
     * Provide a list of all reachable metric.
     */
-   def getMetrics = path("metric") {
-      get
-      {
-         val result = Cassandra.getAllMetrics()
-         complete(HttpEntity(ContentTypes.`application/json`, result.toJson.compactPrint))
+   def getMetricSearch = path("metrics" / "search") {
+      get {
+         parameterMap{
+            params => {
+               DebuggingDirectives.logRequest(s"Metric Search with static taget ${params}", Logging.InfoLevel) {
+                  println(params)
+                  val result = Cassandra.getMetricsWithStaticTagset(params)
+                  complete(HttpEntity(ContentTypes.`application/json`, result.toList.toJson.compactPrint))
+               }
+            }
+         }
       }
    }
 
-   val routes = getStaticTagset ~ patchStaticTagset ~ putStaticTagset ~ getMetrics
+   val routes = getStaticTagset ~ patchStaticTagset ~ putStaticTagset ~ getMetricSearch
 }

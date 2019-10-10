@@ -43,6 +43,7 @@ object Site extends RouteConcatenation with Directives
          }
       }
 
+
       val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
          getFromResourceDirectory("swagger-ui") ~
          pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }

@@ -168,6 +168,49 @@ object Cassandra extends LazyLogging
       session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
    }
 
-   def getMetricsWithStaticTagset(tagset: Map[String, String]) = getAllMetrics()
+   /**
+    * @param tagname    The name of a static tag.
+    * @param tagvalue   The value of a static tag.
+    * @return  The names of all the metrics having the specified static tag.
+    */
+   def getMetricsWithStaticTag(tagname: String, tagvalue: String): Set[String] =
+   {
+      val statement = QueryBuilder.select("metrics")
+         .from(keyspace, "reverse_tagset")
+         .where(QueryBuilder.eq("tagname", tagname))
+         .and(QueryBuilder.eq("tagvalue", tagvalue))
+         .setConsistencyLevel(ConsistencyLevel.ONE)
 
+      Option(session.execute(statement).one())
+         .map(row => row.getSet("metrics", classOf[String]).asScala.toSet)
+         .getOrElse(Set.empty)
+   }
+
+   /**
+    * Retrieves the names of all the metrics having a given set of static tags.
+    *
+    * These names are collected by iteratively calculate the intersection of the metrics associated
+    * with each of the tag set entries.
+    *
+    * @param tagset  The set of static tags a metric must be associated with in order to be returned.
+    *                If an empty tagset is provided, all known metrics are retrieved.
+    * @return The metrics having the specified set of static tags.
+    * @see getAllMetrics
+    */
+   def getMetricsWithStaticTagset(tagset: Map[String, String]) = tagset match
+   {
+      case m: Map[String, String] if m.isEmpty => getAllMetrics()
+      case _ => {
+         val tags = tagset.toList
+         val firstTag = tags.head
+         val otherTags = tags.tail
+
+         def merge(candidates: Set[String], tag: (String, String)) = {
+            val otherCandidates = getMetricsWithStaticTag(tag._1, tag._2).toSet
+            candidates.intersect(otherCandidates)
+         }
+
+         otherTags.foldLeft(getMetricsWithStaticTag(firstTag._1, firstTag._2).toSet)(merge)
+      }
+   }
 }
