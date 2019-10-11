@@ -12,6 +12,7 @@ import be.cetic.tsorage.hub.auth.{AuthenticationQuery, AuthenticationService}
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
 import be.cetic.tsorage.hub.grafana.{FakeDatabase, GrafanaService}
 import be.cetic.tsorage.hub.metric.MetricHttpService
+import be.cetic.tsorage.hub.tag.TagHttpService
 import com.typesafe.config.ConfigFactory
 
 import scala.io.StdIn
@@ -46,6 +47,7 @@ object Site extends RouteConcatenation with Directives
 
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
+      val tagRoutes = new TagHttpService().routes
 
       val grafanaRoutes = new GrafanaService(new FakeDatabase()).routes // TODO: to be changed by a real Cassandra database.
 
@@ -63,7 +65,14 @@ object Site extends RouteConcatenation with Directives
          getFromResourceDirectory("swagger-ui") ~
          pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
-      val routes = (authRoute ~ metricRoutes ~ grafanaRoutes ~ connectionTestRoute ~ swaggerRoute)
+      val routes = (
+         authRoute ~
+         metricRoutes ~
+         grafanaRoutes ~
+         connectionTestRoute ~
+         swaggerRoute ~
+         tagRoutes
+      )
 
       val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
 

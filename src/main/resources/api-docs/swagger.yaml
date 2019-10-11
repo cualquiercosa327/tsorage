@@ -219,6 +219,40 @@ paths:
           description: "Invalid input."
         "5XX":
           description: "Unexpected error."
+
+  /statictag/{tagname}/values:
+    get:
+      summary: "Lists the values associated with a static tag having a specific name."
+      description: "Generate the list of all used values for the specified static tag name, as well as the name of the metrics having the static (tagname, tagvalue)."
+      operationId: "getStatictagValues"
+      tags:
+        - tag
+      parameters:
+        - in: "path"
+          name: "tagname"
+          description: "The name of a static tag."
+          required: true
+          schema:
+            type: "string"
+          example: "owner"
+      responses:
+        "200":
+          description: "The values of the specified static tag, as well as the names of the metrics using this static (tagname, tagvalue)"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                example:
+                  "cetic": ["temperature_sensor", "pressure_sensor"]
+                  "user1": ["my_sensor", "pump.speed"]
+        "400":
+          description: "Bad request. Tag name must be a string."
+        "401":
+          description: "Authorization information is missing or invalid."
+        "404":
+          description: "No static tag with the provided name."
+        "5XX":
+          description: "Unexpected error."
   
   /grafana:
     get:
