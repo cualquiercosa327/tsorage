@@ -145,4 +145,23 @@ object Cassandra extends LazyLogging
          otherTags.foldLeft(getMetricsWithStaticTag(firstTag._1, firstTag._2).toSet)(merge)
       }
    }
+
+   /**
+    * Provides the list of values being associated with a static tag name.
+    * @param tagname The name of a static tag.
+    * @return  The values associated with tagname, as well as the metrics using the combined (tag name, tag value) as static tag.
+    *          If the tag name is not in use, an empty set is retrieved.
+    */
+   def getStaticTagValues(tagname: String): Map[String, Set[String]] =
+   {
+      val statement = select("tagvalue", "metric")
+         .from(keyspace, "reverse_static_tagset")
+         .where(QueryBuilder.eq("tagname", tagname))
+
+      session
+         .execute(statement).asScala
+         .map(row => (row.getString("tagvalue") -> row.getString("metric")))
+         .groupBy(r => r._1)
+         .mapValues(v => v.map(_._2).toSet)
+   }
 }

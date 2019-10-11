@@ -7,13 +7,11 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import be.cetic.tsorage.hub.Cassandra
-import be.cetic.tsorage.hub.grafana.jsonsupport.AnnotationRequest
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
 import scala.concurrent.ExecutionContext
-import scala.util.matching.Regex
 
 /**
  * A service for managing metrics.
@@ -81,7 +79,6 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
          parameterMap{
             params => {
                DebuggingDirectives.logRequest(s"Metric Search with static taget ${params}", Logging.InfoLevel) {
-                  println(params)
                   val result = Cassandra.getMetricsWithStaticTagset(params)
                   complete(HttpEntity(ContentTypes.`application/json`, result.toList.toJson.compactPrint))
                }
