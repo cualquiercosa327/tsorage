@@ -1,9 +1,12 @@
-![](https://github.com/cetic/tsorage-processor/workflows/unit-tests/badge.svg) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+# tsorage-hub
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![](https://github.com/cetic/tsorage-hub/workflows/unit-tests/badge.svg)
 
 
-The aim of the processor is to
+This module is the backend of the TSorage project. It contains micro services that support various aspects of TSorage, including
 
-- Periodically consume a stream of raw, secured, incoming measures
-- Process them (rollup, etc.)
-- Store processed measures into Cassandra
-
+- Tag management
+- Metric management
+- User account management
+- Authentication
+- Data representation

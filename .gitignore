@@ -1,3 +1,7 @@
 .idea
-project/target
+project
 target
+out
+
+# OS files
+*.DS_Store
