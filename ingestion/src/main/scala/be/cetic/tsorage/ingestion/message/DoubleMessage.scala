@@ -35,7 +35,7 @@ case class DoubleMessage(
       }
 
       val preparedTagsWithUser = ConfigFactory.load("ingest-http.conf").getBoolean("append_user") match {
-         case true => preparedTagsWithHost + ("user" -> user.name)
+         case true => preparedTagsWithHost + ("user_id" -> user.id.toString)
          case false => preparedTagsWithHost
       }
 
