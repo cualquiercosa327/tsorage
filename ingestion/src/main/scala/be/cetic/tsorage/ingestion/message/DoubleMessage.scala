@@ -1,6 +1,7 @@
 package be.cetic.tsorage.ingestion.message
 
 import java.time.{LocalDateTime, ZoneOffset}
+import com.typesafe.config.{Config, ConfigFactory}
 
 /**
  * A message, provided by an external client.
@@ -14,7 +15,7 @@ case class DoubleMessage(
                           tags: List[String] // format: "key:value"
                        )
 {
-   def prepared() = {
+   def prepared(user: User) = {
 
       val preparedTags = tags.map(tag => tag.split(":", 2)).filter(tag => tag.size == 2).map(tag => tag(0) -> tag(1)).toMap
 
@@ -33,9 +34,14 @@ case class DoubleMessage(
          case Some(h) => preparedTagsWithInterval + ("host" -> h)
       }
 
+      val preparedTagsWithUser = ConfigFactory.load("ingest-http.conf").getBoolean("append_user") match {
+         case true => preparedTagsWithHost + ("user" -> user.name)
+         case false => preparedTagsWithHost
+      }
+
       PreparedDoubleMessage(
          metric,
-         preparedTagsWithHost,
+         preparedTagsWithUser,
          "tdouble",
          points.map(point => (
             LocalDateTime.ofEpochSecond(point._1.toLong, 0, ZoneOffset.UTC),

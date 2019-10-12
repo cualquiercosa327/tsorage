@@ -33,6 +33,8 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
    implicit val materializer = ActorMaterializer()
    implicit val executionContext = system.dispatcher
 
+   private val  conf = ConfigFactory.load("ingest-http.conf")
+
    def verifyToken(conf: Config)(token: String): Future[Option[User]] = {
       val request = HttpRequest(
          method = HttpMethods.POST,
@@ -55,7 +57,6 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
 
    def main(args: Array[String]): Unit =
    {
-      val conf = ConfigFactory.load("ingest-http.conf")
 
       val producerSettings = ProducerSettings(system, new StringSerializer, new StringSerializer)
          .withBootstrapServers(s"${conf.getString("kafka.host")}:${conf.getInt("kafka.port")}")
@@ -79,7 +80,7 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
 
                            entity(as[DoubleBody])
                            { body =>
-                              val messages = body.series.map(s => s.prepared())
+                              val messages = body.series.map(s => s.prepared(user))
 
                               messages.map(message => new ProducerRecord[String, String](conf.getString("kafka.topic"), message.toJson.compactPrint))
                                  .foreach(pr => kafkaProducer.send(pr))
