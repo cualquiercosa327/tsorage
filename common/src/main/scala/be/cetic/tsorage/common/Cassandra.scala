@@ -1,19 +1,20 @@
-package be.cetic.tsorage.hub
+package be.cetic.tsorage.common
 
-import com.datastax.driver.core.querybuilder.{BindMarker, QueryBuilder}
-import com.datastax.driver.core.querybuilder.QueryBuilder._
-import com.datastax.driver.core.{Cluster, ConsistencyLevel, Row, Session}
+import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.querybuilder.QueryBuilder.select
+import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
+
 
 /**
  * An access to the Cassandra cluster
  */
 object Cassandra extends LazyLogging
 {
-   private val conf = ConfigFactory.load("hub.conf")
+   private val conf = ConfigFactory.load("common.conf")
 
    private val cassandraHost = conf.getString("cassandra.host")
    private val cassandraPort = conf.getInt("cassandra.port")

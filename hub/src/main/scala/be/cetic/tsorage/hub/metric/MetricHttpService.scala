@@ -4,13 +4,12 @@ import akka.event.Logging
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.directives.DebuggingDirectives
-import be.cetic.tsorage.hub.Cassandra
+import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.hub.auth.MessageJsonSupport
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
-
 import spray.json._
 
 /**
