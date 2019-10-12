@@ -1,8 +1,5 @@
 # tsorage-hub
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![](https://github.com/cetic/tsorage-hub/workflows/unit-tests/badge.svg)
-
-
 This module is the backend of the TSorage project. It contains micro services that support various aspects of TSorage, including
 
 - Tag management
