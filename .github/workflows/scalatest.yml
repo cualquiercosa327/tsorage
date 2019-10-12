@@ -1,9 +1,7 @@
 name: unit-tests
 
-<<<<<<< HEAD
-on: 
-  push:
-    
+on: [push, pull_request]
+
 jobs:
     test:
       runs-on: ubuntu-latest
@@ -16,22 +14,3 @@ jobs:
         run: sbt compile
       - name: Test
         run: sbt test
-      
-      
-=======
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v1
-    - uses: olafurpg/setup-scala@v5
-      with:
-        java-version: openjdk@1.12 
-    - name: Compile
-      run: sbt compile
-    - name: Test
-      run: sbt test
->>>>>>> 7ff6c021fa0e7a58b0de6b6e76f5225fb0192cc8
