@@ -1,6 +1,8 @@
 # TSorage
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) ![](https://github.com/cetic/tsorage/workflows/unit-tests/badge.svg)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
+![](https://github.com/cetic/tsorage/workflows/unit-tests/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/tsorage/badge/?version=latest)](https://tsorage.readthedocs.io/en/latest/?badge=latest)
 
 A platform for collecting, storing, and processing time series.
 
