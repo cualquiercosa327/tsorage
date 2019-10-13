@@ -3,7 +3,21 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. include:: principles/subindex.rst
-.. include:: installation/subindex.rst
-.. include:: operation/subindex.rst
-.. include:: userguide/subindex.rst
+##########
+Principles
+##########
+.. include:: principles/intro.rst
+.. include:: principles/features.rst
+.. include:: principles/architecture.rst
+
+############
+Installation
+############
+
+#########
+Operation
+#########
+
+##########
+User Guide
+##########
