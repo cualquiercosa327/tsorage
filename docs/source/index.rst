@@ -3,9 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. toctree::
+   :maxdepth: 3
+
 ##########
 Principles
 ##########
+
 .. include:: principles/intro.rst
 .. include:: principles/features.rst
 .. include:: principles/architecture.rst
@@ -14,10 +18,21 @@ Principles
 Installation
 ############
 
+.. include:: installation/installation_schema.rst
+.. include:: installation/installation_requirements.rst
+.. include:: installation/installation_procedure.rst
+
+
 #########
 Operation
 #########
 
+.. include:: operation/backup_recovery.rst
+
 ##########
 User Guide
 ##########
+
+.. include:: userguide/ingesting_ts.rst
+
+
