@@ -2,6 +2,7 @@ package be.cetic.tsorage.processor.sharder
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.common.sharder.DaySharder
 import org.scalatest.{FlatSpec, Matchers}
 
 class DaySharderTest extends FlatSpec with Matchers

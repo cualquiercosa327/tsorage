@@ -1,4 +1,4 @@
-package be.cetic.tsorage.processor.sharder
+package be.cetic.tsorage.common.sharder
 
 import java.time.LocalDateTime
 
