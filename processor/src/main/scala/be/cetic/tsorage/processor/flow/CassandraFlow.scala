@@ -3,6 +3,7 @@ package be.cetic.tsorage.processor.flow
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.sharder.Sharder
 import be.cetic.tsorage.processor.{Message, ProcessorConfig}
+import com.datastax.driver.core.querybuilder.QueryBuilder
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.Try
@@ -15,6 +16,15 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
   private val aggKeyspace = config.getString("cassandra.keyspaces.aggregated")
 
   private implicit val session = Cassandra.session
+
+  private val dynamicTagStatement = session.prepare(
+    QueryBuilder
+     .insertInto(aggKeyspace, "dynamic_tagset")
+     .value("metric", QueryBuilder.bindMarker("metric"))
+     .value("shard", QueryBuilder.bindMarker("shard"))
+     .value("tagname", QueryBuilder.bindMarker("tagname"))
+     .value("tagvalue", QueryBuilder.bindMarker("tagvalue"))
+  )
 
   /**
     * A function ensuring all tagnames contained in a message
@@ -29,11 +39,30 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
       val recentTags = msg.tagset.keySet.diff(cache)
       cache = cache ++ recentTags
 
+      /* Ensure the tag columns exist in the database */
       recentTags.map(tag => s"""ALTER TABLE ${rawKeyspace}.observations ADD "${tag.replace("\"", "\"\"")}" text;""")
         .foreach(t => Try(session.execute(t)))
 
       recentTags.map(tag => s"""ALTER TABLE ${aggKeyspace}.observations ADD "${tag.replace("\"", "\"\"")}" text;""")
         .foreach(t => Try(session.execute(t)))
+
+      /* Update the dynamic tagset */
+      val sharder = Cassandra.sharder
+      val shards = msg.values.map(obs => sharder.shard(obs._1)).toSet
+
+      shards.foreach(shard => {
+        msg.tagset.foreach(tag => {
+          val bound = dynamicTagStatement
+             .bind()
+             .setString("metric", msg.metric)
+             .setString("shard", shard)
+             .setString("tagname", tag._1)
+             .setString("tagvalue", tag._2)
+
+          session.executeAsync(bound)
+        })
+      })
+
 
       msg
     }
