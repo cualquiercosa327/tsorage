@@ -1,7 +1,7 @@
 package be.cetic.tsorage.processor.flow
 
+import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.sharder.Sharder
 import be.cetic.tsorage.processor.{Message, ProcessorConfig}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 
