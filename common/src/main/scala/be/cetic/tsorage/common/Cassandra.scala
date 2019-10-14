@@ -95,7 +95,7 @@ object Cassandra extends LazyLogging
       val statement = QueryBuilder
          .select("metric")
          .distinct()
-         .from(keyspace, "static_statement")
+         .from(keyspace, "static_tagset")
          .setConsistencyLevel(ConsistencyLevel.ONE)
 
       session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
