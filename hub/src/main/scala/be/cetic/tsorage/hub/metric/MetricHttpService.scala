@@ -28,7 +28,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
          metricId =>
          get
          {
-            val results = Cassandra.getStaticTagset(metricId)
+            val results = new Cassandra().getStaticTagset(metricId)
             complete(HttpEntity(ContentTypes.`application/json`, results.toJson.compactPrint))
          }
       }
@@ -44,7 +44,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
          {
             query => {
                logger.info(s"Update static tagset for ${metricId}: ${query}")
-               Cassandra.updateStaticTagset(metricId, query)
+               new Cassandra().updateStaticTagset(metricId, query)
                complete(StatusCodes.NoContent, HttpEntity.Empty)
             }
          }
@@ -62,7 +62,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
             {
                query => {
                   logger.info(s"Set static tagset for ${metricId}: ${query}")
-                  Cassandra.setStaticTagset(metricId, query)
+                  new Cassandra().setStaticTagset(metricId, query)
                   complete(StatusCodes.NoContent, HttpEntity.Empty)
                }
             }
@@ -78,7 +78,7 @@ class MetricHttpService(implicit executionContext: ExecutionContext)
          parameterMap{
             params => {
                DebuggingDirectives.logRequest(s"Metric Search with static taget ${params}", Logging.InfoLevel) {
-                  val result = Cassandra.getMetricsWithStaticTagset(params)
+                  val result = new Cassandra().getMetricsWithStaticTagset(params)
                   complete(HttpEntity(ContentTypes.`application/json`, result.toList.toJson.compactPrint))
                }
             }

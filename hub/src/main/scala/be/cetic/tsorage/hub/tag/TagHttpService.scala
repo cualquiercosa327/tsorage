@@ -26,7 +26,7 @@ class TagHttpService(implicit executionContext: ExecutionContext) extends Direct
       tagname =>
          get {
             DebuggingDirectives.logRequest(s"Values of static tag name ${tagname} are queried ", Logging.InfoLevel) {
-               val results = Cassandra.getStaticTagValues(tagname)
+               val results = new Cassandra().getStaticTagValues(tagname)
 
                if(results.isEmpty) complete(StatusCodes.NoContent, HttpEntity.Empty)
                else complete(HttpEntity(ContentTypes.`application/json`, results.toJson.compactPrint))
