@@ -2,7 +2,7 @@ package be.cetic.tsorage.hub.auth.backend
 
 import java.time.LocalDateTime
 
-import be.cetic.tsorage.hub.auth.AuthenticationResponse
+import be.cetic.tsorage.common.messaging.AuthenticationResponse
 
 /**
  * A backend for the authentication, based on hardcoded values

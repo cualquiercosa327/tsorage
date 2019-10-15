@@ -6,6 +6,8 @@ import akka.http.scaladsl.server.directives.HeaderDirectives
 import akka.http.scaladsl.server.{Directive, Directives, RouteConcatenation}
 import akka.pattern.ask
 import akka.util.Timeout
+import be.cetic.tsorage.common.json.MessageJsonSupport
+import be.cetic.tsorage.common.messaging.AuthenticationQuery
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
 import com.typesafe.config.ConfigFactory
 import spray.json._

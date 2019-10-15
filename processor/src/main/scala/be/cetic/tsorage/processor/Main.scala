@@ -8,6 +8,7 @@ import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
 import akka.stream.scaladsl.{Sink, Source}
+import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.processor.aggregator.time.{DayAggregator, HourAggregator, MinuteAggregator}
 import be.cetic.tsorage.processor.flow.GlobalProcessingGraphFactory
 import com.typesafe.config.ConfigFactory
@@ -19,7 +20,6 @@ import spray.json._
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
-
 
 object Main extends LazyLogging with App with MessageJsonSupport
 {

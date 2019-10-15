@@ -1,6 +1,8 @@
 package be.cetic.tsorage.ingestion.message
 
 import java.time.{LocalDateTime, ZoneOffset}
+
+import be.cetic.tsorage.common.messaging.User
 import com.typesafe.config.{Config, ConfigFactory}
 
 /**

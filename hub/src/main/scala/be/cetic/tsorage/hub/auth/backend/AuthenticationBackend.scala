@@ -1,6 +1,6 @@
 package be.cetic.tsorage.hub.auth.backend
 
-import be.cetic.tsorage.hub.auth.AuthenticationResponse
+import be.cetic.tsorage.common.messaging.AuthenticationResponse
 import com.typesafe.config.Config
 
 /**
