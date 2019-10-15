@@ -4,9 +4,8 @@ import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Date
 
-import be.cetic.tsorage.common.sharder.{DaySharder, MonthSharder}
+import be.cetic.tsorage.common.sharder.{DaySharder, MonthSharder, Sharder}
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import be.cetic.tsorage.common.sharder.MonthSharder
 import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
 import be.cetic.tsorage.processor.ProcessorConfig
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
@@ -29,11 +28,7 @@ object Cassandra extends LazyLogging {
     .build
     .connect()
 
-
-  val sharder = conf.conf.getString("sharder") match {
-    case "day" => DaySharder
-    case _ => MonthSharder
-  }
+  val sharder = Sharder(conf.conf.getString("sharder"))
 
   /**
     * Synchronously submits a raw value in the raw table.
