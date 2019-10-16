@@ -1,5 +1,9 @@
 package be.cetic.tsorage.common
 
+import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
+import java.util.Date
+
+import be.cetic.tsorage.common.sharder.{MonthSharder, Sharder}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.querybuilder.QueryBuilder.select
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
@@ -7,7 +11,6 @@ import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
-
 
 /**
  * An access to the Cassandra cluster
@@ -17,7 +20,8 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
    private val cassandraHost = conf.getString("cassandra.host")
    private val cassandraPort = conf.getInt("cassandra.port")
 
-   private val keyspace = conf.getString("cassandra.keyspaces.other")
+   private val keyspaceAgg = conf.getString("cassandra.keyspaces.other") // Keyspace containing aggregated data.
+   private val keyspaceRaw = conf.getString("cassandra.keyspaces.raw") // Keyspace containing raw data.
 
    private val session: Session = Cluster.builder
       .addContactPoint(cassandraHost)
@@ -34,7 +38,7 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
    def getStaticTagset(metric: String): Map[String, String] =
    {
       val statement = QueryBuilder.select("tagname", "tagvalue")
-         .from(keyspace, "static_tagset")
+         .from(keyspaceAgg, "static_tagset")
          .where(QueryBuilder.eq("metric", metric))
 
       val result = session
@@ -55,7 +59,7 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
     */
    def updateStaticTagset(metric: String, tags: Map[String, String]) = {
       tags.foreach(tag => {
-         val statement = QueryBuilder.update(keyspace, "static_tagset")
+         val statement = QueryBuilder.update(keyspaceAgg, "static_tagset")
             .`with`(QueryBuilder.set("tagvalue", tag._2))
             .where(QueryBuilder.eq("metric", metric))
             .and(QueryBuilder.eq("tagname", tag._1))
@@ -74,7 +78,7 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
    def setStaticTagset(metric: String, tagset: Map[String, String]): Unit =
    {
       val deleteStatement = QueryBuilder.delete()
-         .from(keyspace, "static_tagset")
+         .from(keyspaceAgg, "static_tagset")
          .where(QueryBuilder.eq("metric", metric))
          .setConsistencyLevel(ConsistencyLevel.ONE)
 
@@ -93,7 +97,7 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
       val statement = QueryBuilder
          .select("metric")
          .distinct()
-         .from(keyspace, "static_tagset")
+         .from(keyspaceAgg, "static_tagset")
          .setConsistencyLevel(ConsistencyLevel.ONE)
 
       session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
@@ -107,7 +111,7 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
    def getMetricsWithStaticTag(tagname: String, tagvalue: String) =
    {
       val statement = QueryBuilder.select("metric")
-         .from(keyspace, "reverse_static_tagset")
+         .from(keyspaceAgg, "reverse_static_tagset")
          .where(QueryBuilder.eq("tagname", tagname))
          .and(QueryBuilder.eq("tagvalue", tagvalue))
          .setConsistencyLevel(ConsistencyLevel.ONE)
@@ -154,7 +158,7 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
    def getStaticTagValues(tagname: String): Map[String, Set[String]] =
    {
       val statement = select("tagvalue", "metric")
-         .from(keyspace, "reverse_static_tagset")
+         .from(keyspaceAgg, "reverse_static_tagset")
          .where(QueryBuilder.eq("tagname", tagname))
 
       session
@@ -162,5 +166,61 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
          .map(row => (row.getString("tagvalue") -> row.getString("metric")))
          .groupBy(r => r._1)
          .mapValues(v => v.map(_._2).toSet)
+   }
+
+   /**
+    * Get data from a time range for a single metric.
+    *
+    * @param metric A metric.
+    * @param startDatetime A start time.
+    * @param endDatetime An end time.
+    */
+   def getDataFromTimeRange(metric: String, startDatetime: LocalDateTime, endDatetime: LocalDateTime): Seq[(LocalDateTime, BigDecimal)] = {
+      // Compute shards.
+      val sharder: Sharder = MonthSharder
+      val shards = sharder.shards(startDatetime, endDatetime)
+
+      // Convert datetimes to timestamps.
+      // val startTimestamp = startDatetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
+      //val endTimestamp = endDatetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
+      val startTimestamp = startDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
+      val endTimestamp = endDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
+
+      // Query the database.
+      val results = for (shard <- shards)
+         yield {
+            val statement = QueryBuilder.select("datetime_", "value_double_")
+              .from(keyspaceRaw, "observations")
+              .where(QueryBuilder.eq("metric_", metric))
+              .and(QueryBuilder.eq("shard_", shard))
+              .and(QueryBuilder.gte("datetime_", startTimestamp))
+              .and(QueryBuilder.lte("datetime_", endTimestamp))
+
+            session.executeAsync(statement)
+         }
+
+      val data = results.flatMap(
+         _.getUninterruptibly().all().asScala.map(row => {
+            val date = row.getTimestamp("datetime_")
+            val value = row.getUDTValue("value_double_").getDouble("value")
+
+            // Convert the date to LocalDateTime and the value to BigDecimal.
+            LocalDateTime.ofInstant(date.toInstant, ZoneOffset.UTC) -> BigDecimal(value)
+            //LocalDateTime.ofInstant(date.toInstant, ZoneId.systemDefault()) -> BigDecimal(value)
+         })
+      )
+
+      data
+   }
+}
+
+object Main {
+   def main(args: Array[String]): Unit = {
+      val startDatetime = LocalDateTime.of(2019, 1, 20, 17, 50, 0)
+      val endDatetime = LocalDateTime.of(2019, 9, 21, 1, 10, 0)
+      val database = new Cassandra(ConfigFactory.load("test.conf"))
+
+      val data = database.getDataFromTimeRange("temperature", startDatetime, endDatetime)
+      println(data)
    }
 }

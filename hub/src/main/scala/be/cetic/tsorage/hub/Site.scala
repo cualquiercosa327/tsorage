@@ -7,6 +7,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import akka.http.scaladsl.server.{Directives, Route, RouteConcatenation}
 import akka.stream.ActorMaterializer
+import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.hub.auth.AuthenticationService
 import be.cetic.tsorage.hub.grafana.{FakeDatabase, GrafanaService}
 import be.cetic.tsorage.hub.metric.MetricHttpService
@@ -46,7 +47,7 @@ object Site extends RouteConcatenation with Directives
       val metricRoutes = new MetricHttpService().routes
       val tagRoutes = new TagHttpService().routes
 
-      val grafanaRoutes = new GrafanaService(new FakeDatabase()).routes // TODO: to be changed by a real Cassandra database.
+      val grafanaRoutes = new GrafanaService(new Cassandra(ConfigFactory.load("test.conf"))).routes // TODO: change "test.conf" to "common.conf"
 
       // Route to test the connection with the server.
       val testConnectionRoute = path("") {

@@ -1,26 +1,28 @@
 package be.cetic.tsorage.hub.grafana.backend
 
-import java.time.Instant
+import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
-import be.cetic.tsorage.hub.grafana.Database
-import be.cetic.tsorage.hub.grafana.jsonsupport.{
-  AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
-  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse
-}
+import be.cetic.tsorage.common.Cassandra
+import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints, GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
-class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupport {
+class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSupport {
   /**
-   * Response to the search request (<api.prefix>/grafana/search). In our case, it is the name of the metrics that is returned.
+   * Response to the search request (<api.prefix>/grafana/search). In our case, it is the name of the metrics that is
+   * returned.
    *
    * @param request the search request.
    * @return the response to the search request (in this case, the name of metrics).
    */
   def responseSearchRequest(request: Option[SearchRequest]): Try[SearchResponse] = {
-    Success(SearchResponse(database.metrics.toList))
+    //Success(SearchResponse(database.metrics.toList))
+    Success(SearchResponse(database.getAllMetrics().toList))
   }
 
   /**
@@ -254,11 +256,11 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
    *         then `Failure(java.lang.IllegalArgumentException)` is returned.
    */
   def responseQueryRequest(request: QueryRequest): Try[QueryResponse] = {
-    // Convert date time (ISO 8601) to timestamp in milliseconds.
-    val timestampFrom = Try(Instant.parse(request.range.from).toEpochMilli)
-    val timestampTo = Try(Instant.parse(request.range.to).toEpochMilli)
+    // Convert ISO 8601 string to LocalDataTime.
+    val startDatetime = Try(ZonedDateTime.parse(request.range.from).toLocalDateTime)
+    val endDatetime = Try(ZonedDateTime.parse(request.range.to).toLocalDateTime)
 
-    if (timestampFrom.isFailure || timestampTo.isFailure) {
+    if (startDatetime.isFailure || endDatetime.isFailure) {
       return Failure(new IllegalArgumentException(s"${request.range.from} and ${request.range.to} must be in ISO 8601" +
         s" format."))
     }
@@ -267,23 +269,66 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
     val metrics = request.targets.flatMap(_.target)
 
     // Check if all metrics in `metrics` exist.
-    if (!metrics.toSet.subsetOf(database.metrics.toSet)) {
+    if (!metrics.toSet.subsetOf(database.getAllMetrics().toSet)) {
       return Failure(new NoSuchElementException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
+    // Query the database asynchronously.
+    val databaseQueries: Future[Seq[DataPoints]] = Future.sequence(metrics.map(metric => {
+      Future {
+        // Extract data for this metric.
+        val metricData = database.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
+
+        // Retrieve the data points from the metric data.
+        val dataPoints = metricData.map(singleData => {
+          val (datetime, value) = singleData
+          val timestamp = datetime.toInstant(ZoneOffset.UTC).toEpochMilli
+          //val timestamp = datetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
+          Tuple2[BigDecimal, Long](value, timestamp)
+        })
+
+        DataPoints(metric, dataPoints)
+      }
+    }))
+
+    // Wait the results.
+    var dataPointsList: Seq[DataPoints] = Await.result(databaseQueries, Duration.Inf)
+
+    /*
     // Extract the data from the database in order to response to the request.
+    val dataPointsList: Seq[DataPoints] = metrics.map(metric => {
+      // Extract data for this metric.
+      val metricData = database.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
+
+      // Retrieve the data points from the metric data.
+      val dataPoints = metricData.map(singleData => {
+        val (datetime, value) = singleData
+        val timestamp = datetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
+        Tuple2[BigDecimal, Long](value, timestamp)
+      })
+
+      // Append all data points for this metric to the list of data points.
+      DataPoints(metric, dataPoints)
+    })
+    */
+
+    /*
     var dataPointsList = List[DataPoints]()
     for (metric <- metrics) {
       // Extract data for this metric.
-      val metricData = database.extractData(metric, (timestampFrom.get / 1000).toInt, (timestampTo.get / 1000).toInt)
+      val metricData = database.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
 
       // Retrieve the data points from the metric data.
-      val dataPoints = for ((timestamp, value) <- metricData)
-        yield Tuple2[BigDecimal, Long](value, timestamp.toLong * 1000)
+      val dataPoints = metricData.map(singleData => {
+          val (datetime, value) = singleData
+          val timestamp = datetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
+          Tuple2[BigDecimal, Long](value, timestamp)
+        })
 
       // Prepend all data points for this metric to the list of data points.
       dataPointsList = DataPoints(metric, dataPoints) +: dataPointsList
     }
+     */
 
     // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
     request.intervalMs match {

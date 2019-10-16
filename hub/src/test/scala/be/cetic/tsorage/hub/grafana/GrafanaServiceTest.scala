@@ -1,22 +1,23 @@
 package be.cetic.tsorage.hub.grafana
 
-import java.time.Instant
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.MediaTypes.`application/json`
-
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.hub.grafana.jsonsupport._
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpec}
-
 import spray.json._
 
 
 class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest with GrafanaJsonSupport {
   //val database: Database = new FakeDatabase(1568991600) // Correspond to Friday 20 September 2019 15:00:00.
-  val database: Database = new FakeDatabase(1568991734) // Correspond to Friday 20 September 2019 15:02:14.
+  //val database: Database = new FakeDatabase(1568991734) // Correspond to Friday 20 September 2019 15:02:14.
+  val database = new Cassandra(ConfigFactory.load("test.conf"))
   val grafanaService = new GrafanaService(database)
   val grafanaConnectionTestRoute: Route = grafanaService.grafanaConnectionTestRoute
   val getMetricNamesRoute: Route = grafanaService.getMetricNamesRoute
@@ -40,7 +41,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
       Get(s"${prefix}/grafana/search") ~> getMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual database.metrics.toSet
+        response.targets.toSet shouldEqual database.getAllMetrics().toSet
       }
 
       val request = SearchRequest(Some("Temperature"))
@@ -48,7 +49,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         postMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual database.metrics.toSet
+        response.targets.toSet shouldEqual database.getAllMetrics().toSet
       }
     }
 
@@ -61,30 +62,38 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
       )
       Post(s"${prefix}/grafana/query", HttpEntity(`application/json`, request.toJson.toString)) ~> postQueryRoute ~>
         check {
-        val response = responseAs[QueryResponse]
+          val response = responseAs[QueryResponse]
 
-        // Test the metric names.
-        val metrics = response.dataPointsSeq.map(_.target) // Get the name of metrics.
-        metrics.toSet shouldEqual request.targets.flatMap(_.target).toSet
+          // Test the metric names.
+          val metrics = response.dataPointsSeq.map(_.target) // Get the name of metrics.
+          metrics.toSet shouldEqual request.targets.flatMap(_.target).toSet
 
-        // Test data.
-        val timestampFrom = Instant.parse(request.range.from).toEpochMilli
-        val timestampTo = Instant.parse(request.range.to).toEpochMilli
-        response.dataPointsSeq.foreach { dataPoints =>
-          // Test if there are some data.
-          dataPoints.datapoints.size should be > 5
+          /*
+          val date = "2019-09-20T20:20:00.000Z"
+          ZonedDateTime.parse(date).toLocalDateTime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
+          ZonedDateTime.parse(date).toLocalDateTime.toInstant(ZoneOffset.UTC).toEpochMilli
+          LocalDateTime.parse(date, DateTimeFormatter.ISO_DATE_TIME).toInstant(ZoneOffset.UTC).toEpochMilli
+          //LocalDateTime.parse(date, DateTimeFormatter.ISO_DATE_TIME).atZone(ZoneId.systemDefault).toInstant.toEpochMilli
+          */
 
-          // Test if data in the response is within the correct time interval.
-          dataPoints.datapoints.foreach {
-            _._2 should (be >= timestampFrom and be <= timestampTo)
+          // Test data.
+          val startTimestamp = Instant.parse(request.range.from).toEpochMilli
+          val endTimestamp = Instant.parse(request.range.to).toEpochMilli
+          response.dataPointsSeq.foreach { dataPoints =>
+            // Test if there are some data.
+            dataPoints.datapoints.size should be > 5
+
+            // Test if data in the response is within the correct time interval.
+            dataPoints.datapoints.foreach {
+              _._2 should (be >= startTimestamp and be <= endTimestamp)
+            }
+          }
+
+          // Test if there are at most roughly `request.maxDataPoints.get` data.
+          response.dataPointsSeq.foreach {
+            _.datapoints.size should (be < request.maxDataPoints.get + 5) // Tolerance of five data.
           }
         }
-
-        // Test if there are at most roughly `request.maxDataPoints.get` data.
-        response.dataPointsSeq.foreach {
-          _.datapoints.size shouldEqual request.maxDataPoints.get +- 5 // Tolerance of five data.
-        }
-      }
     }
 
     // Query route (returns an error).
@@ -127,8 +136,8 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         }
       Post(s"${prefix}/grafana/query", HttpEntity(`application/json`, request4.toJson.toString)) ~> postQueryRoute ~>
         check {
-        status shouldEqual StatusCodes.MethodNotAllowed
-      }
+          status shouldEqual StatusCodes.MethodNotAllowed
+        }
     }
 
     // Annotation route.

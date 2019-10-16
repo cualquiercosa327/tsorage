@@ -4,13 +4,14 @@ import akka.event.Logging
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import akka.http.scaladsl.server.{Directives, Route}
+import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.hub.grafana.backend.GrafanaBackend
 import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationRequest, GrafanaJsonSupport, QueryRequest, SearchRequest}
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 
-class GrafanaService(database: Database)(implicit executionContext: ExecutionContext) extends Directives
+class GrafanaService(database: Cassandra)(implicit executionContext: ExecutionContext) extends Directives
   with GrafanaJsonSupport
 {
   val grafanaRequestHandler = new GrafanaBackend(database)
