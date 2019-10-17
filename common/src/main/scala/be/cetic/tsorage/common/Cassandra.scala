@@ -1,7 +1,5 @@
 package be.cetic.tsorage.common
 
-import java.security.Timestamp
-import java.sql.Timestamp
 import java.time.{LocalDateTime, ZoneOffset}
 
 import be.cetic.tsorage.common.sharder.{MonthSharder, Sharder}
@@ -183,7 +181,7 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
     // Query the database.
     val results = for (shard <- shards)
       yield {
-        val statement = QueryBuilder.select("datetime_", "value_double_")
+        val statement = QueryBuilder.select("datetime_", "value_double_", "value_long_")
           .from(keyspaceRaw, "observations")
           .where(QueryBuilder.eq("metric_", metric))
           .and(QueryBuilder.eq("shard_", shard))
@@ -194,13 +192,28 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
       }
 
     val data = results.flatMap(
-      _.getUninterruptibly().all().asScala.map(row => {
+      _.getUninterruptibly().all().asScala.flatMap { row =>
         val date = row.getTimestamp("datetime_")
-        val value = row.getUDTValue("value_double_").getDouble("value")
 
-        // Convert the date to LocalDateTime and the value to BigDecimal.
-        LocalDateTime.ofInstant(date.toInstant, ZoneOffset.UTC) -> BigDecimal(value)
-      })
+        val udtDouble = row.getUDTValue("value_double_")
+        val udtLong = row.getUDTValue("value_long_")
+
+        var valueOpt: Option[AnyVal] = None
+        if (udtDouble != null) {
+          valueOpt = Some(udtDouble.getDouble("value"))
+        } else if (udtLong != null) {
+          valueOpt = Some(udtLong.getLong("value"))
+        }
+
+        valueOpt match {
+          case Some(value) =>
+            // Convert the date to LocalDateTime and the value to BigDecimal.
+            Some(LocalDateTime.ofInstant(date.toInstant, ZoneOffset.UTC) -> BigDecimal(value.toString))
+          case None =>
+            // This row is ignored because `value_double_` and `value_long_` are missing.
+            None
+        }
+      }
     )
 
     data
@@ -214,6 +227,7 @@ object Main {
     val database = new Cassandra(ConfigFactory.load("test.conf"))
 
     val data = database.getDataFromTimeRange("temperature", startDatetime, endDatetime)
+    println("RESULT:")
     println(data)
   }
 }

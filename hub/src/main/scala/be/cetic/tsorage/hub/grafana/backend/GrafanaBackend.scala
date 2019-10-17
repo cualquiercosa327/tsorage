@@ -1,7 +1,6 @@
 package be.cetic.tsorage.hub.grafana.backend
 
-import java.sql.Timestamp
-import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.{ZoneOffset, ZonedDateTime}
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}

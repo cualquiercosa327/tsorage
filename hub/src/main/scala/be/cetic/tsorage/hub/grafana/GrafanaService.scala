@@ -12,8 +12,7 @@ import com.typesafe.config.ConfigFactory
 import scala.concurrent.ExecutionContext
 
 class GrafanaService(database: Cassandra)(implicit executionContext: ExecutionContext) extends Directives
-  with GrafanaJsonSupport
-{
+  with GrafanaJsonSupport {
   val grafanaRequestHandler = new GrafanaBackend(database)
   private val conf = ConfigFactory.load("hub.conf")
   private val apiVersion = conf.getString("api.version")
@@ -24,7 +23,7 @@ class GrafanaService(database: Cassandra)(implicit executionContext: ExecutionCo
    *
    * @return the Grafana connection test route.
    */
-  def grafanaConnectionTest: Route = path("api"/ apiVersion / "grafana") {
+  def grafanaConnectionTest: Route = path("api" / apiVersion / "grafana") {
     get {
       DebuggingDirectives.logRequestResult(s"Grafana connection test route (${apiPrefix}/grafana)", Logging.InfoLevel) {
         complete(StatusCodes.OK)
@@ -39,7 +38,7 @@ class GrafanaService(database: Cassandra)(implicit executionContext: ExecutionCo
    *
    * @return the search route.
    */
-  def getMetricNames: Route = path("api"/ apiVersion / "grafana" / "search") {
+  def getMetricNames: Route = path("api" / apiVersion / "grafana" / "search") {
     get {
       DebuggingDirectives.logRequestResult(s"Search route (${apiPrefix}/grafana/search)", Logging.InfoLevel) {
         grafanaRequestHandler.handleSearchRoute(None)
@@ -54,7 +53,7 @@ class GrafanaService(database: Cassandra)(implicit executionContext: ExecutionCo
    *
    * @return the search route.
    */
-  def postMetricNames: Route = path("api"/ apiVersion / "grafana" / "search") {
+  def postMetricNames: Route = path("api" / apiVersion / "grafana" / "search") {
     post {
       entity(as[SearchRequest]) { request =>
         DebuggingDirectives.logRequestResult(s"Search route (${apiPrefix}/grafana/search)", Logging.InfoLevel) {
@@ -71,7 +70,7 @@ class GrafanaService(database: Cassandra)(implicit executionContext: ExecutionCo
    *
    * @return the query route.
    */
-  def postQuery: Route = path("api"/ apiVersion / "grafana" / "query") {
+  def postQuery: Route = path("api" / apiVersion / "grafana" / "query") {
     post {
       entity(as[QueryRequest]) { request =>
         DebuggingDirectives.logRequestResult(s"Query route (${apiPrefix}/grafana/query)", Logging.InfoLevel) {
@@ -88,7 +87,7 @@ class GrafanaService(database: Cassandra)(implicit executionContext: ExecutionCo
    *
    * @return the annotation route.
    */
-  def postAnnotation: Route = path("api"/ apiVersion / "grafana" / "annotations") {
+  def postAnnotation: Route = path("api" / apiVersion / "grafana" / "annotations") {
     post {
       entity(as[AnnotationRequest]) { request =>
         DebuggingDirectives.logRequestResult(s"Annotation route (${apiPrefix}/grafana/annotations)", Logging.InfoLevel) {
