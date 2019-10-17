@@ -22,12 +22,11 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
    * @return the response to the search request (in this case, the name of metrics).
    */
   def responseSearchRequest(request: Option[SearchRequest]): Try[SearchResponse] = {
-    //Success(SearchResponse(database.metrics.toList))
     Success(SearchResponse(database.getAllMetrics().toList))
   }
 
   /**
-   * Handle the search route <api.prefix>/grafana/search).
+   * Handle the search route (<api.prefix>/grafana/search).
    *
    * From the Grafana's official documentation: /search used by the find metric options on the query tab in panels.
    *
@@ -52,8 +51,7 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
    * @param values     a sequence of values.
    * @return the aggregation of timestamps and the aggregation of values if `timestamps` and `values` are nonempty.
    *         Otherwise, return None. If `timestamps` and `values` does not have the same length, then
-   *         *         `Failure(java.lang.IllegalArgumentException)` is returned.
-   * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
+   *         `Failure(java.lang.IllegalArgumentException)` is returned.
    */
   def aggregateDataPointsByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): Try[Option[(Long, BigDecimal)]] = {
     if (timestamps.size != values.size) {

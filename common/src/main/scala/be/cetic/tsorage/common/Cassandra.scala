@@ -16,208 +16,204 @@ import collection.JavaConverters._
 /**
  * An access to the Cassandra cluster
  */
-class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) extends LazyLogging
-{
-   private val cassandraHost = conf.getString("cassandra.host")
-   private val cassandraPort = conf.getInt("cassandra.port")
+class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) extends LazyLogging {
+  private val cassandraHost = conf.getString("cassandra.host")
+  private val cassandraPort = conf.getInt("cassandra.port")
 
-   private val keyspaceAgg = conf.getString("cassandra.keyspaces.other") // Keyspace containing aggregated data.
-   private val keyspaceRaw = conf.getString("cassandra.keyspaces.raw") // Keyspace containing raw data.
+  private val keyspaceAgg = conf.getString("cassandra.keyspaces.other") // Keyspace containing aggregated data.
+  private val keyspaceRaw = conf.getString("cassandra.keyspaces.raw") // Keyspace containing raw data.
 
-   private val session: Session = Cluster.builder
-      .addContactPoint(cassandraHost)
-      .withPort(cassandraPort)
-      .withoutJMXReporting()
-      .build
-      .connect()
+  private val session: Session = Cluster.builder
+    .addContactPoint(cassandraHost)
+    .withPort(cassandraPort)
+    .withoutJMXReporting()
+    .build
+    .connect()
 
-   /**
-    * @param metric  A metric.
-    * @return  The static tagset associated with the metric.
-    *          An empty map is returned if there is no static tagset associated with the metric.
-    */
-   def getStaticTagset(metric: String): Map[String, String] =
-   {
-      val statement = QueryBuilder.select("tagname", "tagvalue")
-         .from(keyspaceAgg, "static_tagset")
-         .where(QueryBuilder.eq("metric", metric))
+  /**
+   * @param metric A metric.
+   * @return The static tagset associated with the metric.
+   *         An empty map is returned if there is no static tagset associated with the metric.
+   */
+  def getStaticTagset(metric: String): Map[String, String] = {
+    val statement = QueryBuilder.select("tagname", "tagvalue")
+      .from(keyspaceAgg, "static_tagset")
+      .where(QueryBuilder.eq("metric", metric))
 
-      val result = session
-         .execute(statement)
-         .iterator().asScala
-         .map(row => row.getString("tagname") -> row.getString("tagvalue"))
-         .toMap
+    val result = session
+      .execute(statement)
+      .iterator().asScala
+      .map(row => row.getString("tagname") -> row.getString("tagvalue"))
+      .toMap
 
-      logger.debug(s"Static tagset retrieved for ${metric}: ${result}")
+    logger.debug(s"Static tagset retrieved for ${metric}: ${result}")
 
-      result
-   }
+    result
+  }
 
-   /**
-    * Updates a subset of the static tags associated with a metric.
-    * @param metric  The metric to update.
-    * @param tags    The static tags to update.
-    */
-   def updateStaticTagset(metric: String, tags: Map[String, String]) = {
-      tags.foreach(tag => {
-         val statement = QueryBuilder.update(keyspaceAgg, "static_tagset")
-            .`with`(QueryBuilder.set("tagvalue", tag._2))
-            .where(QueryBuilder.eq("metric", metric))
-            .and(QueryBuilder.eq("tagname", tag._1))
-            .setConsistencyLevel(ConsistencyLevel.ONE)
+  /**
+   * Updates a subset of the static tags associated with a metric.
+   *
+   * @param metric The metric to update.
+   * @param tags   The static tags to update.
+   */
+  def updateStaticTagset(metric: String, tags: Map[String, String]) = {
+    tags.foreach(tag => {
+      val statement = QueryBuilder.update(keyspaceAgg, "static_tagset")
+        .`with`(QueryBuilder.set("tagvalue", tag._2))
+        .where(QueryBuilder.eq("metric", metric))
+        .and(QueryBuilder.eq("tagname", tag._1))
+        .setConsistencyLevel(ConsistencyLevel.ONE)
 
-         session.executeAsync(statement)
-      })
-   }
+      session.executeAsync(statement)
+    })
+  }
 
-   /**
-    * Replaces a static tagset by a new one. Any previous static tag is deleted.
-    *
-    * @param metric  The metric associated with the tagset.
-    * @param tagset  The new tagset associated with the metric.
-    */
-   def setStaticTagset(metric: String, tagset: Map[String, String]): Unit =
-   {
-      val deleteStatement = QueryBuilder.delete()
-         .from(keyspaceAgg, "static_tagset")
-         .where(QueryBuilder.eq("metric", metric))
-         .setConsistencyLevel(ConsistencyLevel.ONE)
+  /**
+   * Replaces a static tagset by a new one. Any previous static tag is deleted.
+   *
+   * @param metric The metric associated with the tagset.
+   * @param tagset The new tagset associated with the metric.
+   */
+  def setStaticTagset(metric: String, tagset: Map[String, String]): Unit = {
+    val deleteStatement = QueryBuilder.delete()
+      .from(keyspaceAgg, "static_tagset")
+      .where(QueryBuilder.eq("metric", metric))
+      .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      session.execute(deleteStatement)
+    session.execute(deleteStatement)
 
-      updateStaticTagset(metric, tagset)
-   }
+    updateStaticTagset(metric, tagset)
+  }
 
-   /**
-    * Retrieves the names of all the stored metrics.
-    * For the moment, this list is limited to the metrics for which a static tagset has been defined, even if this tagset is empty. In the future, this limitation may be removed.
-    * @return  The names of all the metrics having a defined static tagset.
-    */
-   def getAllMetrics() =
-   {
-      val statement = QueryBuilder
-         .select("metric")
-         .distinct()
-         .from(keyspaceAgg, "static_tagset")
-         .setConsistencyLevel(ConsistencyLevel.ONE)
+  /**
+   * Retrieves the names of all the stored metrics.
+   * For the moment, this list is limited to the metrics for which a static tagset has been defined, even if this tagset is empty. In the future, this limitation may be removed.
+   *
+   * @return The names of all the metrics having a defined static tagset.
+   */
+  def getAllMetrics() = {
+    val statement = QueryBuilder
+      .select("metric")
+      .distinct()
+      .from(keyspaceAgg, "static_tagset")
+      .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
-   }
+    session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
+  }
 
-   /**
-    * @param tagname    The name of a static tag.
-    * @param tagvalue   The value of a static tag.
-    * @return  The names of all the metrics having the specified static tag.
-    */
-   def getMetricsWithStaticTag(tagname: String, tagvalue: String) =
-   {
-      val statement = QueryBuilder.select("metric")
-         .from(keyspaceAgg, "reverse_static_tagset")
-         .where(QueryBuilder.eq("tagname", tagname))
-         .and(QueryBuilder.eq("tagvalue", tagvalue))
-         .setConsistencyLevel(ConsistencyLevel.ONE)
+  /**
+   * @param tagname  The name of a static tag.
+   * @param tagvalue The value of a static tag.
+   * @return The names of all the metrics having the specified static tag.
+   */
+  def getMetricsWithStaticTag(tagname: String, tagvalue: String) = {
+    val statement = QueryBuilder.select("metric")
+      .from(keyspaceAgg, "reverse_static_tagset")
+      .where(QueryBuilder.eq("tagname", tagname))
+      .and(QueryBuilder.eq("tagvalue", tagvalue))
+      .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      session.execute(statement).asScala
-         .map(row => row.getString("metric"))
-         .toSet
-   }
+    session.execute(statement).asScala
+      .map(row => row.getString("metric"))
+      .toSet
+  }
 
-   /**
-    * Retrieves the names of all the metrics having a given set of static tags.
-    *
-    * These names are collected by iteratively calculate the intersection of the metrics associated
-    * with each of the tag set entries.
-    *
-    * @param tagset  The set of static tags a metric must be associated with in order to be returned.
-    *                If an empty tagset is provided, all known metrics are retrieved.
-    * @return The metrics having the specified set of static tags.
-    * @see getAllMetrics
-    */
-   def getMetricsWithStaticTagset(tagset: Map[String, String]) = tagset match
-   {
-      case m: Map[String, String] if m.isEmpty => getAllMetrics()
-      case _ => {
-         val tags = tagset.toList
-         val firstTag = tags.head
-         val otherTags = tags.tail
+  /**
+   * Retrieves the names of all the metrics having a given set of static tags.
+   *
+   * These names are collected by iteratively calculate the intersection of the metrics associated
+   * with each of the tag set entries.
+   *
+   * @param tagset The set of static tags a metric must be associated with in order to be returned.
+   *               If an empty tagset is provided, all known metrics are retrieved.
+   * @return The metrics having the specified set of static tags.
+   * @see getAllMetrics
+   */
+  def getMetricsWithStaticTagset(tagset: Map[String, String]) = tagset match {
+    case m: Map[String, String] if m.isEmpty => getAllMetrics()
+    case _ => {
+      val tags = tagset.toList
+      val firstTag = tags.head
+      val otherTags = tags.tail
 
-         def merge(candidates: Set[String], tag: (String, String)) = {
-            val otherCandidates = getMetricsWithStaticTag(tag._1, tag._2).toSet
-            candidates.intersect(otherCandidates)
-         }
-
-         otherTags.foldLeft(getMetricsWithStaticTag(firstTag._1, firstTag._2).toSet)(merge)
+      def merge(candidates: Set[String], tag: (String, String)) = {
+        val otherCandidates = getMetricsWithStaticTag(tag._1, tag._2).toSet
+        candidates.intersect(otherCandidates)
       }
-   }
 
-   /**
-    * Provides the list of values being associated with a static tag name.
-    * @param tagname The name of a static tag.
-    * @return  The values associated with tagname, as well as the metrics using the combined (tag name, tag value) as static tag.
-    *          If the tag name is not in use, an empty set is retrieved.
-    */
-   def getStaticTagValues(tagname: String): Map[String, Set[String]] =
-   {
-      val statement = select("tagvalue", "metric")
-         .from(keyspaceAgg, "reverse_static_tagset")
-         .where(QueryBuilder.eq("tagname", tagname))
+      otherTags.foldLeft(getMetricsWithStaticTag(firstTag._1, firstTag._2).toSet)(merge)
+    }
+  }
 
-      session
-         .execute(statement).asScala
-         .map(row => (row.getString("tagvalue") -> row.getString("metric")))
-         .groupBy(r => r._1)
-         .mapValues(v => v.map(_._2).toSet)
-   }
+  /**
+   * Provides the list of values being associated with a static tag name.
+   *
+   * @param tagname The name of a static tag.
+   * @return The values associated with tagname, as well as the metrics using the combined (tag name, tag value) as static tag.
+   *         If the tag name is not in use, an empty set is retrieved.
+   */
+  def getStaticTagValues(tagname: String): Map[String, Set[String]] = {
+    val statement = select("tagvalue", "metric")
+      .from(keyspaceAgg, "reverse_static_tagset")
+      .where(QueryBuilder.eq("tagname", tagname))
 
-   /**
-    * Get data from a time range for a single metric.
-    *
-    * @param metric A metric.
-    * @param startDatetime A start time.
-    * @param endDatetime An end time.
-    */
-   def getDataFromTimeRange(metric: String, startDatetime: LocalDateTime, endDatetime: LocalDateTime): Seq[(LocalDateTime, BigDecimal)] = {
-      // Compute shards.
-      val sharder: Sharder = MonthSharder
-      val shards = sharder.shards(startDatetime, endDatetime)
+    session
+      .execute(statement).asScala
+      .map(row => (row.getString("tagvalue") -> row.getString("metric")))
+      .groupBy(r => r._1)
+      .mapValues(v => v.map(_._2).toSet)
+  }
 
-      // Convert datetimes to timestamps.
-      val startTimestamp = startDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
-      val endTimestamp = endDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
-      // Query the database.
-      val results = for (shard <- shards)
-         yield {
-            val statement = QueryBuilder.select("datetime_", "value_double_")
-              .from(keyspaceRaw, "observations")
-              .where(QueryBuilder.eq("metric_", metric))
-              .and(QueryBuilder.eq("shard_", shard))
-              .and(QueryBuilder.gte("datetime_", startTimestamp))
-              .and(QueryBuilder.lte("datetime_", endTimestamp))
+  /**
+   * Get data from a time range for a single metric.
+   *
+   * @param metric        A metric.
+   * @param startDatetime A start time.
+   * @param endDatetime   An end time.
+   */
+  def getDataFromTimeRange(metric: String, startDatetime: LocalDateTime, endDatetime: LocalDateTime): Seq[(LocalDateTime, BigDecimal)] = {
+    // Compute shards.
+    val sharder: Sharder = MonthSharder
+    val shards = sharder.shards(startDatetime, endDatetime)
 
-            session.executeAsync(statement)
-         }
+    // Convert datetimes to timestamps.
+    val startTimestamp = startDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
+    val endTimestamp = endDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
+    // Query the database.
+    val results = for (shard <- shards)
+      yield {
+        val statement = QueryBuilder.select("datetime_", "value_double_")
+          .from(keyspaceRaw, "observations")
+          .where(QueryBuilder.eq("metric_", metric))
+          .and(QueryBuilder.eq("shard_", shard))
+          .and(QueryBuilder.gte("datetime_", startTimestamp))
+          .and(QueryBuilder.lte("datetime_", endTimestamp))
 
-      val data = results.flatMap(
-         _.getUninterruptibly().all().asScala.map(row => {
-            val date = row.getTimestamp("datetime_")
-            val value = row.getUDTValue("value_double_").getDouble("value")
+        session.executeAsync(statement)
+      }
 
-            // Convert the date to LocalDateTime and the value to BigDecimal.
-            LocalDateTime.ofInstant(date.toInstant, ZoneOffset.UTC) -> BigDecimal(value)
-         })
-      )
+    val data = results.flatMap(
+      _.getUninterruptibly().all().asScala.map(row => {
+        val date = row.getTimestamp("datetime_")
+        val value = row.getUDTValue("value_double_").getDouble("value")
 
-      data
-   }
+        // Convert the date to LocalDateTime and the value to BigDecimal.
+        LocalDateTime.ofInstant(date.toInstant, ZoneOffset.UTC) -> BigDecimal(value)
+      })
+    )
+
+    data
+  }
 }
 
 object Main {
-   def main(args: Array[String]): Unit = {
-      val startDatetime = LocalDateTime.of(2019, 1, 20, 17, 50, 0)
-      val endDatetime = LocalDateTime.of(2019, 9, 21, 1, 10, 0)
-      val database = new Cassandra(ConfigFactory.load("test.conf"))
+  def main(args: Array[String]): Unit = {
+    val startDatetime = LocalDateTime.of(2019, 1, 20, 17, 50, 0)
+    val endDatetime = LocalDateTime.of(2019, 9, 21, 1, 10, 0)
+    val database = new Cassandra(ConfigFactory.load("test.conf"))
 
-      val data = database.getDataFromTimeRange("temperature", startDatetime, endDatetime)
-      println(data)
-   }
+    val data = database.getDataFromTimeRange("temperature", startDatetime, endDatetime)
+    println(data)
+  }
 }
