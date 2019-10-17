@@ -1,7 +1,8 @@
 package be.cetic.tsorage.common
 
-import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
-import java.util.Date
+import java.security.Timestamp
+import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneOffset}
 
 import be.cetic.tsorage.common.sharder.{MonthSharder, Sharder}
 import com.datastax.driver.core.querybuilder.QueryBuilder
@@ -181,11 +182,8 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
       val shards = sharder.shards(startDatetime, endDatetime)
 
       // Convert datetimes to timestamps.
-      // val startTimestamp = startDatetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
-      //val endTimestamp = endDatetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
       val startTimestamp = startDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
       val endTimestamp = endDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
-
       // Query the database.
       val results = for (shard <- shards)
          yield {
@@ -206,7 +204,6 @@ class Cassandra (private val conf: Config = ConfigFactory.load("common.conf")) e
 
             // Convert the date to LocalDateTime and the value to BigDecimal.
             LocalDateTime.ofInstant(date.toInstant, ZoneOffset.UTC) -> BigDecimal(value)
-            //LocalDateTime.ofInstant(date.toInstant, ZoneId.systemDefault()) -> BigDecimal(value)
          })
       )
 

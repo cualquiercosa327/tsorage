@@ -1,5 +1,6 @@
 package be.cetic.tsorage.hub.grafana.backend
 
+import java.sql.Timestamp
 import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
 
 import akka.http.scaladsl.model.StatusCodes
@@ -273,6 +274,22 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
       return Failure(new NoSuchElementException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
+    // Check the value of the interval.
+    request.intervalMs match {
+      case Some(interval) if interval < 1 =>
+        return Failure(new IllegalArgumentException(s"${request.intervalMs} must be positive and strictly greater " +
+          s"than 0."))
+      case _ =>
+    }
+
+    // Check the value of "max data points".
+    request.maxDataPoints match {
+      case Some(maxDataPoints) if maxDataPoints < 1 =>
+        return Failure(new IllegalArgumentException(s"${request.maxDataPoints} must be positive and strictly " +
+          s"greater than 0."))
+      case _ =>
+    }
+
     // Query the database asynchronously.
     val databaseQueries: Future[Seq[DataPoints]] = Future.sequence(metrics.map(metric => {
       Future {
@@ -282,81 +299,33 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
         // Retrieve the data points from the metric data.
         val dataPoints = metricData.map(singleData => {
           val (datetime, value) = singleData
+          //val timestamp = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant).getTime
           val timestamp = datetime.toInstant(ZoneOffset.UTC).toEpochMilli
-          //val timestamp = datetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
           Tuple2[BigDecimal, Long](value, timestamp)
         })
 
-        DataPoints(metric, dataPoints)
+        var dataPointsMetric = DataPoints(metric, dataPoints)
+
+        // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
+        request.intervalMs match {
+          case Some(interval) =>
+            dataPointsMetric = handleInterval(dataPointsMetric, interval, aggregateDataPointsByAveraging)
+          case _ =>
+        }
+
+        // Handle the "max data points" feature for Grafana (if the request contains a field "maxDataPoints").
+        request.maxDataPoints match {
+          case Some(maxDataPoints) =>
+            dataPointsMetric = handleMaxDataPoints(dataPointsMetric, maxDataPoints, aggregateDataPointsByAveraging)
+          case _ =>
+        }
+
+        dataPointsMetric
       }
     }))
 
     // Wait the results.
-    var dataPointsList: Seq[DataPoints] = Await.result(databaseQueries, Duration.Inf)
-
-    /*
-    // Extract the data from the database in order to response to the request.
-    val dataPointsList: Seq[DataPoints] = metrics.map(metric => {
-      // Extract data for this metric.
-      val metricData = database.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
-
-      // Retrieve the data points from the metric data.
-      val dataPoints = metricData.map(singleData => {
-        val (datetime, value) = singleData
-        val timestamp = datetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
-        Tuple2[BigDecimal, Long](value, timestamp)
-      })
-
-      // Append all data points for this metric to the list of data points.
-      DataPoints(metric, dataPoints)
-    })
-    */
-
-    /*
-    var dataPointsList = List[DataPoints]()
-    for (metric <- metrics) {
-      // Extract data for this metric.
-      val metricData = database.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
-
-      // Retrieve the data points from the metric data.
-      val dataPoints = metricData.map(singleData => {
-          val (datetime, value) = singleData
-          val timestamp = datetime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
-          Tuple2[BigDecimal, Long](value, timestamp)
-        })
-
-      // Prepend all data points for this metric to the list of data points.
-      dataPointsList = DataPoints(metric, dataPoints) +: dataPointsList
-    }
-     */
-
-    // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
-    request.intervalMs match {
-      case Some(interval) =>
-        if (interval < 1) {
-          return Failure(new IllegalArgumentException(s"${request.intervalMs} must be positive and strictly greater " +
-            s"than 0."))
-        }
-
-        dataPointsList = dataPointsList.map(dataPoints =>
-          handleInterval(dataPoints, interval, aggregateDataPointsByAveraging)
-        )
-      case _ =>
-    }
-
-    // Handle the "max data points" feature for Grafana (if the request contains a field "maxDataPoints").
-    request.maxDataPoints match {
-      case Some(maxDataPoints) =>
-        if (maxDataPoints < 1) {
-          return Failure(new IllegalArgumentException(s"${request.maxDataPoints} must be positive and strictly " +
-            s"greater than 0."))
-        }
-
-        dataPointsList = dataPointsList.map(dataPoints =>
-          handleMaxDataPoints(dataPoints, maxDataPoints, aggregateDataPointsByAveraging)
-        )
-      case _ =>
-    }
+    val dataPointsList: Seq[DataPoints] = Await.result(databaseQueries, Duration.Inf)
 
     Success(QueryResponse(dataPointsList))
   }

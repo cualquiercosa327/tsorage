@@ -68,14 +68,6 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
           val metrics = response.dataPointsSeq.map(_.target) // Get the name of metrics.
           metrics.toSet shouldEqual request.targets.flatMap(_.target).toSet
 
-          /*
-          val date = "2019-09-20T20:20:00.000Z"
-          ZonedDateTime.parse(date).toLocalDateTime.atZone(ZoneId.systemDefault()).toInstant.toEpochMilli
-          ZonedDateTime.parse(date).toLocalDateTime.toInstant(ZoneOffset.UTC).toEpochMilli
-          LocalDateTime.parse(date, DateTimeFormatter.ISO_DATE_TIME).toInstant(ZoneOffset.UTC).toEpochMilli
-          //LocalDateTime.parse(date, DateTimeFormatter.ISO_DATE_TIME).atZone(ZoneId.systemDefault).toInstant.toEpochMilli
-          */
-
           // Test data.
           val startTimestamp = Instant.parse(request.range.from).toEpochMilli
           val endTimestamp = Instant.parse(request.range.to).toEpochMilli
