@@ -11,7 +11,8 @@ import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import be.cetic.tsorage.ingestion.message.{AuthenticationQuery, CheckRunMessage, DoubleBody, DoubleMessage, FloatMessageJsonSupport, User}
+import be.cetic.tsorage.common.messaging.{AuthenticationQuery, User}
+import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DoubleBody, DoubleMessage, FloatMessageJsonSupport}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer

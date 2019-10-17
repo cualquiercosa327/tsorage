@@ -27,3 +27,11 @@ trait Sharder
      */
    def shards(start: LocalDateTime, end: LocalDateTime): List[String]
 }
+
+object Sharder
+{
+   def apply(sharder: String): Sharder = sharder match {
+      case "day" => DaySharder
+      case _ => MonthSharder
+   }
+}

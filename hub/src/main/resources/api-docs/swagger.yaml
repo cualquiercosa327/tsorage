@@ -94,6 +94,7 @@ paths:
       operationId: "getMetricSearch"
       tags:
         - metric
+        - search
       parameters:
         - in: "query"
           name: "params"
@@ -119,8 +120,44 @@ paths:
         "5XX":
           description: "Unexpected error."
 
+  /metric/dynamic-search:
+    get:
+      summary: "Lists all the metrics having the specified dynamic tags in the specified time range."
+      description: "Lists all the metrics having (at least) the specified dynamic tags, during the specified time range.
+      If no tags are specified, no metrics are returned. The result is approximate, since metric activity is recorded by shard."
+      operationId: "getMetricDynamicSearch"
+      tags:
+        - metric
+        - search
+      parameters:
+        - in: "query"
+          name: "params"
+          schema:
+            type: "object"
+            additionalProperties:
+              type: "string"
+          example:
+            owner: "cetic"
+            unit: "degree Celcius"
+            from: "2019-01-01T00:00:00.123"
+            to: "2020-01-01T00:00:00"
+      responses:
+        "200":
+          description: "Successful operation. A list of metrics is returned."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                example: ["pump.temperature", "pump.debit", "pump.current"]
+        "401":
+          description: "Authorization information is missing or invalid."
+        "405":
+          description: "Invalid input. Check whether from and to parameters are specified."
+        "5XX":
+          description: "Unexpected error."
 
-  /metric/{metricId}/tagset:
+
+  /metric/{metricId}/static-tagset:
     get:
       summary: "Lists the static tagset associated with a metric."
       description: "Lists the static tagset associated with a metric."
@@ -219,6 +256,43 @@ paths:
           description: "Invalid input."
         "5XX":
           description: "Unexpected error."
+  /metric/{metricId}/dynamic-tagset:
+    get:
+      summary: "Lists the dynamic tagset associated with a metric for a given period."
+      description: "Lists the dynamic tagset associated with a metric, for a given period."
+      operationId: "getDynamicTags"
+      tags:
+        - metric
+        - tag
+      parameters:
+        - in: "path"
+          name: "metricId"
+          description: "The id of the considered metric."
+          required: true
+          schema:
+            type: "string"
+        - in: "query"
+          name: "params"
+          schema:
+            $ref: "#/components/schemas/TimeRange"
+          example:
+            from: "2020-01-02T03:04:05.678"
+            to: "2020-02-10T21:00:00"
+      responses:
+        "200":
+          description: "The dynamic tagset of the specified metric, for the specified time range."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                example: [["quality", "good"], ["owner", "cetic"]]
+        "400":
+          description: "Bad request. Metric ID must be a string, and from and to query parameters must be specified."
+        "401":
+          description: "Authorization information is missing or invalid."
+        "5XX":
+          description: "Unexpected error."
+
 
   /statictag/{tagname}/values:
     get:

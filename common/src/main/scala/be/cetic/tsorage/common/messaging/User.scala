@@ -1,4 +1,4 @@
-package be.cetic.tsorage.ingestion.message
+package be.cetic.tsorage.common.messaging
 
 import java.time.LocalDateTime
 
