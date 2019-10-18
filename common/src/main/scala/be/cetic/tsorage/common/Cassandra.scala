@@ -31,8 +31,7 @@ object Cassandra extends LazyLogging
       .build
       .connect()
 
-   private val sharder = Sharder(conf.getString("sharder"))
-
+   val sharder = Sharder(conf.getString("sharder"))
 
    private val getDynamicTagsetStatement = session.prepare(
       QueryBuilder.select("tagname", "tagvalue")
