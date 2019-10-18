@@ -1,7 +1,8 @@
 package be.cetic.tsorage.common
 
 import java.time.{LocalDateTime, ZoneOffset}
-import be.cetic.tsorage.common.sharder.{MonthSharder, Sharder}
+
+import be.cetic.tsorage.common.sharder.Sharder
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.querybuilder.QueryBuilder.select
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
@@ -222,7 +223,6 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
    */
   def getDataFromTimeRange(metric: String, startDatetime: LocalDateTime, endDatetime: LocalDateTime): Seq[(LocalDateTime, BigDecimal)] = {
     // Compute shards.
-    val sharder: Sharder = MonthSharder
     val shards = sharder.shards(startDatetime, endDatetime)
 
     // Convert datetimes to timestamps.
@@ -245,14 +245,15 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
       _.getUninterruptibly().all().asScala.flatMap { row =>
         val date = row.getTimestamp("datetime_")
 
-        val udtDouble = row.getUDTValue("value_double_")
-        val udtLong = row.getUDTValue("value_long_")
+        val udtDouble = Option(row.getUDTValue("value_double_"))
+        val udtLong = Option(row.getUDTValue("value_long_"))
 
+        // Take either "value_double_" or "value_long_" or neither (depending on whether they are None or not).
         var valueOpt: Option[AnyVal] = None
-        if (udtDouble != null) {
-          valueOpt = Some(udtDouble.getDouble("value"))
-        } else if (udtLong != null) {
-          valueOpt = Some(udtLong.getLong("value"))
+        if (udtDouble.isDefined) {
+          valueOpt = Some(udtDouble.get.getDouble("value"))
+        } else if (udtLong.isDefined) {
+          valueOpt = Some(udtLong.get.getLong("value"))
         }
 
         valueOpt match {
