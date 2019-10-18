@@ -1,7 +1,6 @@
 package be.cetic.tsorage.common
 
 import java.time.{LocalDateTime, ZoneOffset}
-
 import be.cetic.tsorage.common.sharder.{MonthSharder, Sharder}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.querybuilder.QueryBuilder.select
@@ -27,6 +26,15 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
     .withoutJMXReporting()
     .build
     .connect()
+
+  val sharder = Sharder(conf.getString("sharder"))
+
+  private val getDynamicTagsetStatement = session.prepare(
+    QueryBuilder.select("tagname", "tagvalue")
+      .from(keyspaceAgg, "dynamic_tagset")
+      .where(QueryBuilder.eq("metric", QueryBuilder.bindMarker("metric")))
+      .and(QueryBuilder.in("shard", QueryBuilder.bindMarker("shards")))
+  )
 
   /**
    * @param metric A metric.
@@ -118,6 +126,30 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
   }
 
   /**
+   * @param tagname  The name of the dynamic tag.
+   * @param tagvalue The value of the dynamic tag.
+   * @param from     The beginning of the time range to consider.
+   * @param to       The end of the time range to consider.
+   * @return The metrics having the given dynamic tag during the specified time range.
+   *         The results are approximate, since dynamic tagsets are recorded by shard.
+   */
+  def getMetricsWithDynamigTag(tagname: String, tagvalue: String, from: LocalDateTime, to: LocalDateTime): Set[String] = {
+    val shards = sharder.shards(from, to)
+
+    val statement = QueryBuilder.select("metric")
+      .from(keyspaceAgg, "reverse_dynamic_tagset")
+      .where(QueryBuilder.eq("tagname", tagname))
+      .and(QueryBuilder.eq("tagvalue", tagvalue))
+      .and(QueryBuilder.in("shard", shards.asJava))
+      .setConsistencyLevel(ConsistencyLevel.ONE)
+
+    session.execute(statement)
+      .asScala
+      .map(row => row.getString("metric"))
+      .toSet
+  }
+
+  /**
    * Retrieves the names of all the metrics having a given set of static tags.
    *
    * These names are collected by iteratively calculate the intersection of the metrics associated
@@ -155,12 +187,30 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
     val statement = select("tagvalue", "metric")
       .from(keyspaceAgg, "reverse_static_tagset")
       .where(QueryBuilder.eq("tagname", tagname))
+      .setConsistencyLevel(ConsistencyLevel.ONE)
 
     session
       .execute(statement).asScala
       .map(row => (row.getString("tagvalue") -> row.getString("metric")))
       .groupBy(r => r._1)
       .mapValues(v => v.map(_._2).toSet)
+  }
+
+  /**
+   * @param metric A metric.
+   * @param shards A set of shards.
+   * @return All the dynamic tagsets associated with the metric during the specified shards.
+   */
+  def getDynamicTagset(metric: String, shards: Set[String]): Set[(String, String)] = {
+    val statement = getDynamicTagsetStatement.bind()
+      .setString("metric", metric)
+      .setSet("shards", shards.asJava)
+      .setConsistencyLevel(ConsistencyLevel.ONE)
+
+    session
+      .execute(statement).asScala
+      .map(row => (row.getString("tagname"), row.getString("tagvalue")))
+      .toSet
   }
 
   /**

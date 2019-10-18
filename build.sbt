@@ -84,6 +84,6 @@ lazy val processor = (project in file("processor"))
 lazy val root = (project in file("."))
    .settings(
       name := "tsorage"
-   ).aggregate(hub, ingestion, processor)
+   ).aggregate(common, hub, ingestion, processor)
 
 
