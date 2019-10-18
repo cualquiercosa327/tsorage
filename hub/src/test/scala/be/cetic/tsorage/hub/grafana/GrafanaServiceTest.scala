@@ -1,18 +1,16 @@
 package be.cetic.tsorage.hub.grafana
 
-import java.time.format.DateTimeFormatter
-import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset, ZonedDateTime}
+import java.time.Instant
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import be.cetic.tsorage.common.Cassandra
+import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
 import be.cetic.tsorage.hub.grafana.jsonsupport._
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpec}
 import spray.json._
-
 
 class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest with GrafanaJsonSupport {
   //val database: Database = new FakeDatabase(1568991600) // Correspond to Friday 20 September 2019 15:00:00.
@@ -69,8 +67,8 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
           metrics.toSet shouldEqual request.targets.flatMap(_.target).toSet
 
           // Test data.
-          val startTimestamp = Instant.parse(request.range.from).toEpochMilli
-          val endTimestamp = Instant.parse(request.range.to).toEpochMilli
+          val startTimestamp = DateTimeConverter.strToEpochMilli(request.range.from)
+          val endTimestamp = DateTimeConverter.strToEpochMilli(request.range.to)
           response.dataPointsSeq.foreach { dataPoints =>
             // Test if there are some data.
             dataPoints.datapoints.size should be > 5

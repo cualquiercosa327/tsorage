@@ -1,14 +1,9 @@
 package be.cetic.tsorage.hub.grafana.backend
 
-import java.time.{ZoneOffset, ZonedDateTime}
-
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
-import be.cetic.tsorage.common.Cassandra
-import be.cetic.tsorage.hub.grafana.jsonsupport.{
-  AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
-  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse
-}
+import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
+import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints, GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -258,8 +253,8 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
    */
   def responseQueryRequest(request: QueryRequest): Try[QueryResponse] = {
     // Convert ISO 8601 string to LocalDataTime.
-    val startDatetime = Try(ZonedDateTime.parse(request.range.from).toLocalDateTime)
-    val endDatetime = Try(ZonedDateTime.parse(request.range.to).toLocalDateTime)
+    val startDatetime = Try(DateTimeConverter.strToLocalDateTime(request.range.from))
+    val endDatetime = Try(DateTimeConverter.strToLocalDateTime(request.range.to))
 
     if (startDatetime.isFailure || endDatetime.isFailure) {
       return Failure(new IllegalArgumentException(s"${request.range.from} and ${request.range.to} must be in ISO 8601" +
@@ -299,8 +294,7 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
         // Retrieve the data points from the metric data.
         val dataPoints = metricData.map(singleData => {
           val (datetime, value) = singleData
-          //val timestamp = Timestamp.from(datetime.atOffset(ZoneOffset.UTC).toInstant).getTime
-          val timestamp = datetime.toInstant(ZoneOffset.UTC).toEpochMilli
+          val timestamp = DateTimeConverter.localDateTimeToEpochMilli(datetime)
           Tuple2[BigDecimal, Long](value, timestamp)
         })
 

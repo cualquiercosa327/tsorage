@@ -1,6 +1,6 @@
 package be.cetic.tsorage.common
 
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.LocalDateTime
 
 import be.cetic.tsorage.common.sharder.Sharder
 import com.datastax.driver.core.querybuilder.QueryBuilder
@@ -226,8 +226,8 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
     val shards = sharder.shards(startDatetime, endDatetime)
 
     // Convert datetimes to timestamps.
-    val startTimestamp = startDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
-    val endTimestamp = endDatetime.toInstant(ZoneOffset.UTC).toEpochMilli
+    val startTimestamp = DateTimeConverter.localDateTimeToEpochMilli(startDatetime)
+    val endTimestamp = DateTimeConverter.localDateTimeToEpochMilli(endDatetime)
     // Query the database.
     val results = for (shard <- shards)
       yield {
@@ -259,7 +259,7 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
         valueOpt match {
           case Some(value) =>
             // Convert the date to LocalDateTime and the value to BigDecimal.
-            Some(LocalDateTime.ofInstant(date.toInstant, ZoneOffset.UTC) -> BigDecimal(value.toString))
+            Some(DateTimeConverter.dateToLocalDateTime(date) -> BigDecimal(value.toString))
           case None =>
             // This row is ignored because `value_double_` and `value_long_` are missing.
             None

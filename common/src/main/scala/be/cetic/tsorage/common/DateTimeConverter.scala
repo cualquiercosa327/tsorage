@@ -1,7 +1,7 @@
 package be.cetic.tsorage.common
 
 import java.sql.Timestamp
-import java.time.{LocalDateTime, ZoneOffset, ZonedDateTime}
+import java.time.{Instant, LocalDateTime, ZoneOffset, ZonedDateTime}
 import java.util.Date
 
 object DateTimeConverter {
@@ -35,6 +35,16 @@ object DateTimeConverter {
    */
   def localDateTimeToEpochMilli(localDateTime: LocalDateTime): Long = {
     localDateTime.toInstant(ZoneOffset.UTC).toEpochMilli
+  }
+
+  /**
+   * Convert a string in ISO 8601 format to the number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in UTC).
+   *
+   * @param str a string in ISO 8601.
+   * @return the corresponding number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in UTC).
+   */
+  def strToEpochMilli(str: String): Long = {
+    Instant.parse(str).toEpochMilli
   }
 
   /**
