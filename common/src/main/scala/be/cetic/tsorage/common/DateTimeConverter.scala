@@ -27,7 +27,7 @@ object DateTimeConverter {
   }
 
   /**
-   * Convert a [[java.time.LocalDateTime]] to the number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in
+   * Convert a [[java.time.LocalDateTime]] to a number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in
    * UTC).
    *
    * @param localDateTime a [[java.time.LocalDateTime]].
@@ -38,7 +38,17 @@ object DateTimeConverter {
   }
 
   /**
-   * Convert a string in ISO 8601 format to the number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in UTC).
+   * Convert a number of milliseconds from the epoch of 1970-01-01T00:00:00Z to a [[java.time.LocalDateTime]].
+   *
+   * @param epoch a number of milliseconds from the epoch of 1970-01-01T00:00:00Z.
+   * @return the corresponding [[java.time.LocalDateTime]].
+   */
+  def epochMilliToLocalDateTime(epoch: Long): LocalDateTime = {
+    timestampToLocalDateTime(new Timestamp(epoch))
+  }
+
+  /**
+   * Convert a string in ISO 8601 format to a number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in UTC).
    *
    * @param str a string in ISO 8601.
    * @return the corresponding number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in UTC).

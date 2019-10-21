@@ -270,15 +270,3 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
     data
   }
 }
-
-object Main {
-  def main(args: Array[String]): Unit = {
-    val startDatetime = LocalDateTime.of(2019, 1, 20, 17, 50, 0)
-    val endDatetime = LocalDateTime.of(2019, 9, 21, 1, 10, 0)
-    val database = new Cassandra(ConfigFactory.load("test.conf"))
-
-    val data = database.getDataFromTimeRange("temperature", startDatetime, endDatetime)
-    println("RESULT:")
-    println(data)
-  }
-}
