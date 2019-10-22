@@ -1,22 +1,22 @@
 package be.cetic.tsorage.hub.grafana
 
-import java.time.Instant
-
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
+import be.cetic.tsorage.hub.TestDatabase
 import be.cetic.tsorage.hub.grafana.jsonsupport._
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import spray.json._
 
-class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest with GrafanaJsonSupport {
-  //val database: Database = new FakeDatabase(1568991600) // Correspond to Friday 20 September 2019 15:00:00.
-  //val database: Database = new FakeDatabase(1568991734) // Correspond to Friday 20 September 2019 15:02:14.
-  val database = new Cassandra(ConfigFactory.load("test.conf"))
-  val grafanaService = new GrafanaService(database)
+class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll with ScalatestRouteTest with GrafanaJsonSupport {
+  val database = new TestDatabase()
+  database.create() // Add the keyspaces, tables and data.
+  val databaseHandler = new Cassandra(ConfigFactory.load("test.conf"))
+
+  val grafanaService = new GrafanaService(databaseHandler)
   val grafanaConnectionTestRoute: Route = grafanaService.grafanaConnectionTestRoute
   val getMetricNamesRoute: Route = grafanaService.getMetricNamesRoute
   val postMetricNamesRoute: Route = grafanaService.postMetricNamesRoute
@@ -25,6 +25,10 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
 
   private val conf = ConfigFactory.load("hub.conf")
   private val prefix = conf.getString("api.prefix")
+
+  override def afterAll(): Unit = {
+    database.clean()
+  }
 
   "The Grafana service" should {
     // Grafana connection test route.
@@ -39,7 +43,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
       Get(s"${prefix}/grafana/search") ~> getMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual database.getAllMetrics().toSet
+        response.targets.toSet shouldEqual databaseHandler.getAllMetrics().toSet
       }
 
       val request = SearchRequest(Some("Temperature"))
@@ -47,7 +51,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         postMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual database.getAllMetrics().toSet
+        response.targets.toSet shouldEqual databaseHandler.getAllMetrics().toSet
       }
     }
 
@@ -55,8 +59,8 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
     "correctly queries the database for POST requests to the query path" in {
       val request = QueryRequest(
         Seq(Target(Some("temperature")), Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
-        None, Some(1000)
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
+        None, Some(100)
       )
       Post(s"${prefix}/grafana/query", HttpEntity(`application/json`, request.toJson.toString)) ~> postQueryRoute ~>
         check {
@@ -91,25 +95,25 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
       // Request with a non-existent-metric.
       val request1 = QueryRequest(
         Seq(Target(Some("non-existent-metric"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
         None, None
       )
       // Request with bad time format ("Z" is missing in this case).
       val request2 = QueryRequest(
         Seq(Target(Some("temperature")), Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000", "2019-10-02T03:30:00.000Z"),
         None, None
       )
       // Request with an incorrect interval.
       val request3 = QueryRequest(
         Seq(Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
         Some(0), None
       )
       // Request with an incorrect maximum number of data points to keep.
       val request4 = QueryRequest(
         Seq(Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
         None, Some(-1)
       )
       Post(s"${prefix}/grafana/query", HttpEntity(`application/json`, request1.toJson.toString)) ~> postQueryRoute ~>

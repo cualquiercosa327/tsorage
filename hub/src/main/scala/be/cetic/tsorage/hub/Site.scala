@@ -9,7 +9,7 @@ import akka.http.scaladsl.server.{Directives, Route, RouteConcatenation}
 import akka.stream.ActorMaterializer
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.hub.auth.AuthenticationService
-import be.cetic.tsorage.hub.grafana.{FakeDatabase, GrafanaService}
+import be.cetic.tsorage.hub.grafana.GrafanaService
 import be.cetic.tsorage.hub.metric.MetricHttpService
 import be.cetic.tsorage.hub.tag.TagHttpService
 import com.typesafe.config.ConfigFactory
@@ -23,6 +23,8 @@ import scala.io.StdIn
 object Site extends RouteConcatenation with Directives
 {
    private val conf = ConfigFactory.load("hub.conf")
+   private implicit var system: ActorSystem = _
+   private var database: TestDatabase = _
 
    // Route to test the connection with the server.
    val connectionTestRoute: Route = path("api" / conf.getString("api.version")) {
@@ -37,11 +39,22 @@ object Site extends RouteConcatenation with Directives
      getFromResourceDirectory("swagger-ui") ~
      pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
+   private def onShutdown(): Unit = {
+      database.clean()
+
+      system.terminate()
+   }
+
    def main(args: Array[String]): Unit =
    {
-      implicit val system = ActorSystem("authentication")
+      //implicit val system = ActorSystem("authentication")
+      system = ActorSystem("authentication")
       implicit val materializer = ActorMaterializer()
       implicit val executionContext = system.dispatcher
+
+      // Create a test database.
+      database = new TestDatabase() // TODO: use a real database for production.
+      database.create()
 
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService().routes
@@ -58,7 +71,6 @@ object Site extends RouteConcatenation with Directives
          }
       }
 
-
       val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
          getFromResourceDirectory("swagger-ui") ~
          pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
@@ -74,12 +86,16 @@ object Site extends RouteConcatenation with Directives
 
       val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
 
+      scala.sys.addShutdownHook{
+         onShutdown()
+      }
+
       println(s"Server online at http://localhost:${conf.getInt("port")}/\nPress RETURN to stop...")
       StdIn.readLine() // let it run until user presses return
       bindingFuture
          .flatMap(_.unbind()) // trigger unbinding from the port
          .onComplete(_ => {
-            system.terminate()
+            Site.onShutdown()
          }) // and shutdown when done
    }
 }
