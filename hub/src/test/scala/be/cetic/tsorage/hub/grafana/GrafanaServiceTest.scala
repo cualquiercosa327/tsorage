@@ -11,7 +11,8 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import spray.json._
 
-class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll with ScalatestRouteTest with GrafanaJsonSupport {
+class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll with ScalatestRouteTest
+  with GrafanaJsonSupport {
   val database = new TestDatabase()
   database.create() // Add the keyspaces, tables and data.
   val databaseHandler = new Cassandra(ConfigFactory.load("test.conf"))
@@ -81,6 +82,10 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
             dataPoints.datapoints.foreach {
               _._2 should (be >= startTimestamp and be <= endTimestamp)
             }
+
+            // Test if data are ordered according to ascending datetime.
+            val timestamps = dataPoints.datapoints.map(_._2)
+            timestamps shouldBe sorted
           }
 
           // Test if there are at most roughly `request.maxDataPoints.get` data.
