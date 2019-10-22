@@ -95,7 +95,8 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
 
   /**
    * Retrieves the names of all the stored metrics.
-   * For the moment, this list is limited to the metrics for which a static tagset has been defined, even if this tagset is empty. In the future, this limitation may be removed.
+   * For the moment, this list is limited to the metrics for which a static tagset has been defined, even if this
+   * tagset is empty. In the future, this limitation may be removed.
    *
    * @return The names of all the metrics having a defined static tagset.
    */
@@ -134,7 +135,8 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
    * @return The metrics having the given dynamic tag during the specified time range.
    *         The results are approximate, since dynamic tagsets are recorded by shard.
    */
-  def getMetricsWithDynamigTag(tagname: String, tagvalue: String, from: LocalDateTime, to: LocalDateTime): Set[String] = {
+  def getMetricsWithDynamigTag(tagname: String, tagvalue: String, from: LocalDateTime, to: LocalDateTime)
+  : Set[String] = {
     val shards = sharder.shards(from, to)
 
     val statement = QueryBuilder.select("metric")
@@ -181,7 +183,8 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
    * Provides the list of values being associated with a static tag name.
    *
    * @param tagname The name of a static tag.
-   * @return The values associated with tagname, as well as the metrics using the combined (tag name, tag value) as static tag.
+   * @return The values associated with tagname, as well as the metrics using the combined (tag name, tag value) as
+   *         static tag.
    *         If the tag name is not in use, an empty set is retrieved.
    */
   def getStaticTagValues(tagname: String): Map[String, Set[String]] = {
@@ -220,10 +223,22 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
    * @param metric        A metric.
    * @param startDatetime A start time.
    * @param endDatetime   An end time.
+   * @return data within the given time interval ordered according to descending datetime.
    */
-  def getDataFromTimeRange(metric: String, startDatetime: LocalDateTime, endDatetime: LocalDateTime): Seq[(LocalDateTime, BigDecimal)] = {
+  def getDataFromTimeRange(metric: String, startDatetime: LocalDateTime,
+                           endDatetime: LocalDateTime): Seq[(LocalDateTime, BigDecimal)] = {
     // Compute shards.
-    val shards = sharder.shards(startDatetime, endDatetime)
+    var shards = sharder.shards(startDatetime, endDatetime)
+
+    // Reverse the order of shards (ascending to descending).
+    // Explanation of why we do this:
+    //   Problem: our goal is to return data by ascending datetime. However, in the database, shards are ordered in
+    //     ascending order and data (within a column) according to descending datetime.
+    //   Solution: we reverse the order of shards and the order of data retrieved in the database (see below the
+    //     return line). Reversing the order of shards ensures that `data` (see below) is ordered according to
+    //     descending datetime. As a result, we can just reverse the order of `data` to obtain a sequence of data
+    //     ordered by ascending datetime.
+    shards = shards.reverse
 
     // Convert datetimes to timestamps.
     val startTimestamp = DateTimeConverter.localDateTimeToEpochMilli(startDatetime)
@@ -267,6 +282,7 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
       }
     )
 
-    data
+    data.reverse // As `data` is ordered according to descending datetime, it is necessary to reverse this sequence
+    // (we want data to be ordered by ascending datetime).
   }
 }
