@@ -135,8 +135,8 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
    * @return The metrics having the given dynamic tag during the specified time range.
    *         The results are approximate, since dynamic tagsets are recorded by shard.
    */
-  def getMetricsWithDynamigTag(tagname: String, tagvalue: String, from: LocalDateTime, to: LocalDateTime)
-  : Set[String] = {
+  def getMetricsWithDynamigTag(tagname: String, tagvalue: String, from: LocalDateTime,
+                               to: LocalDateTime): Set[String] = {
     val shards = sharder.shards(from, to)
 
     val statement = QueryBuilder.select("metric")
@@ -223,7 +223,7 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
    * @param metric        A metric.
    * @param startDatetime A start time.
    * @param endDatetime   An end time.
-   * @return data within the given time interval ordered according to descending datetime.
+   * @return data within the given time interval ordered according to ascending datetime.
    */
   def getDataFromTimeRange(metric: String, startDatetime: LocalDateTime,
                            endDatetime: LocalDateTime): Seq[(LocalDateTime, BigDecimal)] = {
