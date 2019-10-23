@@ -5,16 +5,18 @@ on: [push, pull_request]
 jobs:
     test:
       runs-on: ubuntu-latest
-      services:
-          cassandra:
-              image: cassandra:3.11.4
       steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
         with:
           java-version: openjdk@1.12
       - name: Cassandra
-        run: cassandra
+        run: |
+            echo "deb http://www.apache.org/dist/cassandra/debian 311x main" | tee -a /etc/apt/sources.list.d/cassandra.sources.list
+            curl https://www.apache.org/dist/cassandra/KEYS | apt-key add -
+            apt-get update
+            apt-get install -y cassandra
+            cassandra
       - name: Compile
         run: sbt compile
       - name: Test
