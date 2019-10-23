@@ -10,6 +10,8 @@ jobs:
       - uses: olafurpg/setup-scala@v5
         with:
           java-version: openjdk@1.12
+      - name: Cassandra
+        run: docker run --name cassandra --network network -d cassandra:3.11.4
       - name: Compile
         run: sbt compile
       - name: Test
