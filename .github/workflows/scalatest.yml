@@ -5,13 +5,16 @@ on: [push, pull_request]
 jobs:
     test:
       runs-on: ubuntu-latest
+      services:
+          cassandra:
+              image: cassandra:3.11.4
       steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
         with:
           java-version: openjdk@1.12
       - name: Cassandra
-        run: docker run --name cassandra -d cassandra:3.11.4
+        run: cassandra
       - name: Compile
         run: sbt compile
       - name: Test
