@@ -24,7 +24,7 @@ object Cassandra extends LazyLogging
 
    private val keyspace = conf.getString("cassandra.keyspaces.other")
 
-   private val session: Session = Cluster.builder
+   val session: Session = Cluster.builder
       .addContactPoint(cassandraHost)
       .withPort(cassandraPort)
       .withoutJMXReporting()
@@ -37,30 +37,7 @@ object Cassandra extends LazyLogging
       QueryBuilder.select("tagname", "tagvalue")
          .from(keyspace, "dynamic_tagset")
          .where(QueryBuilder.eq("metric", QueryBuilder.bindMarker("metric")))
-         .and(QueryBuilder.in("shard", QueryBuilder.bindMarker("shards")))
    )
-
-   /**
-    * @param metric  A metric.
-    * @return  The static tagset associated with the metric.
-    *          An empty map is returned if there is no static tagset associated with the metric.
-    */
-   def getStaticTagset(metric: String): Map[String, String] =
-   {
-      val statement = QueryBuilder.select("tagname", "tagvalue")
-         .from(keyspace, "static_tagset")
-         .where(QueryBuilder.eq("metric", metric))
-
-      val result = session
-         .execute(statement)
-         .iterator().asScala
-         .map(row => row.getString("tagname") -> row.getString("tagvalue"))
-         .toMap
-
-      logger.debug(s"Static tagset retrieved for ${metric}: ${result}")
-
-      result
-   }
 
    /**
     * Updates a subset of the static tags associated with a metric.
@@ -97,21 +74,7 @@ object Cassandra extends LazyLogging
       updateStaticTagset(metric, tagset)
    }
 
-   /**
-    * Retrieves the names of all the stored metrics.
-    * For the moment, this list is limited to the metrics for which a static tagset has been defined, even if this tagset is empty. In the future, this limitation may be removed.
-    * @return  The names of all the metrics having a defined static tagset.
-    */
-   def getAllMetrics() =
-   {
-      val statement = QueryBuilder
-         .select("metric")
-         .distinct()
-         .from(keyspace, "static_tagset")
-         .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      session.execute(statement).iterator().asScala.map(row => row.getString("metric"))
-   }
 
    /**
     * @param tagname    The name of a static tag.
@@ -131,58 +94,6 @@ object Cassandra extends LazyLogging
          .toSet
    }
 
-   /**
-    * @param tagname    The name of the dynamic tag.
-    * @param tagvalue   The value of the dynamic tag.
-    * @param from       The beginning of the time range to consider.
-    * @param to         The end of the time range to consider.
-    * @return           The metrics having the given dynamic tag during the specified time range.
-    *                   The results are approximate, since dynamic tagsets are recorded by shard.
-    */
-   def getMetricsWithDynamigTag(tagname: String, tagvalue: String, from: LocalDateTime, to: LocalDateTime): Set[String] =
-   {
-      val shards = sharder.shards(from, to)
-
-      val statement = QueryBuilder.select("metric")
-         .from(keyspace, "reverse_dynamic_tagset")
-         .where(QueryBuilder.eq("tagname", tagname))
-         .and(QueryBuilder.eq("tagvalue", tagvalue))
-         .and(QueryBuilder.in("shard", shards.asJava))
-         .setConsistencyLevel(ConsistencyLevel.ONE)
-
-      session.execute(statement)
-         .asScala
-         .map(row => row.getString("metric"))
-         .toSet
-   }
-
-   /**
-    * Retrieves the names of all the metrics having a given set of static tags.
-    *
-    * These names are collected by iteratively calculate the intersection of the metrics associated
-    * with each of the tag set entries.
-    *
-    * @param tagset  The set of static tags a metric must be associated with in order to be returned.
-    *                If an empty tagset is provided, all known metrics are retrieved.
-    * @return The metrics having the specified set of static tags.
-    * @see getAllMetrics
-    */
-   def getMetricsWithStaticTagset(tagset: Map[String, String]) = tagset match
-   {
-      case m: Map[String, String] if m.isEmpty => getAllMetrics()
-      case _ => {
-         val tags = tagset.toList
-         val firstTag = tags.head
-         val otherTags = tags.tail
-
-         def merge(candidates: Set[String], tag: (String, String)) = {
-            val otherCandidates = getMetricsWithStaticTag(tag._1, tag._2).toSet
-            candidates.intersect(otherCandidates)
-         }
-
-         otherTags.foldLeft(getMetricsWithStaticTag(firstTag._1, firstTag._2).toSet)(merge)
-      }
-   }
 
    /**
     * Provides the list of values being associated with a static tag name.

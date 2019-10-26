@@ -1,5 +1,8 @@
 package be.cetic.tsorage.hub.tag
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 import akka.event.Logging
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives
@@ -22,7 +25,7 @@ class TagHttpService(implicit executionContext: ExecutionContext) extends Direct
    /**
     * Provide the list of available values for a static tag name, with the names of the associated metric.
     */
-   def getStatictagValues = path("api" / conf.getString("api.version") / "statictag" / """(\w+)""".r / "values") {
+   def getStatictagValues = path("api" / conf.getString("api.version") / "static-tag" / """(\w+)""".r / "values") {
       tagname =>
          get {
             DebuggingDirectives.logRequest(s"Values of static tag name ${tagname} are queried ", Logging.InfoLevel) {
@@ -33,6 +36,7 @@ class TagHttpService(implicit executionContext: ExecutionContext) extends Direct
             }
          }
    }
+
 
    val routes = getStatictagValues
 }
