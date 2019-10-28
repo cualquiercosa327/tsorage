@@ -4,7 +4,6 @@ import java.time.LocalDateTime
 
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.Cassandra.{keyspace, logger, session}
-import be.cetic.tsorage.hub.metric.QueryDateRange
 import com.datastax.driver.core.{ConsistencyLevel, ResultSetFuture, Session, Statement}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
@@ -248,5 +247,39 @@ case class MetricManager(session: Session, conf: Config) extends LazyLogging
       logger.debug(s"Static tagset retrieved for ${metric}: ${result}")
 
       result
+   }
+
+   /**
+    * @param metric  The name of a metric
+    * @param range   An option time range restriction.
+    * @return The dynamic tagset associated with the specified metric, potentially restricted to the
+    *         specified time range. Results are approximate since dynamic tags are recorded at shard level.
+    *         The result is a map associating, to each tagname, the set of associated tag values.
+    */
+   def getDynamicTagset(metric: String, range: Option[QueryDateRange]) = range match
+   {
+      case None => session.execute(
+         QueryBuilder
+            .select("tagname", "tagvalue")
+            .from(keyspace, "dynamic_tagset")
+            .where(QueryBuilder.eq("metric", metric))
+      ).asScala
+         .map(row => row.getString("tagname") -> row.getString("tagvalue"))
+         .groupBy(_._1).mapValues(values => values.map(_._2).toSet)
+
+      case Some(QueryDateRange(start, end)) => {
+         val shards = Cassandra.sharder.shards(start, end)
+         val tags = shards.par.map(shard => session.execute(
+            QueryBuilder
+               .select("tagname", "tagvalue")
+               .from(keyspace, "dynamic_tagset")
+               .where(QueryBuilder.eq("metric", metric))
+         )  .asScala
+            .map(row => row.getString("tagname") -> row.getString("tagvalue")))
+            .flatten
+            .toList
+
+         tags.groupBy(_._1).mapValues(values => values.map(_._2).toSet)
+      }
    }
 }

@@ -1,4 +1,4 @@
-package be.cetic.tsorage.hub.metric
+package be.cetic.tsorage.hub.filter
 
 import java.time.LocalDateTime
 

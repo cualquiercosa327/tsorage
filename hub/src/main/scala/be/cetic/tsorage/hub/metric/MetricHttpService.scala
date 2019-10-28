@@ -91,7 +91,8 @@ class MetricHttpService(session: Session)(implicit executionContext: ExecutionCo
    }
 
 
-   val routes = getStaticTagset ~
+   val routes =
+      getStaticTagset ~
       patchStaticTagset ~
       putStaticTagset ~
       postMetricSearch

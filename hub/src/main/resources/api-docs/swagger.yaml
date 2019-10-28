@@ -40,6 +40,8 @@ tags:
     description: "Metrics management"
   - name: "tag"
     description: "Tags associated with metrics (static tags) or with specific observations (dynamic tags)"
+  - name: "search"
+    description: "Services for searching and suggesting entities (tags, metrics, etc.) corresponding to specific conditions."
 
 paths:
   /:
@@ -86,7 +88,7 @@ paths:
 
   /search/metrics:
     post:
-      summary: "Lists all the metrics having the specified tagset."
+      summary: "Lists all the metrics corresponding to the specified condition."
       description: "Lists all the metrics having the specified tags.
 
       If no tags are specified, the system retrieves all the metrics having at least one tag (this limitation may be removed in a future version),
@@ -102,15 +104,55 @@ paths:
             schema:
               type: "object"
             example:
-              type: "absolute"
               filter: ["and", ["=", "owner", "nsa"], ["+", "quality"]]
               range:
+                type: "absolute"
                 start: "2019-01-02T12:34:56.789"
                 end: "2019-06-07T21:43:15"
 
       responses:
         "200":
           description: "Successful operation. A list of metrics is returned."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                example: ["pump.temperature", "pump.debit", "pump.current"]
+        "401":
+          description: "Authorization information is missing or invalid."
+        "405":
+          description: "Invalid input."
+        "5XX":
+          description: "Unexpected error."
+
+  /search/tagnames:
+    post:
+      summary: "Lists the names of all the tags corresponding to the specified constraints."
+      description: "Lists all the names of the static and dynamic tags, for the metrics specified in the query.
+      The names of tags explicitly used in the filter are excluded from the response.
+      "
+      operationId: "postTagnameSuggestion"
+      tags:
+        - tag
+        - search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+            example:
+              filter: ["and", ["=", "owner", "nsa"], ["+", "quality"]]
+              range:
+                type: "absolute"
+                start: "2019-01-02T12:34:56.789"
+                end: "2019-06-07T21:43:15"
+
+      responses:
+        "200":
+          description: "Successful operation.
+          Returns the names of tags owned by the metrics corresponding to the specified filter, during the specified time range.
+          The names of tags explicitly used in the filter are excluded from the response."
           content:
             application/json:
               schema:
@@ -222,109 +264,10 @@ paths:
           description: "Invalid input."
         "5XX":
           description: "Unexpected error."
-  /metric/{metricId}/dynamic-tagset:
-    get:
-      summary: "Lists the dynamic tagset associated with a metric for a given period."
-      description: "Lists the dynamic tagset associated with a metric, for a given period."
-      operationId: "getDynamicTags"
-      tags:
-        - metric
-        - tag
-      parameters:
-        - in: "path"
-          name: "metricId"
-          description: "The id of the considered metric."
-          required: true
-          schema:
-            type: "string"
-        - in: "query"
-          name: "params"
-          schema:
-            $ref: "#/components/schemas/TimeRange"
-          example:
-            from: "2020-01-02T03:04:05.678"
-            to: "2020-02-10T21:00:00"
-      responses:
-        "200":
-          description: "The dynamic tagset of the specified metric, for the specified time range."
-          content:
-            application/json:
-              schema:
-                type: "array"
-                example: [["quality", "good"], ["owner", "cetic"]]
-        "400":
-          description: "Bad request. Metric ID must be a string, and from and to query parameters must be specified."
-        "401":
-          description: "Authorization information is missing or invalid."
-        "5XX":
-          description: "Unexpected error."
 
-  /static-tag/{tagname}/values:
-    get:
-      summary: "Lists the values associated with a static tag having a specific name."
-      description: "Generate the list of all used values for the specified static tag name, as well as the name of the metrics having the static (tagname, tagvalue)."
-      operationId: "getStatictagValues"
-      tags:
-        - tag
-        - recommendation
-      parameters:
-        - in: "path"
-          name: "tagname"
-          description: "The name of a static tag."
-          required: true
-          schema:
-            type: "string"
-          example: "owner"
-      responses:
-        "200":
-          description: "The values of the specified static tag, as well as the names of the metrics using this static (tagname, tagvalue)"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                example:
-                  "cetic": ["temperature_sensor", "pressure_sensor"]
-                  "user1": ["my_sensor", "pump.speed"]
-        "400":
-          description: "Bad request. Tag name must be a string."
-        "401":
-          description: "Authorization information is missing or invalid."
-        "404":
-          description: "No static tag with the provided name."
-        "5XX":
-          description: "Unexpected error."
 
-  /dynamic-tag/names:
-    get:
-      summary: "Lists the names of dynamic tags for a specified time range."
-      description: "Reports the names of dynamic tags declared during a specific time range.
-      Results are apprimate, since dynamic tagsets are recorded by shard."
-      operationId: "getDynamicTagNames"
-      tags:
-        - tag
-        - recommendation
-      parameters:
-      - in: "query"
-        name: "params"
-        schema:
-          $ref: "#/components/schemas/TimeRange"
-        example:
-          from: "2020-01-02T03:04:05.678"
-          to: "2020-02-10T21:00:00"
-      responses:
-        "200":
-          description: "The names of the dynamic tagsets recorded during the considered time range."
-          content:
-            application/json:
-              schema:
-                type: "object"
-                example: ["quality", "battery-level"]
-        "400":
-          description: "Bad request. Parameters 'from' and 'to' must be specified."
-        "401":
-          description: "Authorization information is missing or invalid."
-        "5XX":
-          description: "Unexpected error."
+
+
 
 
   
