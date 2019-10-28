@@ -1,6 +1,7 @@
 package be.cetic.tsorage.hub.filter
 
 import be.cetic.tsorage.common.Cassandra
+import be.cetic.tsorage.hub.tag.TagValueQuery
 import com.datastax.driver.core.{ConsistencyLevel, Session}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
@@ -94,5 +95,100 @@ case class TagManager(session: Session, conf: Config) extends LazyLogging
 
       // remove names of tags already used in the filter
       tagNames -- filter.involvedTagNames
+   }
+
+   /**
+    * Suggests values for a specific tag name, corresponding to a selection of metrics.
+    * @param context   The context of the suggestion.
+    * @return        Relevant values for the specified context
+    */
+   def suggestTagValues(context: TagValueQuery): Set[String] = context.filter match
+   {
+      case None => { // No filter
+
+         val staticValues = session.execute(
+            QueryBuilder
+               .select("tagvalue")
+               .from(keyspace, "reverse_static_tagset")
+               .where(QueryBuilder.eq("tagname", context.tagname))
+               .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+         ).asScala.map(row => row.getString("tagvalue")).toSet
+
+         val dynamicValues = context.range match {
+            case None => session.execute(
+                  QueryBuilder
+                     .select("tagvalue")
+                     .from(keyspace, "reverse_dynamic_tagset")
+                     .where(QueryBuilder.eq("tagname", context.tagname))
+                     .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+               ).asScala.map(row => row.getString("tagvalue")).toSet
+
+            case Some(QueryDateRange(start, end)) => {   // With time range
+               val shards = Cassandra.sharder.shards(start, end)
+               shards.par.map(shard => session.execute(
+                     QueryBuilder.select("tagvalue")
+                        .from(keyspace, "reverse_sharded_dynamic_tagset")
+                        .where(QueryBuilder.eq("tagname", context.tagname))
+                        .and(QueryBuilder.eq("shard", shard))
+                        .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+                  ).asScala
+                  .map(row => row.getString("tagvalue"))
+                  .toSet
+               ).reduce( (v1, v2) => v1 union v2)
+            }
+         }
+
+         staticValues union dynamicValues
+      }
+
+      case Some(filter) => {
+         val metrics = metricManager.getMetrics(filter, context.range)
+
+         val staticValues = metrics.par.map(metric => session.execute(
+               QueryBuilder
+                  .select("tagvalue")
+                  .from(keyspace, "static_tagset")
+                  .where(QueryBuilder.eq("metric", metric))
+                  .and(QueryBuilder.eq("tagname", context.tagname))
+                  .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+            ).asScala
+            .map(row => row.getString("tagvalue"))
+            .toSet
+         ).reduce( (v1, v2) => v1 union v2)
+
+         val dynamicValues = context.range match {
+            case None => metrics.par.map(metric => session.execute(
+               QueryBuilder
+                  .select("tagvalue")
+                  .from(keyspace, "dynamic_tagset")
+                  .where(QueryBuilder.eq("metric", metric))
+                  .and(QueryBuilder.eq("tagname", context.tagname))
+                  .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+               ).asScala
+               .map(row => row.getString("tagvalue"))
+               .toSet
+            ).reduce( (v1, v2) => v1 union v2)
+
+            case Some(QueryDateRange(start, end)) => {
+               val shards = Cassandra.sharder.shards(start, end)
+
+               metrics.par.map(metric => shards.par.map(shard => {
+                  Cassandra.session.execute(
+                     QueryBuilder.select("tagvalue")
+                        .from(keyspace, "sharded_dynamic_tagset")
+                        .where(QueryBuilder.eq("metric", metric))
+                        .and(QueryBuilder.eq("shard", shard))
+                        .and(QueryBuilder.eq("tagname", context.tagname))
+                        .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+                  ).asScala
+                     .map(row => row.getString("tagvalue"))
+                     .toSet
+               })
+               ).flatten.reduce( (v1, v2) => v1 union v2)
+            }
+         }
+
+         staticValues union dynamicValues
+      }
    }
 }

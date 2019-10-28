@@ -165,6 +165,44 @@ paths:
         "5XX":
           description: "Unexpected error."
 
+  /search/tagvalues:
+    post:
+      summary: "Lists the values corresponding to a tag name, for metrics corresponding to the specified constraints."
+      description: "Lists all the values of the static and dynamic tags, for the metrics specified in the query."
+      operationId: "postTagvalueSuggestion"
+      tags:
+        - tag
+        - search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+            example:
+              filter: ["=", "owner", "nsa"]
+              tagname: "quality"
+              range:
+                type: "absolute"
+                start: "2019-01-02T12:34:56.789"
+                end: "2019-06-07T21:43:15"
+
+      responses:
+        "200":
+          description: "Successful operation.
+            Returns the values of the requested tag name, owned by the metrics corresponding to the specified filter, during the specified time range."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                example: ["good", "failure", "not-specified"]
+        "401":
+          description: "Authorization information is missing or invalid."
+        "405":
+          description: "Invalid input."
+        "5XX":
+          description: "Unexpected error."
+
   /metric/{metricId}/static-tagset:
     get:
       summary: "Lists the static tagset associated with a metric."
