@@ -11,6 +11,7 @@ import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, MetricManager, TagManager}
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
+import be.cetic.tsorage.hub.tag.TagValueQuery
 import com.datastax.driver.core.Session
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
@@ -63,8 +64,21 @@ class TagHttpService(val cassandra: Cassandra)(implicit executionContext: Execut
       }
    }
 
+   def postTagvalueSuggestion = path("api" / conf.getString("api.version") / "search" / "tagvalues") {
+      post {
+         entity(as[TagValueQuery]) {
+            query => {
+               val tagValues = tagManager.suggestTagValues(query)
+
+               complete(HttpEntity(ContentTypes.`application/json`, tagValues.toJson.compactPrint))
+            }
+         }
+      }
+   }
+
 
    val routes =
       getStatictagValues ~
-      postTagnameSuggestion
+      postTagnameSuggestion ~
+      postTagvalueSuggestion
 }
