@@ -9,6 +9,7 @@ import akka.http.scaladsl.server.{Directives, Route, RouteConcatenation}
 import akka.stream.ActorMaterializer
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.hub.auth.AuthenticationService
+import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.GrafanaService
 import be.cetic.tsorage.hub.metric.MetricHttpService
 import be.cetic.tsorage.hub.tag.TagHttpService
@@ -54,13 +55,19 @@ object Site extends RouteConcatenation with Directives
 
       // Create a test database.
       database = new TestDatabase() // TODO: use a real database for production.
+      database.clean()
       database.create()
 
-      val authRoute = new AuthenticationService().route
-      val metricRoutes = new MetricHttpService().routes
-      val tagRoutes = new TagHttpService().routes
+      // Create the database handler.
+      val databaseConf = ConfigFactory.load("test.conf") // TODO: change "test.conf" to "common.conf"
+      val hubConf = ConfigFactory.load("hub.conf")
+      val cassandra = new Cassandra(databaseConf)
 
-      val grafanaRoutes = new GrafanaService(new Cassandra(ConfigFactory.load("test.conf"))).routes // TODO: change "test.conf" to "common.conf"
+      val authRoute = new AuthenticationService().route
+      val metricRoutes = new MetricHttpService(cassandra).routes
+      val tagRoutes = new TagHttpService(cassandra).routes
+
+      val grafanaRoutes = new GrafanaService(cassandra, MetricManager(cassandra, databaseConf)).routes
 
       // Route to test the connection with the server.
       val testConnectionRoute = path("") {

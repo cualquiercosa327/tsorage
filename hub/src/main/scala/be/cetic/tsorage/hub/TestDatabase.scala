@@ -133,19 +133,62 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
       SchemaBuilder.createTable(keyspaceAgg, "static_tagset")
         .addPartitionKey("metric", DataType.text)
         .addClusteringColumn("tagname", DataType.text)
-        .addColumn("tagvalue", DataType.text)
+        .addClusteringColumn("tagvalue", DataType.text)
         .withOptions().clusteringOrder("tagname", Direction.ASC)
+        .clusteringOrder("tagvalue", Direction.ASC)
+    )
+
+    session.execute(
+      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_static_tagset AS
+         | SELECT metric, tagname, tagvalue
+         | FROM $keyspaceAgg.static_tagset
+         | WHERE tagname IS NOT NULL AND tagvalue IS NOT NULL
+         | PRIMARY KEY (tagname, tagvalue, metric)
+         | WITH CLUSTERING ORDER BY (tagvalue ASC);""".stripMargin
     )
 
     session.execute(
       SchemaBuilder.createTable(keyspaceAgg, "dynamic_tagset")
         .addPartitionKey("metric", DataType.text)
-        .addClusteringColumn("shard", DataType.text())
         .addClusteringColumn("tagname", DataType.text())
-        .addClusteringColumn("tagvalue", DataType.text())
-        .withOptions().clusteringOrder("shard", Direction.DESC)
-        .clusteringOrder("tagname", Direction.ASC)
-        .clusteringOrder("tagvalue", Direction.ASC)
+        .addColumn("tagvalue", DataType.text())
+        .withOptions().clusteringOrder("tagname", Direction.ASC)
+    )
+
+    session.execute(
+      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_dynamic_tagset AS
+         | SELECT tagname, tagvalue, metric
+         | FROM $keyspaceAgg.dynamic_tagset
+         | WHERE tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
+         | PRIMARY KEY (tagname, tagvalue, metric)
+         | WITH CLUSTERING ORDER BY (tagvalue ASC, metric ASC);""".stripMargin
+    )
+
+    session.execute(
+      SchemaBuilder.createTable(keyspaceAgg, "sharded_dynamic_tagset")
+        .addPartitionKey("metric", DataType.text)
+        .addPartitionKey("shard", DataType.text)
+        .addClusteringColumn("tagname", DataType.text)
+        .addColumn("tagvalue", DataType.text)
+        .withOptions().clusteringOrder("tagname", Direction.ASC)
+    )
+
+    session.execute(
+      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_sharded_dynamic_tagset AS
+         | SELECT shard, tagname, tagvalue, metric
+         | FROM $keyspaceAgg.sharded_dynamic_tagset
+         | WHERE shard IS NOT NULL and tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
+         | PRIMARY KEY ((shard, tagname), tagvalue, metric)
+         | WITH CLUSTERING ORDER BY (tagvalue ASC, metric ASC);""".stripMargin
+    )
+
+    session.execute(
+      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_sharded_dynamic_tagname AS
+         | SELECT shard, tagname, metric
+         | FROM $keyspaceAgg.sharded_dynamic_tagset
+         | WHERE shard IS NOT NULL and tagname IS NOT NULL and metric IS NOT NULL
+         | PRIMARY KEY (shard, tagname, metric)
+         | WITH CLUSTERING ORDER BY (tagname ASC);""".stripMargin
     )
   }
 

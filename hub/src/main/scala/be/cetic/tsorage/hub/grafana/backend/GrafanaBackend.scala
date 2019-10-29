@@ -3,15 +3,15 @@ package be.cetic.tsorage.hub.grafana.backend
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
 import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
-import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
-  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
+import be.cetic.tsorage.hub.filter.MetricManager
+import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints, GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
-class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSupport {
+class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends Directives with GrafanaJsonSupport {
   /**
    * Response to the search request (<api.prefix>/grafana/search). In our case, it is the name of the metrics that is
    * returned.
@@ -20,7 +20,7 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
    * @return the response to the search request (in this case, the name of metrics).
    */
   def responseSearchRequest(request: Option[SearchRequest]): Try[SearchResponse] = {
-    Success(SearchResponse(database.getAllMetrics().toList))
+    Success(SearchResponse(metricManager.getAllMetrics().toSeq))
   }
 
   /**
@@ -266,7 +266,7 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
     val metrics = request.targets.flatMap(_.target)
 
     // Check if all metrics in `metrics` exist.
-    if (!metrics.toSet.subsetOf(database.getAllMetrics().toSet)) {
+    if (!metrics.toSet.subsetOf(metricManager.getAllMetrics())) {
       return Failure(new NoSuchElementException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
@@ -290,7 +290,7 @@ class GrafanaBackend(database: Cassandra) extends Directives with GrafanaJsonSup
     val databaseQueries: Future[Seq[DataPoints]] = Future.sequence(metrics.map(metric => {
       Future {
         // Extract data for this metric.
-        val metricData = database.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
+        val metricData = cassandra.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
 
         // Retrieve the data points from the metric data.
         val dataPoints = metricData.map(singleData => {

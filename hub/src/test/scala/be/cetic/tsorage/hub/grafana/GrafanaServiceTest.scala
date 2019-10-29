@@ -6,26 +6,35 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
 import be.cetic.tsorage.hub.TestDatabase
+import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.jsonsupport._
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import spray.json._
 
 class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll with ScalatestRouteTest
   with GrafanaJsonSupport {
+  // Database.
   val database = new TestDatabase()
   database.create() // Add the keyspaces, tables and data.
-  val databaseHandler = new Cassandra(ConfigFactory.load("test.conf"))
 
-  val grafanaService = new GrafanaService(databaseHandler)
+  // Configurations.
+  val databaseConf: Config = ConfigFactory.load("test.conf")
+  val hubConf: Config = ConfigFactory.load("hub.conf")
+
+  // Database handlers.
+  val cassandra = new Cassandra(databaseConf)
+  val metricManager = MetricManager(cassandra, databaseConf)
+
+  // Grafana service and routes.
+  val grafanaService = new GrafanaService(cassandra, metricManager)
   val grafanaConnectionTestRoute: Route = grafanaService.grafanaConnectionTestRoute
   val getMetricNamesRoute: Route = grafanaService.getMetricNamesRoute
   val postMetricNamesRoute: Route = grafanaService.postMetricNamesRoute
   val postQueryRoute: Route = grafanaService.postQueryRoute
   val postAnnotationRoute: Route = grafanaService.postAnnotationRoute
 
-  private val conf = ConfigFactory.load("hub.conf")
-  private val prefix = conf.getString("api.prefix")
+  private val prefix = hubConf.getString("api.prefix")
 
   override def afterAll(): Unit = {
     database.clean()
@@ -44,7 +53,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
       Get(s"${prefix}/grafana/search") ~> getMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual databaseHandler.getAllMetrics().toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
       }
 
       val request = SearchRequest(Some("Temperature"))
@@ -52,7 +61,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
         postMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual databaseHandler.getAllMetrics().toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
       }
     }
 
