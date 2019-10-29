@@ -1,31 +1,44 @@
 package be.cetic.tsorage.hub.grafana
 
-import java.time.Instant
-
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.MediaTypes.`application/json`
-
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
+import be.cetic.tsorage.hub.TestDatabase
+import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.jsonsupport._
-import com.typesafe.config.ConfigFactory
-import org.scalatest.{Matchers, WordSpec}
-
+import com.typesafe.config.{Config, ConfigFactory}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import spray.json._
 
+class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll with ScalatestRouteTest
+  with GrafanaJsonSupport {
+  // Database.
+  val database = new TestDatabase()
+  database.create() // Add the keyspaces, tables and data.
 
-class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest with GrafanaJsonSupport {
-  //val database: Database = new FakeDatabase(1568991600) // Correspond to Friday 20 September 2019 15:00:00.
-  val database: Database = new FakeDatabase(1568991734) // Correspond to Friday 20 September 2019 15:02:14.
-  val grafanaService = new GrafanaService(database)
+  // Configurations.
+  val databaseConf: Config = ConfigFactory.load("test.conf")
+  val hubConf: Config = ConfigFactory.load("hub.conf")
+
+  // Database handlers.
+  val cassandra = new Cassandra(databaseConf)
+  val metricManager = MetricManager(cassandra, databaseConf)
+
+  // Grafana service and routes.
+  val grafanaService = new GrafanaService(cassandra, metricManager)
   val grafanaConnectionTestRoute: Route = grafanaService.grafanaConnectionTestRoute
   val getMetricNamesRoute: Route = grafanaService.getMetricNamesRoute
   val postMetricNamesRoute: Route = grafanaService.postMetricNamesRoute
   val postQueryRoute: Route = grafanaService.postQueryRoute
   val postAnnotationRoute: Route = grafanaService.postAnnotationRoute
 
-  private val conf = ConfigFactory.load("hub.conf")
-  private val prefix = conf.getString("api.prefix")
+  private val prefix = hubConf.getString("api.prefix")
+
+  override def afterAll(): Unit = {
+    database.clean()
+  }
 
   "The Grafana service" should {
     // Grafana connection test route.
@@ -40,7 +53,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
       Get(s"${prefix}/grafana/search") ~> getMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual database.metrics.toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
       }
 
       val request = SearchRequest(Some("Temperature"))
@@ -48,7 +61,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         postMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual database.metrics.toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
       }
     }
 
@@ -56,35 +69,39 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
     "correctly queries the database for POST requests to the query path" in {
       val request = QueryRequest(
         Seq(Target(Some("temperature")), Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
-        None, Some(1000)
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
+        None, Some(100)
       )
       Post(s"${prefix}/grafana/query", HttpEntity(`application/json`, request.toJson.toString)) ~> postQueryRoute ~>
         check {
-        val response = responseAs[QueryResponse]
+          val response = responseAs[QueryResponse]
 
-        // Test the metric names.
-        val metrics = response.dataPointsSeq.map(_.target) // Get the name of metrics.
-        metrics.toSet shouldEqual request.targets.flatMap(_.target).toSet
+          // Test the metric names.
+          val metrics = response.dataPointsSeq.map(_.target) // Get the name of metrics.
+          metrics.toSet shouldEqual request.targets.flatMap(_.target).toSet
 
-        // Test data.
-        val timestampFrom = Instant.parse(request.range.from).toEpochMilli
-        val timestampTo = Instant.parse(request.range.to).toEpochMilli
-        response.dataPointsSeq.foreach { dataPoints =>
-          // Test if there are some data.
-          dataPoints.datapoints.size should be > 5
+          // Test data.
+          val startTimestamp = DateTimeConverter.strToEpochMilli(request.range.from)
+          val endTimestamp = DateTimeConverter.strToEpochMilli(request.range.to)
+          response.dataPointsSeq.foreach { dataPoints =>
+            // Test if there are some data.
+            dataPoints.datapoints.size should be > 5
 
-          // Test if data in the response is within the correct time interval.
-          dataPoints.datapoints.foreach {
-            _._2 should (be >= timestampFrom and be <= timestampTo)
+            // Test if data in the response is within the correct time interval.
+            dataPoints.datapoints.foreach {
+              _._2 should (be >= startTimestamp and be <= endTimestamp)
+            }
+
+            // Test if data are ordered according to ascending datetime.
+            val timestamps = dataPoints.datapoints.map(_._2)
+            timestamps shouldBe sorted
+          }
+
+          // Test if there are at most roughly `request.maxDataPoints.get` data.
+          response.dataPointsSeq.foreach {
+            _.datapoints.size should (be < request.maxDataPoints.get + 5) // Tolerance of five data.
           }
         }
-
-        // Test if there are at most roughly `request.maxDataPoints.get` data.
-        response.dataPointsSeq.foreach {
-          _.datapoints.size shouldEqual request.maxDataPoints.get +- 5 // Tolerance of five data.
-        }
-      }
     }
 
     // Query route (returns an error).
@@ -92,25 +109,25 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
       // Request with a non-existent-metric.
       val request1 = QueryRequest(
         Seq(Target(Some("non-existent-metric"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
         None, None
       )
       // Request with bad time format ("Z" is missing in this case).
       val request2 = QueryRequest(
         Seq(Target(Some("temperature")), Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000", "2019-10-02T03:30:00.000Z"),
         None, None
       )
       // Request with an incorrect interval.
       val request3 = QueryRequest(
         Seq(Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
         Some(0), None
       )
       // Request with an incorrect maximum number of data points to keep.
       val request4 = QueryRequest(
         Seq(Target(Some("pressure"))),
-        TimeRange("2019-09-20T20:20:00.000Z", "2019-09-21T03:30:00.000Z"),
+        TimeRange("2019-09-29T20:20:00.000Z", "2019-10-02T03:30:00.000Z"),
         None, Some(-1)
       )
       Post(s"${prefix}/grafana/query", HttpEntity(`application/json`, request1.toJson.toString)) ~> postQueryRoute ~>
@@ -127,8 +144,8 @@ class GrafanaServiceTest extends WordSpec with Matchers with ScalatestRouteTest 
         }
       Post(s"${prefix}/grafana/query", HttpEntity(`application/json`, request4.toJson.toString)) ~> postQueryRoute ~>
         check {
-        status shouldEqual StatusCodes.MethodNotAllowed
-      }
+          status shouldEqual StatusCodes.MethodNotAllowed
+        }
     }
 
     // Annotation route.

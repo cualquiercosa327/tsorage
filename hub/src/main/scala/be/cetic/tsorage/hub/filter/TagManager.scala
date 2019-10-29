@@ -13,10 +13,13 @@ import collection.JavaConverters._
 /**
  * An entity for managing tag recommendations.
  */
-case class TagManager(session: Session, conf: Config) extends LazyLogging
+case class TagManager(cassandra: Cassandra, conf: Config) extends LazyLogging
 {
    private val keyspace = conf.getString("cassandra.keyspaces.other")
-   private lazy val metricManager = MetricManager(session, conf)
+
+   private lazy val metricManager = MetricManager(cassandra, conf)
+
+   private val session = cassandra.session
 
    /**
     * Retrieves the names of all tags recorded in the system.
@@ -52,7 +55,7 @@ case class TagManager(session: Session, conf: Config) extends LazyLogging
 
          case Some(r) =>
          {
-            val shards = Cassandra.sharder.shards(r.start, r.end)
+            val shards = cassandra.sharder.shards(r.start, r.end)
             shards.par.map(shard => session.execute(
                QueryBuilder.select("tagname")
                   .distinct()
@@ -124,7 +127,7 @@ case class TagManager(session: Session, conf: Config) extends LazyLogging
                ).asScala.map(row => row.getString("tagvalue")).toSet
 
             case Some(QueryDateRange(start, end)) => {   // With time range
-               val shards = Cassandra.sharder.shards(start, end)
+               val shards = cassandra.sharder.shards(start, end)
                shards.par.map(shard => session.execute(
                      QueryBuilder.select("tagvalue")
                         .from(keyspace, "reverse_sharded_dynamic_tagset")
@@ -170,10 +173,10 @@ case class TagManager(session: Session, conf: Config) extends LazyLogging
             ).reduce( (v1, v2) => v1 union v2)
 
             case Some(QueryDateRange(start, end)) => {
-               val shards = Cassandra.sharder.shards(start, end)
+               val shards = cassandra.sharder.shards(start, end)
 
                metrics.par.map(metric => shards.par.map(shard => {
-                  Cassandra.session.execute(
+                  cassandra.session.execute(
                      QueryBuilder.select("tagvalue")
                         .from(keyspace, "sharded_dynamic_tagset")
                         .where(QueryBuilder.eq("metric", metric))

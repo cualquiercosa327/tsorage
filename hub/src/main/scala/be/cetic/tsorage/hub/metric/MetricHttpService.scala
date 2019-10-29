@@ -17,14 +17,17 @@ import spray.json._
 /**
  * A service for managing metrics.
  */
-class MetricHttpService(session: Session)(implicit executionContext: ExecutionContext)
+class MetricHttpService(cassandra: Cassandra)(implicit executionContext: ExecutionContext)
    extends Directives
    with MessageJsonSupport with LazyLogging with FilterJsonProtocol
 {
    private val conf = ConfigFactory.load("hub.conf")
+
    private val sharder = Sharder(conf.getString("sharder"))
 
-   private val metricManager = MetricManager(session, conf)
+   private val metricManager = MetricManager(cassandra, conf)
+
+   private val session = cassandra.session
 
    /**
     * @return  The static tagset associated with a metric.
@@ -49,7 +52,7 @@ class MetricHttpService(session: Session)(implicit executionContext: ExecutionCo
          {
             query => {
                logger.info(s"Update static tagset for ${metricId}: ${query}")
-               Cassandra.updateStaticTagset(metricId, query)
+               new Cassandra().updateStaticTagset(metricId, query)
                complete(StatusCodes.NoContent, HttpEntity.Empty)
             }
          }
@@ -67,7 +70,7 @@ class MetricHttpService(session: Session)(implicit executionContext: ExecutionCo
             {
                query => {
                   logger.info(s"Set static tagset for ${metricId}: ${query}")
-                  Cassandra.setStaticTagset(metricId, query)
+                  new Cassandra().setStaticTagset(metricId, query)
                   complete(StatusCodes.NoContent, HttpEntity.Empty)
                }
             }

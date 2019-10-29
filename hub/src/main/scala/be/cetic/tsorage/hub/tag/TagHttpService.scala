@@ -22,14 +22,16 @@ import spray.json._
 /**
  * A service for managing tags.
  */
-class TagHttpService(val session: Session)(implicit executionContext: ExecutionContext)
+class TagHttpService(val cassandra: Cassandra)(implicit executionContext: ExecutionContext)
    extends Directives
       with MessageJsonSupport
       with LazyLogging
       with FilterJsonProtocol
 {
    private val conf = ConfigFactory.load("hub.conf")
-   private val tagManager = TagManager(session, conf)
+   private val tagManager = TagManager(cassandra, conf)
+
+   private val session = cassandra.session
 
 
    /**
@@ -39,7 +41,7 @@ class TagHttpService(val session: Session)(implicit executionContext: ExecutionC
       tagname =>
          get {
             DebuggingDirectives.logRequest(s"Values of static tag name ${tagname} are queried ", Logging.InfoLevel) {
-               val results = Cassandra.getStaticTagValues(tagname)
+               val results = new Cassandra().getStaticTagValues(tagname)
 
                if(results.isEmpty) complete(StatusCodes.NoContent, HttpEntity.Empty)
                else complete(HttpEntity(ContentTypes.`application/json`, results.toJson.compactPrint))

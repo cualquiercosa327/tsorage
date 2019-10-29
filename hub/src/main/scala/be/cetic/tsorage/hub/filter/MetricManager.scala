@@ -3,7 +3,6 @@ package be.cetic.tsorage.hub.filter
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.common.Cassandra
-import be.cetic.tsorage.common.Cassandra.{keyspace, logger, session}
 import com.datastax.driver.core.{ConsistencyLevel, ResultSetFuture, Session, Statement}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
@@ -14,9 +13,11 @@ import collection.JavaConverters._
 /**
  * An entity for manipulating metric collections based on specified predicates.
  */
-case class MetricManager(session: Session, conf: Config) extends LazyLogging
+case class MetricManager(cassandra: Cassandra, conf: Config) extends LazyLogging
 {
    private val keyspace = conf.getString("cassandra.keyspaces.other")
+
+   private val session = cassandra.session
 
    private val allMetricsStaticStatement = session.prepare(
       QueryBuilder
@@ -120,7 +121,7 @@ case class MetricManager(session: Session, conf: Config) extends LazyLogging
     */
    def getMetricWithTag(tagname: String, tagvalue: String, start: LocalDateTime, end: LocalDateTime): Set[String] =
    {
-      val shards = Cassandra.sharder.shards(start, end)
+      val shards = cassandra.sharder.shards(start, end)
 
       val staticMetrics = session
          .execute(metricExistingTagStaticStatement.bind().setString("tagname", tagname))
@@ -174,7 +175,7 @@ case class MetricManager(session: Session, conf: Config) extends LazyLogging
          .asScala
          .map(row => row.getString("metric")).toSet
 
-      val shards = Cassandra.sharder.shards(start, end)
+      val shards = cassandra.sharder.shards(start, end)
 
       val shardMetrics = shards.par.map(shard =>
          session.execute(
@@ -268,7 +269,7 @@ case class MetricManager(session: Session, conf: Config) extends LazyLogging
          .groupBy(_._1).mapValues(values => values.map(_._2).toSet)
 
       case Some(QueryDateRange(start, end)) => {
-         val shards = Cassandra.sharder.shards(start, end)
+         val shards = cassandra.sharder.shards(start, end)
          val tags = shards.par.map(shard => session.execute(
             QueryBuilder
                .select("tagname", "tagvalue")

@@ -1,30 +1,30 @@
 package be.cetic.tsorage.hub.grafana.backend
 
-import java.time.Instant
-
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
-import be.cetic.tsorage.hub.grafana.Database
-import be.cetic.tsorage.hub.grafana.jsonsupport.{
-  AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints,
-  GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse
-}
+import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
+import be.cetic.tsorage.hub.filter.MetricManager
+import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints, GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
 
-class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupport {
+class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends Directives with GrafanaJsonSupport {
   /**
-   * Response to the search request (<api.prefix>/grafana/search). In our case, it is the name of the metrics that is returned.
+   * Response to the search request (<api.prefix>/grafana/search). In our case, it is the name of the metrics that is
+   * returned.
    *
    * @param request the search request.
    * @return the response to the search request (in this case, the name of metrics).
    */
   def responseSearchRequest(request: Option[SearchRequest]): Try[SearchResponse] = {
-    Success(SearchResponse(database.metrics.toList))
+    Success(SearchResponse(metricManager.getAllMetrics().toSeq))
   }
 
   /**
-   * Handle the search route <api.prefix>/grafana/search).
+   * Handle the search route (<api.prefix>/grafana/search).
    *
    * From the Grafana's official documentation: /search used by the find metric options on the query tab in panels.
    *
@@ -49,8 +49,7 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
    * @param values     a sequence of values.
    * @return the aggregation of timestamps and the aggregation of values if `timestamps` and `values` are nonempty.
    *         Otherwise, return None. If `timestamps` and `values` does not have the same length, then
-   *         *         `Failure(java.lang.IllegalArgumentException)` is returned.
-   * @throws IllegalArgumentException if `timestamps` and `values` does not have the same length.
+   *         `Failure(java.lang.IllegalArgumentException)` is returned.
    */
   def aggregateDataPointsByDropping(timestamps: Seq[Long], values: Seq[BigDecimal]): Try[Option[(Long, BigDecimal)]] = {
     if (timestamps.size != values.size) {
@@ -254,11 +253,11 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
    *         then `Failure(java.lang.IllegalArgumentException)` is returned.
    */
   def responseQueryRequest(request: QueryRequest): Try[QueryResponse] = {
-    // Convert date time (ISO 8601) to timestamp in milliseconds.
-    val timestampFrom = Try(Instant.parse(request.range.from).toEpochMilli)
-    val timestampTo = Try(Instant.parse(request.range.to).toEpochMilli)
+    // Convert ISO 8601 string to LocalDataTime.
+    val startDatetime = Try(DateTimeConverter.strToLocalDateTime(request.range.from))
+    val endDatetime = Try(DateTimeConverter.strToLocalDateTime(request.range.to))
 
-    if (timestampFrom.isFailure || timestampTo.isFailure) {
+    if (startDatetime.isFailure || endDatetime.isFailure) {
       return Failure(new IllegalArgumentException(s"${request.range.from} and ${request.range.to} must be in ISO 8601" +
         s" format."))
     }
@@ -267,51 +266,61 @@ class GrafanaBackend(database: Database) extends Directives with GrafanaJsonSupp
     val metrics = request.targets.flatMap(_.target)
 
     // Check if all metrics in `metrics` exist.
-    if (!metrics.toSet.subsetOf(database.metrics.toSet)) {
+    if (!metrics.toSet.subsetOf(metricManager.getAllMetrics())) {
       return Failure(new NoSuchElementException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
-    // Extract the data from the database in order to response to the request.
-    var dataPointsList = List[DataPoints]()
-    for (metric <- metrics) {
-      // Extract data for this metric.
-      val metricData = database.extractData(metric, (timestampFrom.get / 1000).toInt, (timestampTo.get / 1000).toInt)
-
-      // Retrieve the data points from the metric data.
-      val dataPoints = for ((timestamp, value) <- metricData)
-        yield Tuple2[BigDecimal, Long](value, timestamp.toLong * 1000)
-
-      // Prepend all data points for this metric to the list of data points.
-      dataPointsList = DataPoints(metric, dataPoints) +: dataPointsList
-    }
-
-    // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
+    // Check the value of the interval.
     request.intervalMs match {
-      case Some(interval) =>
-        if (interval < 1) {
-          return Failure(new IllegalArgumentException(s"${request.intervalMs} must be positive and strictly greater " +
-            s"than 0."))
-        }
-
-        dataPointsList = dataPointsList.map(dataPoints =>
-          handleInterval(dataPoints, interval, aggregateDataPointsByAveraging)
-        )
+      case Some(interval) if interval < 1 =>
+        return Failure(new IllegalArgumentException(s"${request.intervalMs} must be positive and strictly greater " +
+          s"than 0."))
       case _ =>
     }
 
-    // Handle the "max data points" feature for Grafana (if the request contains a field "maxDataPoints").
+    // Check the value of "max data points".
     request.maxDataPoints match {
-      case Some(maxDataPoints) =>
-        if (maxDataPoints < 1) {
-          return Failure(new IllegalArgumentException(s"${request.maxDataPoints} must be positive and strictly " +
-            s"greater than 0."))
-        }
-
-        dataPointsList = dataPointsList.map(dataPoints =>
-          handleMaxDataPoints(dataPoints, maxDataPoints, aggregateDataPointsByAveraging)
-        )
+      case Some(maxDataPoints) if maxDataPoints < 1 =>
+        return Failure(new IllegalArgumentException(s"${request.maxDataPoints} must be positive and strictly " +
+          s"greater than 0."))
       case _ =>
     }
+
+    // Query the database asynchronously.
+    val databaseQueries: Future[Seq[DataPoints]] = Future.sequence(metrics.map(metric => {
+      Future {
+        // Extract data for this metric.
+        val metricData = cassandra.getDataFromTimeRange(metric, startDatetime.get, endDatetime.get)
+
+        // Retrieve the data points from the metric data.
+        val dataPoints = metricData.map(singleData => {
+          val (datetime, value) = singleData
+          val timestamp = DateTimeConverter.localDateTimeToEpochMilli(datetime)
+          Tuple2[BigDecimal, Long](value, timestamp)
+        })
+
+        var dataPointsMetric = DataPoints(metric, dataPoints)
+
+        // Handle the "interval" feature for Grafana (if the request contains a field "intervalMs").
+        request.intervalMs match {
+          case Some(interval) =>
+            dataPointsMetric = handleInterval(dataPointsMetric, interval, aggregateDataPointsByAveraging)
+          case _ =>
+        }
+
+        // Handle the "max data points" feature for Grafana (if the request contains a field "maxDataPoints").
+        request.maxDataPoints match {
+          case Some(maxDataPoints) =>
+            dataPointsMetric = handleMaxDataPoints(dataPointsMetric, maxDataPoints, aggregateDataPointsByAveraging)
+          case _ =>
+        }
+
+        dataPointsMetric
+      }
+    }))
+
+    // Wait the results.
+    val dataPointsList: Seq[DataPoints] = Await.result(databaseQueries, Duration.Inf)
 
     Success(QueryResponse(dataPointsList))
   }
