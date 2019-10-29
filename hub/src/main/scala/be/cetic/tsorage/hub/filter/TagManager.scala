@@ -127,7 +127,7 @@ case class TagManager(cassandra: Cassandra, conf: Config) extends LazyLogging
                ).asScala.map(row => row.getString("tagvalue")).toSet
 
             case Some(QueryDateRange(start, end)) => {   // With time range
-               val shards = Cassandra.sharder.shards(start, end)
+               val shards = cassandra.sharder.shards(start, end)
                shards.par.map(shard => session.execute(
                      QueryBuilder.select("tagvalue")
                         .from(keyspace, "reverse_sharded_dynamic_tagset")
@@ -173,10 +173,10 @@ case class TagManager(cassandra: Cassandra, conf: Config) extends LazyLogging
             ).reduce( (v1, v2) => v1 union v2)
 
             case Some(QueryDateRange(start, end)) => {
-               val shards = Cassandra.sharder.shards(start, end)
+               val shards = cassandra.sharder.shards(start, end)
 
                metrics.par.map(metric => shards.par.map(shard => {
-                  Cassandra.session.execute(
+                  cassandra.session.execute(
                      QueryBuilder.select("tagvalue")
                         .from(keyspace, "sharded_dynamic_tagset")
                         .where(QueryBuilder.eq("metric", metric))
