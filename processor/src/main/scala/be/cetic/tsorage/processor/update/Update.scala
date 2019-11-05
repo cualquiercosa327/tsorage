@@ -13,13 +13,13 @@ import spray.json.JsValue
   * @param `type`    A representation of the type of value observed.
   * @param value     The observed value.
   */
-abstract class Update(
-                        val metric: String,
-                        val tagset: Map[String, String],
-                        val datetime: LocalDateTime,
-                        val `type`: String,
-                        val value: JsValue
-                     )
+case class Update(
+                    metric: String,
+                    tagset: Map[String, String],
+                    datetime: LocalDateTime,
+                    `type`: String,
+                    value: JsValue
+                 )
 
 
 

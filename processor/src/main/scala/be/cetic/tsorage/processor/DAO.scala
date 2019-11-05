@@ -1,7 +1,9 @@
 package be.cetic.tsorage.processor
 
-import java.time.LocalDateTime
+import java.sql.Timestamp
+import java.time.{LocalDateTime, ZoneOffset}
 
+import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.scalalogging.LazyLogging
 
 object DAO extends LazyLogging with TimeFormatHelper
@@ -19,13 +21,13 @@ object DAO extends LazyLogging with TimeFormatHelper
    }
 
    /**
-     * Creates the query for retrieving the raw values corresponding of a shunk, over a specified shard
+     * Creates the query statement for retrieving the raw values corresponding of a shunk, over a specified shard
      * @param metric    The metric characterizing the time series
      * @param shard     The specified shard
      * @param shunkStart   The lower bound of the shunk)
      * @param shunkEnd     The upper bound of the shunk
      * @param tagset       The tagset characterizing the time series
-     * @return A string representing a CQL query corresponding to the specified shunk
+     * @return A query statement corresponding to the specified shunk
      */
    def getRawShunkValues(
                            metric: String,
@@ -36,30 +38,20 @@ object DAO extends LazyLogging with TimeFormatHelper
                            colname: String
                         ) =
    {
-      /*
-       * TODO : Datastax Query Builder replaces any string variable by "?" instead of the actual string value.
-       *  Investigate and use the builder instead of this function.
-       */
+      val base = QueryBuilder
+         .select("datetime_", colname)
+         .from(rawKeyspace, "observations")
+         .where(QueryBuilder.eq("metric_", metric))
+         .and(QueryBuilder.eq("shard_", shard))
+         .and(QueryBuilder.gt("datetime_", Timestamp.from(shunkStart.atOffset(ZoneOffset.UTC).toInstant)))
+         .and(QueryBuilder.lte("datetime_", Timestamp.from(shunkEnd.atOffset(ZoneOffset.UTC).toInstant)))
 
-      val query =
-         s"""
-            | SELECT datetime_, ${colname}
-            | FROM ${rawKeyspace}.observations
-            | WHERE
-            |   (metric_ = '${metric}') AND
-            |   (shard_ = '${shard}') AND
-            |   (datetime_ > '${formatLDT(shunkStart)}') AND
-            |   (datetime_ <= '${formatLDT(shunkEnd)}')
-            |   ${tagsetAsClause(tagset)}
-            |
-           | ALLOW FILTERING;
-         """.stripMargin
-
-      query
+      tagset.foldLeft(base)( (b,tag) => b.and(QueryBuilder.eq(tag._1, tag._2)))
+            .allowFiltering()
    }
 
    /**
-     * Creates the query for retrieving the aggregated values corresponding of a shunk, over a specified shard
+     * Creates the query statement for retrieving the aggregated values corresponding of a shunk, over a specified shard
      * @param metric    The metric characterizing the time series
      * @param shard     The specified shard
      * @param interval  The aggregation interval to retrieve
@@ -67,7 +59,7 @@ object DAO extends LazyLogging with TimeFormatHelper
      * @param shunkStart   The lower bound of the shunk)
      * @param shunkEnd     The upper bound of the shunk
      * @param tagset       The tagset characterizing the time series
-     * @return A string representing a CQL query corresponding to the specified shunk
+     * @return A query statement corresponding to the specified shunk
      */
    def getAggShunkValues(
                            metric: String,
@@ -80,27 +72,17 @@ object DAO extends LazyLogging with TimeFormatHelper
                            tagset: Map[String, String]
                         ) =
    {
-      /*
-       * TODO : Datastax Query Builder replaces any string variable by "?" instead of the actual string value.
-       *  Investigate and use the builder instead of this function.
-       */
+      val base = QueryBuilder
+         .select("datetime_", colname)
+         .from(aggKeyspace, "observations")
+         .where(QueryBuilder.eq("metric_", metric))
+         .and(QueryBuilder.eq("shard_", shard))
+         .and(QueryBuilder.eq("interval_", interval))
+         .and(QueryBuilder.eq("aggregator_", aggregator))
+         .and(QueryBuilder.gt("datetime_", Timestamp.from(shunkStart.atOffset(ZoneOffset.UTC).toInstant)))
+         .and(QueryBuilder.lte("datetime_", Timestamp.from(shunkEnd.atOffset(ZoneOffset.UTC).toInstant)))
 
-      val query =
-         s"""
-            | SELECT datetime_, ${colname}
-            | FROM ${aggKeyspace}.observations
-            | WHERE
-            |   (metric_ = '${metric}') AND
-            |   (shard_ = '${shard}') AND
-            |   (interval_ = '${interval}') AND
-            |   (aggregator_ = '${aggregator}') AND
-            |   (datetime_ > '${formatLDT(shunkStart)}') AND
-            |   (datetime_ <= '${formatLDT(shunkEnd)}')
-            |   ${tagsetAsClause(tagset)}
-            |
-           | ALLOW FILTERING;
-         """.stripMargin
-
-      query
+      tagset.foldLeft(base)( (b,tag) => b.and(QueryBuilder.eq(tag._1, tag._2)))
+         .allowFiltering()
    }
 }

@@ -17,14 +17,6 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
 
   private implicit val session = Cassandra.session
 
-  private val dynamicTagStatement = session.prepare(
-    QueryBuilder
-     .insertInto(aggKeyspace, "dynamic_tagset")
-     .value("metric", QueryBuilder.bindMarker("metric"))
-     .value("tagname", QueryBuilder.bindMarker("tagname"))
-     .value("tagvalue", QueryBuilder.bindMarker("tagvalue"))
-  )
-
   /**
     * A function ensuring all tagnames contained in a message
     * are prepared in the Cassandra database. The retrieved object
@@ -45,32 +37,9 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
       recentTags.map(tag => s"""ALTER TABLE ${aggKeyspace}.observations ADD "${tag.replace("\"", "\"\"")}" text;""")
         .foreach(t => Try(session.execute(t)))
 
-      /* Update the dynamic tagset */
-
-        msg.tagset.foreach(tag => {
-          val bound = dynamicTagStatement
-             .bind()
-             .setString("metric", msg.metric)
-             .setString("tagname", tag._1)
-             .setString("tagvalue", tag._2)
-
-          session.executeAsync(bound)
-        })
-
       msg
     }
 
     f
   }
-
-  /**
-    * Extracts a datetime from an observation.
-    *
-  def observationToTime[T]: Observation[T] => (String, String, LocalDateTime) = observation =>
-    (observation.metric, sharder.shard(observation.datetime), observation.datetime)
-
-  def rawFlow[T] = AltCassandraFlow.createWithPassThrough[Observation[T]](16,
-    getRawInsertPreparedStatement,
-    bindRawInsert)
-    */
 }
