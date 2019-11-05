@@ -55,7 +55,6 @@ object Site extends RouteConcatenation with Directives
 
       // Create a test database.
       database = new TestDatabase() // TODO: use a real database for production.
-      database.clean()
       database.create()
 
       // Create the database handler.

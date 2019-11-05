@@ -1,18 +1,45 @@
 version: '3'
 
-networks:
-  app-tier:
-    driver: bridge
+#networks:
+#  app-tier:
+#    driver: bridge
 
 services:
-  storage:
+  cassandra:
     image: cassandra:3.11
-    ports:
-      - "9042:9042"
+    container_name: tsorage-cassandra
     volumes:
-      - .:/code
-      - logvolume01:/var/log
-    networks:
-      - app-tier
-volumes:
-  logvolume01: {}
+      - .:/opt/docker
+    #  - logvolume01:/var/log
+    #networks:
+    #  - app-tier
+  hub:
+    image: ceticasbl/tsorage-hub
+    container_name: tsorage-hub
+    ports:
+      - "8081:8081"
+    depends_on:
+      - cassandra
+    entrypoint: ["./wait-for-it.sh", "cassandra:9042", "--strict", "--timeout=100", "--", "/opt/docker/bin/hub"]
+#  test:
+#    image: ubuntu
+#    container_name: testcassandra
+#    depends_on:
+#      - cassandra
+#    command: bash -c "
+#      apt-get update &&
+#      apt-get install -y curl &&
+#      echo coucou &&
+#      sleep 5 &&
+#      curl http://cassandra:9042 > coucou.txt"
+#  test2:
+#    image: byrnedo/alpine-curl
+#    container_name: testcassandra2
+#    depends_on:
+#      - cassandra
+#    #command: /usr/bin/curl http://127.0.0.1:9042
+#    #command: /usr/bin/curl http://tsorage-cassandra:9042
+#    command: /usr/bin/curl http://cassandra:9042
+
+#volumes:
+#  logvolume01: {}

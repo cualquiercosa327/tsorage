@@ -1,4 +1,5 @@
 import Dependencies.Version
+import com.typesafe.sbt.packager.docker.Cmd
 import sbt.Keys.libraryDependencies
 
 name := "tsorage"
@@ -11,6 +12,18 @@ val commonSettings = Seq(
    organization := "cetic",
    version := "1.0.0",
    scalaVersion := "2.12.10",
+   // Docker information.
+   //dockerRepository := Some("ceticasbl/tsorage")
+   dockerBaseImage := "openjdk:12-alpine",
+   dockerUpdateLatest := true,
+   //dockerAlias := DockerAlias(dockerRepository.value, dockerUsername.value, name.value),
+   dockerUsername := Some("ceticasbl"),
+   dockerCommands ++= Seq(
+     Cmd("USER", "root"),
+     Cmd("RUN", "apk", "add", "--no-cache", "wget", "bash"),
+     Cmd("RUN", "wget", "https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh"),
+     Cmd("RUN", "chmod", "+x", "wait-for-it.sh")
+   )
   )
 
 PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
@@ -48,9 +61,10 @@ val cassandraDependencies = Seq(
 )
 
 lazy val common = (project in file("common"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
+   .enablePlugins(DockerPlugin, JavaAppPackaging)
    .settings(
-      name := "common",
+      name := "tsorage-common",
+      packageName := "tsorage-common",
       commonSettings,
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
@@ -61,9 +75,10 @@ lazy val common = (project in file("common"))
    )
 
 lazy val hub = (project in file("hub"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
+   .enablePlugins(DockerPlugin, JavaAppPackaging)
    .settings(
-      name := "hub",
+      name := "tsorage-hub",
+      packageName := "tsorage-hub",
       commonSettings,
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
@@ -74,9 +89,10 @@ lazy val hub = (project in file("hub"))
    ).dependsOn(common)
 
 lazy val ingestion = (project in file("ingestion"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
+  .enablePlugins(DockerPlugin, JavaAppPackaging)
    .settings(
-      name := "ingestion",
+      name := "tsorage-ingestion",
+      packageName := "tsorage-ingestion",
       commonSettings,
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
@@ -88,9 +104,10 @@ lazy val ingestion = (project in file("ingestion"))
 
 
 lazy val processor = (project in file("processor"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
+   .enablePlugins(DockerPlugin, JavaAppPackaging)
    .settings(
-      name := "processor",
+      name := "tsorage-processor",
+      packageName := "tsorage-processor",
       commonSettings,
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
