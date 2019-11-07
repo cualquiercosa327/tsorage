@@ -18,7 +18,6 @@ services:
     container_name: tsorage-cassandra-initializer
     depends_on:
       - cassandra
-    #command: ["./wait-for-it.sh", "cassandra:9042", "--strict", "--timeout=100", "--", "cqlsh -f"]
     command: /bin/bash -c "
       apt-get update && apt-get install -y wget &&
       wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra.cql

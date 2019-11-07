@@ -15,6 +15,8 @@ import be.cetic.tsorage.hub.metric.MetricHttpService
 import be.cetic.tsorage.hub.tag.TagHttpService
 import com.typesafe.config.ConfigFactory
 
+import scala.concurrent.ExecutionContextExecutor
+
 /**
  * The global entry point for all the services.
  */
@@ -39,17 +41,17 @@ object Site extends RouteConcatenation with Directives
 
    def main(args: Array[String]): Unit =
    {
-      //implicit val system = ActorSystem("authentication")
       implicit val system: ActorSystem = ActorSystem("authentication")
-      implicit val materializer = ActorMaterializer()
-      implicit val executionContext = system.dispatcher
+      implicit val materializer: ActorMaterializer = ActorMaterializer()
+      implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+
+      val databaseConf = ConfigFactory.load("common_db_test.conf") // TODO: change "common_db_test.conf" to "common.conf"
 
       // Create a test database.
-      val database: TestDatabase = new TestDatabase() // TODO: use a real database for production.
+      val database: TestDatabase = new TestDatabase(databaseConf) // TODO: use a real database for production.
       database.create()
 
       // Create the database handler.
-      val databaseConf = ConfigFactory.load("test.conf") // TODO: change "test.conf" to "common.conf"
       val cassandra = new Cassandra(databaseConf)
 
       // Routes.

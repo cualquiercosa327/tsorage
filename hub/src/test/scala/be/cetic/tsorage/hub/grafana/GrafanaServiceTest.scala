@@ -19,7 +19,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
   database.create() // Add the keyspaces, tables and data.
 
   // Configurations.
-  val databaseConf: Config = ConfigFactory.load("test.conf")
+  val databaseConf: Config = ConfigFactory.load("common_test.conf")
   val hubConf: Config = ConfigFactory.load("hub.conf")
 
   // Database handlers.

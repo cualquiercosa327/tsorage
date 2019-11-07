@@ -21,7 +21,7 @@ import scala.util.Try
  * minutes.
  *
  */
-class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) extends LazyLogging {
+class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.conf")) extends LazyLogging {
   // TODO: move this class to src/test/scala/be/cetic/tsorage/hub/ for production.
 
   private val cassandraHost = conf.getString("cassandra.host")
