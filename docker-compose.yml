@@ -8,38 +8,33 @@ services:
   cassandra:
     image: cassandra:3.11
     container_name: tsorage-cassandra
-    volumes:
-      - .:/opt/docker
+    #volumes:
+    #  - .:/opt/docker
     #  - logvolume01:/var/log
     #networks:
     #  - app-tier
+  cassandra-init:
+    image: cassandra:3.11
+    container_name: tsorage-cassandra-initializer
+    depends_on:
+      - cassandra
+    #command: ["./wait-for-it.sh", "cassandra:9042", "--strict", "--timeout=100", "--", "cqlsh -f"]
+    command: /bin/bash -c "
+      apt-get update && apt-get install -y wget &&
+      wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra.cql
+      https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh &&
+      chmod +x wait-for-it.sh &&
+      ./wait-for-it.sh cassandra:9042 --strict --timeout=100 -- cqlsh cassandra -f cassandra.cql
+      "
   hub:
     image: ceticasbl/tsorage-hub
     container_name: tsorage-hub
     ports:
-      - "8081:8081"
+      - 8081:8081
     depends_on:
       - cassandra
+      - cassandra-init
     entrypoint: ["./wait-for-it.sh", "cassandra:9042", "--strict", "--timeout=100", "--", "/opt/docker/bin/hub"]
-#  test:
-#    image: ubuntu
-#    container_name: testcassandra
-#    depends_on:
-#      - cassandra
-#    command: bash -c "
-#      apt-get update &&
-#      apt-get install -y curl &&
-#      echo coucou &&
-#      sleep 5 &&
-#      curl http://cassandra:9042 > coucou.txt"
-#  test2:
-#    image: byrnedo/alpine-curl
-#    container_name: testcassandra2
-#    depends_on:
-#      - cassandra
-#    #command: /usr/bin/curl http://127.0.0.1:9042
-#    #command: /usr/bin/curl http://tsorage-cassandra:9042
-#    command: /usr/bin/curl http://cassandra:9042
 
 #volumes:
 #  logvolume01: {}

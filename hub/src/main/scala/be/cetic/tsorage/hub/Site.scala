@@ -66,7 +66,7 @@ object Site extends RouteConcatenation with Directives
            swaggerRoute ~
            tagRoutes
 
-      val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
+      val bindingFuture = Http().bindAndHandle(routes, "0.0.0.0", conf.getInt("port"))
 
       scala.sys.addShutdownHook{
          println("Shutdown...")

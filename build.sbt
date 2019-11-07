@@ -20,8 +20,8 @@ val commonSettings = Seq(
    dockerUsername := Some("ceticasbl"),
    dockerCommands ++= Seq(
      Cmd("USER", "root"),
-     Cmd("RUN", "apk", "add", "--no-cache", "wget", "bash"),
-     Cmd("RUN", "wget", "https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh"),
+     Cmd("RUN", "apk", "add", "--no-cache", "bash"),
+     Cmd("ADD", "https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh", "."),
      Cmd("RUN", "chmod", "+x", "wait-for-it.sh")
    )
   )
