@@ -21,8 +21,6 @@ object GlobalProcessingGraphFactory
    def createGraph(timeAggregators: List[TimeAggregator])(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
       import GraphDSL.Implicits._
 
-      val aggCassandraFlow = CassandraWriter.createAggCassandraFlow
-
       // Define internal flow shapes
 
       val rawProcessor = builder.add(Flow.fromGraph(RawProcessingGraphFactory.createGraph))
@@ -34,6 +32,7 @@ object GlobalProcessingGraphFactory
       else
       {
          val firstAggregator = timeAggregators.head
+         val aggCassandraFlow = CassandraWriter.createAggCassandraFlow
 
          val timeAggUpdate = builder.add(
             Flow[Message].mapConcat(message =>
