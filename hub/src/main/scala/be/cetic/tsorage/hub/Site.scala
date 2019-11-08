@@ -70,7 +70,7 @@ object Site extends RouteConcatenation with Directives
 
       val bindingFuture = Http().bindAndHandle(routes, "0.0.0.0", conf.getInt("port"))
 
-      scala.sys.addShutdownHook{
+      scala.sys.addShutdownHook {
          println("Shutdown...")
 
          database.clean()

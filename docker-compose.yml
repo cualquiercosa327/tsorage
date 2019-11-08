@@ -25,6 +25,18 @@ services:
       chmod +x wait-for-it.sh &&
       ./wait-for-it.sh cassandra:9042 --strict --timeout=100 -- cqlsh cassandra -f cassandra.cql
       "
+  zookeeper:
+    image: zookeeper:3.5
+    container_name: tsorage-zookeeper
+  kafka:
+    image: wurstmeister/kafka:2.12-2.3.0
+    container_name: tsorage-kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ADVERTISED_PORT: 9092
+    depends_on:
+      - zookeeper
   hub:
     image: ceticasbl/tsorage-hub
     container_name: tsorage-hub
@@ -34,6 +46,15 @@ services:
       - cassandra
       - cassandra-init
     entrypoint: ["./wait-for-it.sh", "cassandra:9042", "--strict", "--timeout=100", "--", "/opt/docker/bin/hub"]
+  ingestion:
+    image: ceticasbl/tsorage-ingestion
+    container_name: tsorage-ingestion
+    ports:
+      - 8080:8080
+    depends_on:
+      - kafka
+      - hub
+    entrypoint: ["./wait-for-it.sh", "hub:8081", "--strict", "--timeout=100", "--", "/opt/docker/bin/ingestion"]
 
 #volumes:
 #  logvolume01: {}
