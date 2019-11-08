@@ -43,7 +43,6 @@ services:
     ports:
       - 8081:8081
     depends_on:
-      - cassandra
       - cassandra-init
     entrypoint: ["./wait-for-it.sh", "cassandra:9042", "--strict", "--timeout=100", "--", "/opt/docker/bin/hub"]
   ingestion:
@@ -55,6 +54,13 @@ services:
       - kafka
       - hub
     entrypoint: ["./wait-for-it.sh", "hub:8081", "--strict", "--timeout=100", "--", "/opt/docker/bin/ingestion"]
+  processor:
+    image: ceticasbl/tsorage-processor
+    container_name: tsorage-processor
+    depends_on:
+      - kafka
+      - cassandra-init
+    entrypoint: ["./wait-for-it.sh", "cassandra:9042", "--strict", "--timeout=100", "--", "/opt/docker/bin/processor"]
 
 #volumes:
 #  logvolume01: {}

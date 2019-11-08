@@ -21,7 +21,7 @@ object RandomMessageIterator extends Iterator[Message] {
       "status" -> "ok",
       "owner" -> "myself"
     ),
-    "double",
+    "tdouble",
     List((LocalDateTime.now, JsNumber(Random.nextDouble())))
   )
 

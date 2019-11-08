@@ -22,7 +22,7 @@ object producer {
 
     ///////////// Define Producer Setting
     val producerSettings = ProducerSettings(system, new StringSerializer, new ByteArraySerializer)
-      .withBootstrapServers("localhost:9092")
+      .withBootstrapServers("kafka:9092")
     //s"${conf.getString("kafka.host")}:${conf.getInt("kafka.port")}"
     val kafkaProducer = producerSettings.createKafkaProducer()
     val TOPIC = "test"
