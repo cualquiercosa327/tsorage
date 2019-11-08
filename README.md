@@ -23,3 +23,17 @@ in order to provide faster responses to data queries. Arbitrary processing also 
   - alerting,
   - process mining
 - Hub, a set of microservices for exploiting the platform.
+
+In this project, we use [Docker Compose](https://docs.docker.com/compose/) for deployment. To run TSorage, make sure you have [Docker Engine](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your computer. Then, create Docker image of each module as follows:
+
+```bash
+sbt hub/docker:publishLocal
+sbt ingestion/docker:publishLocal
+sbt processor/docker:publishLocal
+```
+
+Finally, run TSorage using this command in a terminal:
+
+```bash
+docker-compose up
+```
