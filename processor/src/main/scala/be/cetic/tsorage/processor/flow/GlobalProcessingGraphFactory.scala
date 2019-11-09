@@ -3,7 +3,7 @@ package be.cetic.tsorage.processor.flow
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL}
-import be.cetic.tsorage.common.Cassandra
+import be.cetic.tsorage.common.{Cassandra, TimeSeries}
 import be.cetic.tsorage.processor.Message
 import be.cetic.tsorage.processor.aggregator.time.{HourAggregator, MinuteAggregator, TimeAggregator}
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
@@ -39,7 +39,7 @@ object GlobalProcessingGraphFactory
                message.values
                       .map(v => firstAggregator.shunk(v._1))
                                                .toSet
-                                               .map(shunk => TimeAggregatorRawUpdate(message.metric, message.tagset, shunk, message.`type`)) )
+                                               .map(shunk => TimeAggregatorRawUpdate(TimeSeries(message.metric, message.tagset), shunk, message.`type`)) )
          )
 
          val buffer = builder.add(

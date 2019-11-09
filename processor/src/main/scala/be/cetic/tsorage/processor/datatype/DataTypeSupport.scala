@@ -65,12 +65,12 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
       val coveringShards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       val queryStatements = coveringShards.map(shard =>
-         DAO.getRawShunkValues(update.metric, shard, shunkStart, shunkEnd, update.tagset, colname).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+         DAO.getRawShunkValues(update.ts, shard, shunkStart, shunkEnd, update.`type`)
       )
 
       Future.reduceLeft(queryStatements.map(statement =>
          resultSetFutureToFutureResultSet(Cassandra.session.executeAsync(statement))
-            .map(rs => rs.asScala.map(row => (row.getTimestamp("datetime_"), fromUDTValue(row.getUDTValue(colname))))
+            .map(rs => rs.asScala.map(row => (row.getTimestamp("datetime"), fromUDTValue(row.getUDTValue(colname))))
             ))
       )( (l1, l2) => l1 ++ l2)
    }
@@ -121,24 +121,23 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
       val coveringShards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       val statements = coveringShards.map(shard => DAO.getAggShunkValues(
-         update.metric,
+         update.ts,
          shard,
          timeAggregator.previousName,
          update.aggregation,
-         colname,
+         update.`type`,
          shunkStart,
-         shunkEnd,
-         update.tagset
-      ).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
+         shunkEnd
+      ))
       // logger.info(s"QUERIES: ${queries.mkString(" ; ")}")
 
       val results = statements.par
          .map(statement => Cassandra.session.execute(statement).all().asScala)
          .reduce((l1, l2) => l1 ++ l2)
-         .map(row => (row.getTimestamp("datetime_"), fromUDTValue(row.getUDTValue(colname)))).toIterable
+         .map(row => (row.getTimestamp("datetime"), fromUDTValue(row.getUDTValue(colname)))).toIterable
 
       val value = dataAggregation.aggAggregation(results)
-      new AggUpdate(update.metric, update.tagset, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
+      new AggUpdate(update.ts, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
    }
 
    final def asRawUdtValue(value: JsValue): UDTValue = asRawUdtValue(fromJson(value))

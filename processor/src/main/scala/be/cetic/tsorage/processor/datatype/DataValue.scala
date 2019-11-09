@@ -2,6 +2,7 @@ package be.cetic.tsorage.processor.datatype
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.common.TimeSeries
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate, TimeAggregatorRawUpdate}
 import spray.json.JsValue
@@ -18,8 +19,7 @@ case class DataValue[T](val value: T, support: DataTypeSupport[T])
                      dataAggregation: String
                   ): AggUpdate =
       new AggUpdate(
-         rawUpdate.metric,
-         rawUpdate.tagset,
+         rawUpdate.ts,
          timeAggregator.name,
          datetime,
          support.`type`,

@@ -128,15 +128,10 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
     val bcast = builder.add(Broadcast[Message](2))
 
     val tagSplitter = builder.add(splitTagset)
-    val globalBCast = builder.add(Broadcast[DynamicTagUpdate](2))
-
     val shardTagSplitter = builder.add(splitShardedTagset)
-    val shardBCast = builder.add(Broadcast[ShardedDynamicTagUpdate](2))
 
-    bcast ~> tagSplitter ~>       globalBCast ~> notifyDynamicTags
-                                  globalBCast ~> notifyReverseDynamicTags
-    bcast ~> shardTagSplitter ~>  shardBCast  ~> notifyShardedDynamicTags
-                                  shardBCast  ~> notifyShardedReverseDynamicTags
+    bcast ~> tagSplitter ~> notifyReverseDynamicTags
+    bcast ~> shardTagSplitter ~> notifyShardedReverseDynamicTags
 
     SinkShape[Message](bcast.in)
   }
