@@ -20,9 +20,8 @@ val commonSettings = Seq(
    dockerUsername := Some("ceticasbl"),
    dockerCommands ++= Seq(
      Cmd("USER", "root"),
-     Cmd("RUN", "apk", "add", "--no-cache", "bash"),
-     Cmd("ADD", "https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh", "."),
-     Cmd("RUN", "chmod", "+x", "wait-for-it.sh")
+     Cmd("ADD", "https://raw.githubusercontent.com/eficode/wait-for/master/wait-for", "."),
+     Cmd("RUN", "chmod", "+x", "wait-for")
    )
   )
 
@@ -61,7 +60,7 @@ val cassandraDependencies = Seq(
 )
 
 lazy val common = (project in file("common"))
-   .enablePlugins(DockerPlugin, JavaAppPackaging)
+   .enablePlugins(DockerPlugin, AshScriptPlugin)
    .settings(
       name := "tsorage-common",
       packageName := "tsorage-common",
@@ -75,7 +74,7 @@ lazy val common = (project in file("common"))
    )
 
 lazy val hub = (project in file("hub"))
-   .enablePlugins(DockerPlugin, JavaAppPackaging)
+   .enablePlugins(DockerPlugin, AshScriptPlugin)
    .settings(
       name := "tsorage-hub",
       packageName := "tsorage-hub",
@@ -89,7 +88,7 @@ lazy val hub = (project in file("hub"))
    ).dependsOn(common)
 
 lazy val ingestion = (project in file("ingestion"))
-  .enablePlugins(DockerPlugin, JavaAppPackaging)
+  .enablePlugins(DockerPlugin, AshScriptPlugin)
    .settings(
       name := "tsorage-ingestion",
       packageName := "tsorage-ingestion",
@@ -104,7 +103,7 @@ lazy val ingestion = (project in file("ingestion"))
 
 
 lazy val processor = (project in file("processor"))
-   .enablePlugins(DockerPlugin, JavaAppPackaging)
+   .enablePlugins(DockerPlugin, AshScriptPlugin)
    .settings(
       name := "tsorage-processor",
       packageName := "tsorage-processor",
