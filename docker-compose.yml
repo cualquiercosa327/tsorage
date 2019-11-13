@@ -8,6 +8,8 @@ services:
   cassandra:
     image: cassandra:3.11
     container_name: tsorage-cassandra
+    volumes:
+      - data:/var/lib/cassandra
     #volumes:
     #  - .:/opt/docker
     #  - logvolume01:/var/log
@@ -89,5 +91,6 @@ services:
     ]
 
 volumes:
+  data:
   container-sync:
 #  logvolume01: {}

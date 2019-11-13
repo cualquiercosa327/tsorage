@@ -69,7 +69,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     val replication = Map("class" -> "SimpleStrategy", "replication_factor" -> 1.toString.asInstanceOf[AnyRef]).asJava
     Seq(keyspaceAgg, keyspaceRaw).foreach(keyspace =>
       session.execute(
-        SchemaBuilder.createKeyspace(keyspace)
+        SchemaBuilder.createKeyspace(keyspace).ifNotExists()
           .`with`().replication(replication)
           .durableWrites(true)
       )
@@ -83,17 +83,17 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
   private def createUdts(): Unit = {
     Seq(keyspaceAgg, keyspaceRaw).foreach { keyspace =>
       session.execute(
-        SchemaBuilder.createType(keyspace, "tdouble")
+        SchemaBuilder.createType(keyspace, "tdouble").ifNotExists()
           .addColumn("value", DataType.cdouble)
       )
 
       session.execute(
-        SchemaBuilder.createType(keyspace, "tlong")
+        SchemaBuilder.createType(keyspace, "tlong").ifNotExists()
           .addColumn("value", DataType.bigint)
       )
 
       session.execute(
-        SchemaBuilder.createType(keyspace, "date_double")
+        SchemaBuilder.createType(keyspace, "date_double").ifNotExists()
           .addColumn("datetime", DataType.timestamp())
           .addColumn("value", DataType.cdouble)
       )
@@ -106,7 +106,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
    */
   private def createTables(): Unit = {
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "observations")
+      SchemaBuilder.createTable(keyspaceAgg, "observations").ifNotExists()
         .addPartitionKey("metric_", DataType.text)
         .addPartitionKey("shard_", DataType.text)
         .addPartitionKey("interval_", DataType.text)
@@ -119,7 +119,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceRaw, "observations")
+      SchemaBuilder.createTable(keyspaceRaw, "observations").ifNotExists()
         .addPartitionKey("metric_", DataType.text)
         .addPartitionKey("shard_", DataType.text)
         .addClusteringColumn("datetime_", DataType.timestamp)
@@ -130,7 +130,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "static_tagset")
+      SchemaBuilder.createTable(keyspaceAgg, "static_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
         .addClusteringColumn("tagname", DataType.text)
         .addClusteringColumn("tagvalue", DataType.text)
@@ -139,7 +139,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_static_tagset AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_static_tagset AS
          | SELECT metric, tagname, tagvalue
          | FROM $keyspaceAgg.static_tagset
          | WHERE tagname IS NOT NULL AND tagvalue IS NOT NULL
@@ -148,7 +148,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "dynamic_tagset")
+      SchemaBuilder.createTable(keyspaceAgg, "dynamic_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
         .addClusteringColumn("tagname", DataType.text())
         .addColumn("tagvalue", DataType.text())
@@ -156,7 +156,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_dynamic_tagset AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_dynamic_tagset AS
          | SELECT tagname, tagvalue, metric
          | FROM $keyspaceAgg.dynamic_tagset
          | WHERE tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
@@ -165,7 +165,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "sharded_dynamic_tagset")
+      SchemaBuilder.createTable(keyspaceAgg, "sharded_dynamic_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
         .addPartitionKey("shard", DataType.text)
         .addClusteringColumn("tagname", DataType.text)
@@ -174,7 +174,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_sharded_dynamic_tagset AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_sharded_dynamic_tagset AS
          | SELECT shard, tagname, tagvalue, metric
          | FROM $keyspaceAgg.sharded_dynamic_tagset
          | WHERE shard IS NOT NULL and tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
@@ -183,7 +183,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_sharded_dynamic_tagname AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_sharded_dynamic_tagname AS
          | SELECT shard, tagname, metric
          | FROM $keyspaceAgg.sharded_dynamic_tagset
          | WHERE shard IS NOT NULL and tagname IS NOT NULL and metric IS NOT NULL
