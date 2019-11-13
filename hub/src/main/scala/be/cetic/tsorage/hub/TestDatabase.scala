@@ -1,6 +1,7 @@
 package be.cetic.tsorage.hub
 
 import be.cetic.tsorage.common.DateTimeConverter
+import be.cetic.tsorage.common.RichListenableFuture._
 import be.cetic.tsorage.common.sharder.Sharder
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.schemabuilder.SchemaBuilder
@@ -9,8 +10,11 @@ import com.datastax.driver.core.{Cluster, DataType, Session}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 
+import java.util.concurrent.Semaphore
+
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 /**
  * Cassandra database for unit tests.
@@ -30,12 +34,12 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
   private val keyspaceAgg = conf.getString("cassandra.keyspaces.other") // Keyspace containing aggregated data.
   private val keyspaceRaw = conf.getString("cassandra.keyspaces.raw") // Keyspace containing raw data.
 
-  private val session: Session = Cluster.builder
+  private val cluster: Cluster = Cluster.builder
     .addContactPoint(cassandraHost)
     .withPort(cassandraPort)
-    .withoutJMXReporting()
+    .withoutJMXReporting
     .build
-    .connect()
+  private val session: Session = cluster.connect
 
   private val sharder = Sharder(conf.getString("sharder"))
 
@@ -215,11 +219,13 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
     )
 
     // Extract some UDTs.
-    val tDoubleType = session.getCluster.getMetadata.getKeyspace(keyspaceRaw).getUserType("tdouble")
+    val tDoubleType = cluster.getMetadata.getKeyspace(keyspaceRaw).getUserType("tdouble")
 
     // Generate and add `numData` data for each metric.
     val random = new scala.util.Random(seed)
     val startTimestamp = DateTimeConverter.strToEpochMilli(startTime)
+    val requestSem = new Semaphore(100) // Semaphore for limiting the number of requests (it avoids "Pool is
+    // busy" error).
     metricValueRange.foreach { case (metric, valueRange) =>
       // Add some tagset in order to the database contains the name of `metric`.
       session.executeAsync(
@@ -240,13 +246,21 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
         value = value - (value % 0.01) // Round to two decimal points.
         val valueDouble = tDoubleType.newValue().setDouble("value", value)
 
-        session.executeAsync(
+        requestSem.acquire()
+        val request = session.executeAsync(
           QueryBuilder.insertInto(keyspaceRaw, "observations")
             .value("metric_", metric)
             .value("shard_", shard)
             .value("datetime_", timestamp)
             .value("value_double_", valueDouble)
-        )
+        ).asScala
+
+        request onComplete {
+          case Success(_) => requestSem.release()
+          case Failure(e) =>
+            requestSem.release()
+            e.printStackTrace()
+        }
       }
     }
   }
@@ -257,7 +271,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
    */
   def clean(): Unit = {
     Seq(keyspaceAgg, keyspaceRaw).foreach(keyspace =>
-      if (Option(session.getCluster.getMetadata.getKeyspace(keyspace)).isDefined) {
+      if (Option(cluster.getMetadata.getKeyspace(keyspace)).isDefined) {
         // If `keyspace` exists.
         session.execute(
           SchemaBuilder.dropKeyspace(keyspace)
