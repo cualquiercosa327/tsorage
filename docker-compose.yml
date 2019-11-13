@@ -18,12 +18,18 @@ services:
     container_name: tsorage-cassandra-initializer
     depends_on:
       - cassandra
+    volumes:
+      - container-sync:/sync
     command: /bin/bash -c "
-      apt-get update && apt-get install -y wget &&
-      wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra.cql
-      https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh &&
-      chmod +x wait-for-it.sh &&
-      ./wait-for-it.sh cassandra:9042 --strict --timeout=100 -- cqlsh cassandra -f cassandra.cql
+      if [ ! -f '/sync/db_initialized' ]; then
+        apt-get update && apt-get install -y wget &&
+        wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra.cql &&
+        wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh &&
+        chmod +x wait-for-it.sh &&
+        ./wait-for-it.sh cassandra:9042 --strict --timeout=100 -- cqlsh cassandra -f cassandra.cql;
+        touch /sync/db_initialized &&
+        echo 'The database has just been initialized.';
+      fi
       "
   zookeeper:
     image: zookeeper:3.5
@@ -44,7 +50,17 @@ services:
       - 8081:8081
     depends_on:
       - cassandra-init
-    entrypoint: ["./wait-for", "cassandra:9042", "--timeout=100", "--", "/opt/docker/bin/hub"]
+    read_only: true
+    volumes:
+      - container-sync:/sync
+    entrypoint: [
+      "sh", "-c", "./wait-for cassandra:9042 --timeout=100 -- sh -c \"
+      while [ ! -f '/sync/db_initialized' ]; do
+        sleep 1;
+      done;
+      /opt/docker/bin/hub
+      \""
+    ]
   ingestion:
     image: ceticasbl/tsorage-ingestion
     container_name: tsorage-ingestion
@@ -60,7 +76,18 @@ services:
     depends_on:
       - cassandra-init
       - kafka
-    entrypoint: ["./wait-for", "cassandra:9042", "--timeout=100", "--", "/opt/docker/bin/processor"]
+    read_only: true
+    volumes:
+        - container-sync:/sync
+    entrypoint: [
+      "sh", "-c", "./wait-for cassandra:9042 --timeout=100 -- sh -c \"
+          while [ ! -f '/sync/db_initialized' ]; do
+            sleep 1;
+          done;
+          /opt/docker/bin/processor
+          \""
+    ]
 
-#volumes:
+volumes:
+  container-sync:
 #  logvolume01: {}

@@ -73,8 +73,6 @@ object Site extends RouteConcatenation with Directives
       scala.sys.addShutdownHook {
          println("Shutdown...")
 
-         database.clean()
-
          bindingFuture
            .flatMap(_.unbind()) // trigger unbinding from the port
            .onComplete(_ => {
