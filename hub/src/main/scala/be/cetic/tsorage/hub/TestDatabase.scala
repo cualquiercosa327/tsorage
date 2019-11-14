@@ -235,7 +235,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.co
           .value("tagvalue", "some_value")
       )
 
-      // Generate and add `numData` data for `metric``
+      // Generate and add `numData` data for `metric`.
       for (i <- Seq.range(0, numData)) {
         // Compute the timestamp and the corresponding shard for this data.
         val timestamp = startTimestamp + (i * timeStepSec * 1000)
