@@ -5,10 +5,10 @@ import java.util.Date
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, GraphDSL}
+import be.cetic.tsorage.common.FutureManager
 import be.cetic.tsorage.processor.aggregator.data.DataAggregation
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.flow.FutureManager
 import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate, TimeAggregatorRawUpdate}
 import be.cetic.tsorage.processor.{DAO, ProcessorConfig}
 import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement, UDTValue, UserType}

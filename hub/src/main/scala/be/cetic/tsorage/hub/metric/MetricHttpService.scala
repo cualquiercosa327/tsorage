@@ -8,8 +8,7 @@ import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.sharder.Sharder
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
-import be.cetic.tsorage.hub.filter.{Filter, FilterJsonProtocol, MetricManager, TagFilter}
-import com.datastax.driver.core.Session
+import be.cetic.tsorage.hub.filter.{Filter, FilterJsonProtocol, Metric, MetricManager, TagFilter}
 
 import scala.concurrent.ExecutionContext
 import spray.json._
@@ -23,8 +22,6 @@ class MetricHttpService(cassandra: Cassandra)(implicit executionContext: Executi
 {
    private val conf = ConfigFactory.load("hub.conf")
 
-   private val sharder = Sharder(conf.getString("sharder"))
-
    private val metricManager = MetricManager(cassandra, conf)
 
    private val session = cassandra.session
@@ -36,7 +33,7 @@ class MetricHttpService(cassandra: Cassandra)(implicit executionContext: Executi
          metricId =>
          get
          {
-            val results = metricManager.getStaticTagset(metricId)
+            val results = Metric(metricId, session, conf).getStaticTagset()
             complete(HttpEntity(ContentTypes.`application/json`, results.toJson.compactPrint))
          }
       }
@@ -77,22 +74,19 @@ class MetricHttpService(cassandra: Cassandra)(implicit executionContext: Executi
          }
    }
 
-   def postMetricSearch = path("api" / conf.getString("api.version") / "search" / "metrics") {
+   /**
+    * Looks for specific metrics.
+    */
+   def postMetricSearch = path("api" / conf.getString("api.version") / "search" / "metric") {
       post {
          entity(as[MetricSearchQuery]) {
             query => {
-               val metrics = query.filter match {
-                  case None => metricManager.getAllMetrics()
-                  case Some(filter) => metricManager.getMetrics(filter, query.range)
-
-               }
-
+               val metrics = metricManager.getMetrics(query).map(_.name)
                complete(HttpEntity(ContentTypes.`application/json`, metrics.toJson.compactPrint))
             }
          }
       }
    }
-
 
    val routes =
       getStaticTagset ~

@@ -11,9 +11,14 @@ sealed abstract class QueryDateRange(val `type`: String)
 {
    def start: LocalDateTime
    def end: LocalDateTime
+
+   def toAbsoluteQueryDateRange = AbsoluteQueryDateRange(start, end)
 }
 
 case class AbsoluteQueryDateRange(start: LocalDateTime, end: LocalDateTime) extends QueryDateRange("absolute")
+{
+   override def toAbsoluteQueryDateRange: AbsoluteQueryDateRange = this
+}
 
 case class RelativeQueryDateRange(duration: Long, unit: String) extends QueryDateRange("relative")
 {

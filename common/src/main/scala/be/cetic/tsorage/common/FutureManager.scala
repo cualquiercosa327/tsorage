@@ -1,4 +1,4 @@
-package be.cetic.tsorage.processor.flow
+package be.cetic.tsorage.common
 
 import com.datastax.driver.core.{ResultSet, ResultSetFuture}
 
