@@ -24,6 +24,8 @@ in order to provide faster responses to data queries. Arbitrary processing also 
   - process mining
 - Hub, a set of microservices for exploiting the platform.
 
+### Deployment
+
 In this project, we use [Docker Compose](https://docs.docker.com/compose/) for deployment. To run TSorage, make sure you have [Docker Engine](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your computer. Then, create Docker image of each module as follows:
 
 ```bash
@@ -35,5 +37,28 @@ sbt processor/docker:publishLocal
 Finally, run TSorage using this command in a terminal:
 
 ```bash
-docker-compose up
+docker-compose up -d
 ```
+
+To stop TSorage, run this command:
+
+```bash
+docker-compose down
+```
+
+### Demonstration
+
+[Datadog](https://www.datadoghq.com) agent is a service that sends metrics and events from your host to Datadog. In the case of our demonstration, we use [Docker image of the Datadog agent](https://hub.docker.com/r/datadog/agent) and have configured it to send data to the ingestion service.
+
+To run the demonstration, use this command in a terminal:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.demo.yml up -d
+```
+
+To stop it, run this command:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.demo.yml down
+```
+

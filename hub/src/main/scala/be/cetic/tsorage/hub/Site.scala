@@ -45,11 +45,7 @@ object Site extends RouteConcatenation with Directives
       implicit val materializer: ActorMaterializer = ActorMaterializer()
       implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-      val databaseConf = ConfigFactory.load("common_db_test.conf") // TODO: change "common_db_test.conf" to "common.conf"
-
-      // Create a test database.
-      val database: TestDatabase = new TestDatabase(databaseConf) // TODO: use a real database for production.
-      database.create()
+      val databaseConf = ConfigFactory.load("common.conf")
 
       // Create the database handler.
       val cassandra = new Cassandra(databaseConf)
