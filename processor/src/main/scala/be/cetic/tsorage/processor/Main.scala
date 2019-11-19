@@ -63,6 +63,6 @@ object Main extends LazyLogging with MessageJsonSupport
 
     inboundMessagesConnector()
        .via(processorGraph)
-       .runWith(Sink.foreach( println ))
+       .runWith(Sink.ignore)
   }
 }
