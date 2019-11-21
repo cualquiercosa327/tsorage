@@ -45,6 +45,17 @@ services:
       KAFKA_ADVERTISED_PORT: 9092
     depends_on:
       - zookeeper
+  grafana:
+    image: grafana/grafana:6.4.4
+    container_name: tsorage-grafana
+    environment:
+      GF_INSTALL_PLUGINS: grafana-simple-json-datasource 1.4.0
+    ports:
+      - 3000:3000
+    depends_on:
+      - hub
+    volumes:
+      - grafana:/var/lib/grafana
   hub:
     image: ceticasbl/tsorage-hub
     container_name: tsorage-hub
@@ -66,8 +77,6 @@ services:
   ingestion:
     image: ceticasbl/tsorage-ingestion
     container_name: tsorage-ingestion
-    ports:
-      - 8080:8080
     depends_on:
       - hub
       - kafka
@@ -92,5 +101,6 @@ services:
 
 volumes:
   data:
+  grafana:
   container-sync:
 #  logvolume01: {}
