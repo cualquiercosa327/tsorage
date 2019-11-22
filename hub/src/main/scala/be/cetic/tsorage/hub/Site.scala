@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContextExecutor
  */
 object Site extends RouteConcatenation with Directives
 {
-   private val conf = ConfigFactory.load("hub.conf")
+   private val conf = HubConfiguration.conf
 
    // Route to test the connection with the server.
    val connectionTestRoute: Route = path("api" / conf.getString("api.version")) {
@@ -45,16 +45,14 @@ object Site extends RouteConcatenation with Directives
       implicit val materializer: ActorMaterializer = ActorMaterializer()
       implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-      val databaseConf = ConfigFactory.load("common.conf")
-
       // Create the database handler.
-      val cassandra = new Cassandra(databaseConf)
+      val cassandra = new Cassandra(conf)
 
       // Routes.
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService(cassandra).routes
       val tagRoutes = new TagHttpService(cassandra).routes
-      val grafanaRoutes = new GrafanaService(cassandra, MetricManager(cassandra, databaseConf)).routes
+      val grafanaRoutes = new GrafanaService(cassandra, MetricManager(cassandra, conf)).routes
 
       val routes =
          authRoute ~
@@ -64,7 +62,9 @@ object Site extends RouteConcatenation with Directives
            swaggerRoute ~
            tagRoutes
 
-      val bindingFuture = Http().bindAndHandle(routes, "0.0.0.0", conf.getInt("port"))
+      val hubHost = System.getenv().getOrDefault("TSORAGE_HUB_HOST", "localhost")
+      val bindingFuture = Http().bindAndHandle(routes, hubHost, conf.getInt("port"))
+
 
       scala.sys.addShutdownHook {
          println("Shutdown...")

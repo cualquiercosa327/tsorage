@@ -8,6 +8,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.AuthenticationQuery
+import be.cetic.tsorage.hub.HubConfiguration
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
 import com.typesafe.config.ConfigFactory
 import spray.json._
@@ -41,7 +42,7 @@ import scala.io.StdIn
  */
 class AuthenticationService(implicit executionContext: ExecutionContext) extends Directives with MessageJsonSupport with RouteConcatenation
 {
-   val conf = ConfigFactory.load("hub.conf")
+   val conf = HubConfiguration.conf
    val authenticator = AuthenticationBackend(conf.getConfig("backend"))
 
    def postAuth = path("api" / conf.getString("api.version") / "auth") {

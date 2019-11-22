@@ -24,6 +24,13 @@ in order to provide faster responses to data queries. Arbitrary processing also 
   - process mining
 - Hub, a set of microservices for exploiting the platform.
 
+### Environment variables
+
+TSorage uses several environment variables to configure certain parts of the software:
+
+- `TSORAGE_CASSANDRA_HOST`: Host of Cassandra. Defaults to `localhost`.
+- `TSORAGE_HUB_HOST`: Host of hub module. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
+
 ### Deployment
 
 In this project, we use [Docker Compose](https://docs.docker.com/compose/) for deployment. To run TSorage, make sure you have [Docker Engine](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your computer. Then, create Docker image of each module as follows:

@@ -59,6 +59,9 @@ services:
   hub:
     image: ceticasbl/tsorage-hub
     container_name: tsorage-hub
+    environment:
+      - TSORAGE_CASSANDRA_HOST: cassandra
+      - TSORAGE_HUB_HOST: 0.0.0.0
     ports:
       - 8081:8081
     depends_on:
