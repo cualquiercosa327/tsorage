@@ -12,8 +12,9 @@ import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import be.cetic.tsorage.common.messaging.{AuthenticationQuery, User}
+import be.cetic.tsorage.ingestion.IngestionConfiguration
 import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DoubleBody, DoubleMessage, FloatMessageJsonSupport}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
 
@@ -34,7 +35,7 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
    implicit val materializer = ActorMaterializer()
    implicit val executionContext = system.dispatcher
 
-   private val  conf = ConfigFactory.load("ingest-http.conf")
+   private val conf = IngestionConfiguration.conf
 
    def verifyToken(conf: Config)(token: String): Future[Option[User]] = {
       val request = HttpRequest(
@@ -119,8 +120,8 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
          }
       }
 
-
-      val bindingFuture = Http().bindAndHandle(concat(routeSeries, routeCheckRun), "0.0.0.0", 8080)
+      val hubListenAddress = System.getenv().getOrDefault("TSORAGE_HUB_LISTEN_ADDRESS", "localhost")
+      val bindingFuture = Http().bindAndHandle(concat(routeSeries, routeCheckRun), hubListenAddress, 8080)
 
       scala.sys.addShutdownHook {
          println("Shutdown...")

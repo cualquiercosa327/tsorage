@@ -3,7 +3,8 @@ package be.cetic.tsorage.ingestion.message
 import java.time.{LocalDateTime, ZoneOffset}
 
 import be.cetic.tsorage.common.messaging.User
-import com.typesafe.config.{Config, ConfigFactory}
+import be.cetic.tsorage.ingestion.IngestionConfiguration
+import com.typesafe.config.ConfigFactory
 
 /**
  * A message, provided by an external client.
@@ -36,7 +37,7 @@ case class DoubleMessage(
          case Some(h) => preparedTagsWithInterval + ("host" -> h)
       }
 
-      val preparedTagsWithUser = ConfigFactory.load("ingest-http.conf").getBoolean("append_user") match {
+      val preparedTagsWithUser = IngestionConfiguration.conf.getBoolean("append_user") match {
          case true => preparedTagsWithHost + ("user_id" -> user.id.toString)
          case false => preparedTagsWithHost
       }

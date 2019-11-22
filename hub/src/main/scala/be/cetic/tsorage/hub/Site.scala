@@ -13,7 +13,6 @@ import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.GrafanaService
 import be.cetic.tsorage.hub.metric.MetricHttpService
 import be.cetic.tsorage.hub.tag.TagHttpService
-import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -62,8 +61,8 @@ object Site extends RouteConcatenation with Directives
            swaggerRoute ~
            tagRoutes
 
-      val hubHost = System.getenv().getOrDefault("TSORAGE_HUB_HOST", "localhost")
-      val bindingFuture = Http().bindAndHandle(routes, hubHost, conf.getInt("port"))
+      val hubListenAddress = System.getenv().getOrDefault("TSORAGE_HUB_LISTEN_ADDRESS", "localhost")
+      val bindingFuture = Http().bindAndHandle(routes, hubListenAddress, conf.getInt("port"))
 
 
       scala.sys.addShutdownHook {

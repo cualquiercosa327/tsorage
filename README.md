@@ -29,7 +29,10 @@ in order to provide faster responses to data queries. Arbitrary processing also 
 TSorage uses several environment variables to configure certain parts of the software:
 
 - `TSORAGE_CASSANDRA_HOST`: Host of Cassandra. Defaults to `localhost`.
-- `TSORAGE_HUB_HOST`: Host of hub module. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
+- `TSORAGE_KAFKA_HOST`: Host of Kafka. Defaults to `localhost`.
+- `TSORAGE_HUB_LISTEN_ADDRESS`: Listen address of hub module. This variable controls which IP address to listen for incoming connections on. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
+- `TSORAGE_HUB_HOST`: Host of hub module. Defaults to `localhost`.
+- `TSORAGE_INGESTION_LISTEN_ADDRESS`: Listen address of ingestion module. This variable controls which IP address to listen for incoming connections on. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
 
 ### Deployment
 

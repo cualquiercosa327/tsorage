@@ -7,7 +7,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
  *
  * Path of configuration file is tsorage/hub/src/main/resources/hub.conf.
  *
- * To configure Cassandra host, you have to set the environment variable TSORAGE_CASSANDRA_HOST (defaults to localhost).
+ * To configure Cassandra host, you have to set the TSORAGE_CASSANDRA_HOST environment variable (defaults to localhost).
  *
  */
 object HubConfiguration {
