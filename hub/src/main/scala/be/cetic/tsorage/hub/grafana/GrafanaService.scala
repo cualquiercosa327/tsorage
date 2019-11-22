@@ -9,7 +9,6 @@ import be.cetic.tsorage.hub.HubConfig
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.backend.GrafanaBackend
 import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationRequest, GrafanaJsonSupport, QueryRequest, SearchRequest}
-import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 

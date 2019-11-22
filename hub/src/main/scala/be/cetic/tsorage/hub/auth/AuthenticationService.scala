@@ -10,7 +10,6 @@ import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.AuthenticationQuery
 import be.cetic.tsorage.hub.HubConfig
 import be.cetic.tsorage.hub.auth.backend.AuthenticationBackend
-import com.typesafe.config.ConfigFactory
 import spray.json._
 
 import scala.concurrent.ExecutionContext

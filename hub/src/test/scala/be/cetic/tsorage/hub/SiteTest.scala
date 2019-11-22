@@ -3,7 +3,6 @@ package be.cetic.tsorage.hub
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.io.Source

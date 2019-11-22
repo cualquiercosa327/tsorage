@@ -14,7 +14,6 @@ import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, MetricManager, TagManage
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
 import be.cetic.tsorage.hub.tag.TagValueQuery
 import com.datastax.driver.core.Session
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext

@@ -4,7 +4,6 @@ import java.time.{LocalDateTime, ZoneOffset}
 
 import be.cetic.tsorage.common.messaging.User
 import be.cetic.tsorage.ingestion.IngestionConfig
-import com.typesafe.config.ConfigFactory
 
 /**
  * A message, provided by an external client.

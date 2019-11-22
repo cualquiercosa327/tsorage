@@ -7,7 +7,6 @@ import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.hub.HubConfig
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import be.cetic.tsorage.hub.filter.{Filter, FilterJsonProtocol, MetricManager, TagFilter}
 import com.datastax.driver.core.Session

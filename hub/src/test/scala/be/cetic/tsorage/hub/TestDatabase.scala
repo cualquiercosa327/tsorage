@@ -1,5 +1,7 @@
 package be.cetic.tsorage.hub
 
+import java.util.concurrent.Semaphore
+
 import be.cetic.tsorage.common.DateTimeConverter
 import be.cetic.tsorage.common.RichListenableFuture._
 import be.cetic.tsorage.common.sharder.Sharder
@@ -7,10 +9,8 @@ import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.schemabuilder.SchemaBuilder
 import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction
 import com.datastax.driver.core.{Cluster, DataType, Session}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
-
-import java.util.concurrent.Semaphore
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -25,9 +25,7 @@ import scala.util.{Failure, Success, Try}
  * minutes.
  *
  */
-class TestDatabase(private val conf: Config = ConfigFactory.load("common_test.conf")) extends LazyLogging {
-  // TODO: move this class to src/test/scala/be/cetic/tsorage/hub/ for production.
-
+class TestDatabase(private val conf: Config) extends LazyLogging {
   private val cassandraHost = conf.getString("cassandra.host")
   private val cassandraPort = conf.getInt("cassandra.port")
 
