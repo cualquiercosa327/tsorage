@@ -9,7 +9,7 @@ import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.hub.HubConfiguration
+import be.cetic.tsorage.hub.HubConfig
 import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, MetricManager, TagManager}
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
 import be.cetic.tsorage.hub.tag.TagValueQuery
@@ -29,7 +29,7 @@ class TagHttpService(val cassandra: Cassandra)(implicit executionContext: Execut
       with LazyLogging
       with FilterJsonProtocol
 {
-   private val conf = HubConfiguration.conf
+   private val conf = HubConfig.conf
    private val tagManager = TagManager(cassandra, conf)
 
    private val session = cassandra.session

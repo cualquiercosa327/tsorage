@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.sharder.Sharder
-import be.cetic.tsorage.hub.HubConfiguration
+import be.cetic.tsorage.hub.HubConfig
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import be.cetic.tsorage.hub.filter.{Filter, FilterJsonProtocol, MetricManager, TagFilter}
@@ -22,7 +22,7 @@ class MetricHttpService(cassandra: Cassandra)(implicit executionContext: Executi
    extends Directives
    with MessageJsonSupport with LazyLogging with FilterJsonProtocol
 {
-   private val conf = HubConfiguration.conf
+   private val conf = HubConfig.conf
 
    private val sharder = Sharder(conf.getString("sharder"))
 

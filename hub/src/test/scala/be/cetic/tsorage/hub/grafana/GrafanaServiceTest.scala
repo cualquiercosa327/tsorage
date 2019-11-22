@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
-import be.cetic.tsorage.hub.{HubConfiguration, TestDatabase}
+import be.cetic.tsorage.hub.{HubConfig, TestDatabase}
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.jsonsupport._
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
@@ -19,7 +19,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
   database.create() // Add the keyspaces, tables and data.
 
   // Configurations.
-  val conf: Config = HubConfiguration.conf
+  val conf: Config = HubConfig.conf
     .withValue("cassandra.keyspaces.raw", ConfigValueFactory.fromAnyRef("tsorage_ts_test"))
     .withValue("cassandra.keyspaces.other", ConfigValueFactory.fromAnyRef("tsorage_test"))
 

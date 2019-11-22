@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContextExecutor
  */
 object Site extends RouteConcatenation with Directives
 {
-   private val conf = HubConfiguration.conf
+   private val conf = HubConfig.conf
 
    // Route to test the connection with the server.
    val connectionTestRoute: Route = path("api" / conf.getString("api.version")) {

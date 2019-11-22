@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import akka.http.scaladsl.server.{Directives, Route}
 import be.cetic.tsorage.common.Cassandra
-import be.cetic.tsorage.hub.HubConfiguration
+import be.cetic.tsorage.hub.HubConfig
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.backend.GrafanaBackend
 import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationRequest, GrafanaJsonSupport, QueryRequest, SearchRequest}
@@ -17,7 +17,7 @@ class GrafanaService(cassandra: Cassandra, metricManager: MetricManager)(implici
   with GrafanaJsonSupport {
   val grafanaRequestHandler = new GrafanaBackend(cassandra, metricManager)
 
-  private val conf = HubConfiguration.conf
+  private val conf = HubConfig.conf
   private val apiVersion = conf.getString("api.version")
   private val apiPrefix = conf.getString("api.prefix")
 

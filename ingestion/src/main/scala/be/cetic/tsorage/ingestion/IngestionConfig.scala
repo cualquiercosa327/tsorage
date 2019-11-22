@@ -1,9 +1,10 @@
 package be.cetic.tsorage.ingestion
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
+import com.typesafe.scalalogging.LazyLogging
 
 /**
- * Configuration of the ingestion module.
+ * A representation of the Ingestion configuration.
  *
  * Path of configuration file is tsorage/ingestion/src/main/resources/ingest-http.conf.
  *
@@ -11,7 +12,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
  * configure hub module host, you have to set the TSORAGE_HUB_HOST environment variable (defaults to localhost).
  *
  */
-object IngestionConfiguration {
+object IngestionConfig extends LazyLogging {
   private val kafkaHost = System.getenv().getOrDefault("TSORAGE_KAFKA_HOST", "localhost")
   private val hubHost = System.getenv().getOrDefault("TSORAGE_HUB_HOST", "http://localhost")
 
