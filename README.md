@@ -30,6 +30,7 @@ TSorage uses several environment variables to configure certain parts of the sof
 
 - `TSORAGE_CASSANDRA_HOST`: Host of Cassandra. Defaults to `localhost`.
 - `TSORAGE_KAFKA_HOST`: Host of Kafka. Defaults to `localhost`.
+- `TSORAGE_KAFKA_BROKER_ADDRESSES`: List of addresses of the Kafka brokers in a bootstrap Kafka cluster (more information [here](https://kafka.apache.org/documentation/) and [here](https://jaceklaskowski.gitbooks.io/apache-kafka/kafka-properties-bootstrap-servers.html)). Defaults to `[localhost:9092]`.
 - `TSORAGE_HUB_LISTEN_ADDRESS`: Listen address of hub module. This variable controls which IP address to listen for incoming connections on. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
 - `TSORAGE_HUB_HOST`: Host of hub module. Defaults to `localhost`.
 - `TSORAGE_INGESTION_LISTEN_ADDRESS`: Listen address of ingestion module. This variable controls which IP address to listen for incoming connections on. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.

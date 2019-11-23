@@ -11,7 +11,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.processor.aggregator.time.{DayAggregator, HourAggregator, MinuteAggregator}
 import be.cetic.tsorage.processor.flow.GlobalProcessingGraphFactory
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
@@ -29,7 +28,7 @@ object Main extends LazyLogging with MessageJsonSupport
 
   def main(args: Array[String]): Unit =
   {
-    val conf = ConfigFactory.load("tsorage.conf")
+    val conf = ProcessorConfig.conf
     val cassandraHost = conf.getString("cassandra.host")
     val cassandraPort = conf.getInt("cassandra.port")
     val root: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)

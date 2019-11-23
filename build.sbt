@@ -1,5 +1,6 @@
 import Dependencies.Version
 import com.typesafe.sbt.packager.docker.Cmd
+import NativePackagerHelper._
 import sbt.Keys.libraryDependencies
 
 name := "tsorage"
@@ -79,6 +80,7 @@ lazy val hub = (project in file("hub"))
       name := "tsorage-hub",
       packageName := "tsorage-hub",
       commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
@@ -93,6 +95,7 @@ lazy val ingestion = (project in file("ingestion"))
       name := "tsorage-ingestion",
       packageName := "tsorage-ingestion",
       commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
@@ -108,6 +111,7 @@ lazy val processor = (project in file("processor"))
       name := "tsorage-processor",
       packageName := "tsorage-processor",
       commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(

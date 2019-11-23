@@ -91,6 +91,9 @@ services:
   processor:
     image: ceticasbl/tsorage-processor
     container_name: tsorage-processor
+    environment:
+      TSORAGE_CASSANDRA_HOST: cassandra
+      TSORAGE_KAFKA_BROKER_ADDRESSES: "[kafka:9092]"
     depends_on:
       - cassandra-init
       - kafka

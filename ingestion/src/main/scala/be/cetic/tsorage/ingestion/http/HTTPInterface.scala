@@ -120,7 +120,7 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
          }
       }
 
-      val hubListenAddress = System.getenv().getOrDefault("TSORAGE_HUB_LISTEN_ADDRESS", "localhost")
+      val hubListenAddress = System.getenv().getOrDefault("TSORAGE_INGESTION_LISTEN_ADDRESS", "localhost")
       val bindingFuture = Http().bindAndHandle(concat(routeSeries, routeCheckRun), hubListenAddress, 8080)
 
       scala.sys.addShutdownHook {
