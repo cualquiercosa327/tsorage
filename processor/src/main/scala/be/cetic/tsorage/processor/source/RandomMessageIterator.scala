@@ -23,10 +23,10 @@ object RandomMessageIterator extends Iterator[Message] {
     count = count + 1
 
     if(count % 1000 == 0)
-      {
-        val duration = Duration.between(initTimeStamp, LocalDateTime.now())
-        println(s"${count} / ${duration.toSeconds} -> ${count.toLong / (duration.toSeconds)}")
-      }
+    {
+      val duration = Duration.between(initTimeStamp, LocalDateTime.now())
+     // println(s"${count} / ${duration.toSeconds} -> ${count.toLong / (duration.toSeconds)}")
+    }
 
     Message(
       s"my sensor ${Random.nextInt(5000)}",

@@ -1,6 +1,8 @@
 package be.cetic.tsorage.ingestion.producer
-package scalapb
+//package scalapb
 
+
+import be.cetic.tsorage.common
 import akka.actor.ActorSystem
 import akka.kafka.ProducerSettings
 import akka.serialization.SerializationExtension
@@ -11,7 +13,7 @@ import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSeriali
 import play.api.libs.json.{JsArray, JsValue, Json}
 import scala.io.Source
 
-object producer {
+object Producer {
   ///////////// Define System Setting
   implicit val system = ActorSystem("http-interface")
   val serialization = SerializationExtension(system)

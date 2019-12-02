@@ -15,7 +15,7 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import scala.collection.JavaConverters._
 
 
-object consumer {
+object Consumer {
 
   implicit val system = ActorSystem("http-interface")
   implicit val materializer = ActorMaterializer()
