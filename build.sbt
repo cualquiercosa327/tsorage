@@ -34,8 +34,6 @@ PB.targets in Compile := Seq(
 
  */
 
-
-
 //scalapb.compiler.Version.scalapbVersion
 val akkaVersion = "10.1.10"
 
@@ -111,10 +109,12 @@ lazy val ingestion = (project in file("ingestion"))
    ).dependsOn(common)
 
 lazy val gatling = (project in file("gatling"))
-   .enablePlugins(GatlingPlugin)
+   .enablePlugins(DockerPlugin, GatlingPlugin)
    .settings(
-      name := "gatling",
+      name := "tsorage-gatling",
+      packageName := "tsorage-gatling",
       commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          Seq(
             "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.3.0",
@@ -141,6 +141,3 @@ lazy val root = (project in file("."))
    .settings(
       name := "tsorage"
    ).aggregate(common, hub, ingestion, processor, gatling)
-
-
-
