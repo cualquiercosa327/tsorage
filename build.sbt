@@ -26,10 +26,14 @@ val commonSettings = Seq(
    )
   )
 
-PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
+//PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
+/*
 PB.targets in Compile := Seq(
-  scalapb.gen() -> (sourceManaged in Compile).value / "protos",
+  scalapb.gen() -> (sourceManaged in Compile).value/ "protos",
 )
+
+ */
+
 
 
 //scalapb.compiler.Version.scalapbVersion
@@ -43,16 +47,16 @@ val commonDependencies = Seq(
    "com.typesafe.akka" %% "akka-stream-kafka" % "1.0.4",
    "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.23",
    "com.typesafe.akka" %% "akka-http-testkit" % Version.akka,
-   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
+   //"com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     "com.typesafe.play" %% "play-json" % "2.7.4",
    "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
-   "com.thesamet.scalapb" %% "scalapb-runtime" % "0.9.4"
+  "com.thesamet.scalapb" %% "scalapb-runtime" % "0.9.5",
+   "org.apache.commons" % "commons-collections4" % "4.4",
+"com.thesamet.scalapb" %% "scalapb-json4s" % "0.9.3"
+
 
 
 )
-
-
-
 
 val cassandraDependencies = Seq(
    "com.datastax.oss" % "java-driver-core" % "4.1.0",
@@ -99,11 +103,24 @@ lazy val ingestion = (project in file("ingestion"))
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
-         "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-         "ch.qos.logback" % "logback-classic" % "1.2.3"
-      )
+            "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+            "ch.qos.logback" % "logback-classic" % "1.2.3",
+            "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.3.0" % "test,it",
+            "io.gatling"            % "gatling-test-framework"    % "3.3.0" % "test,it",
+         )
    ).dependsOn(common)
 
+lazy val gatling = (project in file("gatling"))
+   .enablePlugins(GatlingPlugin)
+   .settings(
+      name := "gatling",
+      commonSettings,
+      libraryDependencies := commonDependencies ++
+         Seq(
+            "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.3.0",
+            "io.gatling"            % "gatling-test-framework"    % "3.3.0",
+         )
+   ).dependsOn(common)
 
 lazy val processor = (project in file("processor"))
    .enablePlugins(DockerPlugin, AshScriptPlugin)
@@ -123,6 +140,7 @@ lazy val processor = (project in file("processor"))
 lazy val root = (project in file("."))
    .settings(
       name := "tsorage"
-   ).aggregate(common, hub, ingestion, processor)
+   ).aggregate(common, hub, ingestion, processor, gatling)
+
 
 

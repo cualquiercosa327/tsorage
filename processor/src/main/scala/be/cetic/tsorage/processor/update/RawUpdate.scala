@@ -2,6 +2,8 @@ package be.cetic.tsorage.processor.update
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.common.sharder.Sharder
+import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import spray.json.JsValue
 
 /**
@@ -21,3 +23,11 @@ class RawUpdate(
    `type`: String,
    value: JsValue
 ) extends Update(metric, tagset, datetime, `type`, value)
+{
+   def asTimeAggregatorUpdate(aggregator: TimeAggregator) = TimeAggregatorRawUpdate(
+      metric,
+      tagset,
+      aggregator.shunk(datetime),
+      `type`
+   )
+}

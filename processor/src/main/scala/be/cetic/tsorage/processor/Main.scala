@@ -11,6 +11,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.processor.aggregator.time.{DayAggregator, HourAggregator, MinuteAggregator}
 import be.cetic.tsorage.processor.flow.GlobalProcessingGraphFactory
+import be.cetic.tsorage.processor.source.RandomMessageIterator
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
@@ -42,19 +44,14 @@ object Main extends LazyLogging with MessageJsonSupport
        .withGroupId(conf.getString("kafka.group"))
     //  .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
-
+/*
     def inboundMessagesConnector(): Source[Message, _] = Consumer
        .plainSource(consumerSettings, Subscriptions.topics(conf.getString("kafka.topic")))
        .map(record => Message.messageFormat.read(record.value().parseJson))
+*/
+     def inboundMessagesConnector() = RandomMessageIterator.source()
 
-    val bufferGroupSize = 1000
-    val bufferTime = FiniteDuration(1, TimeUnit.SECONDS)
-
-    val settings: CassandraBatchSettings = CassandraBatchSettings(100, FiniteDuration(20, TimeUnit.SECONDS))
-
-    val minuteAggregator = new MinuteAggregator("raw")
-    val hourAggregator = new HourAggregator(minuteAggregator.name)
-    val dayAggregator = new DayAggregator(hourAggregator.name)
+    val settings: CassandraBatchSettings = CassandraBatchSettings(1000, FiniteDuration(20, TimeUnit.SECONDS))
 
     val aggregators = ProcessorConfig.aggregators()
 
