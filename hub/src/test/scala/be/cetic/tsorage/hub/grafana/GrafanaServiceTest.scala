@@ -5,26 +5,27 @@ import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
-import be.cetic.tsorage.hub.TestDatabase
+import be.cetic.tsorage.hub.{HubConfig, TestDatabase}
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.jsonsupport._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{Config, ConfigValueFactory}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import spray.json._
 
 class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll with ScalatestRouteTest
   with GrafanaJsonSupport {
+  // Configuration.
+  val conf: Config = HubConfig.conf
+    .withValue("cassandra.keyspaces.raw", ConfigValueFactory.fromAnyRef("tsorage_ts_test"))
+    .withValue("cassandra.keyspaces.other", ConfigValueFactory.fromAnyRef("tsorage_test"))
+
   // Database.
-  val database = new TestDatabase()
+  val database = new TestDatabase(conf)
   database.create() // Add the keyspaces, tables and data.
 
-  // Configurations.
-  val databaseConf: Config = ConfigFactory.load("test.conf")
-  val hubConf: Config = ConfigFactory.load("hub.conf")
-
   // Database handlers.
-  val cassandra = new Cassandra(databaseConf)
-  val metricManager = MetricManager(cassandra, databaseConf)
+  val cassandra = new Cassandra(conf)
+  val metricManager = MetricManager(cassandra, conf)
 
   // Grafana service and routes.
   val grafanaService = new GrafanaService(cassandra, metricManager)
@@ -34,7 +35,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
   val postQueryRoute: Route = grafanaService.postQueryRoute
   val postAnnotationRoute: Route = grafanaService.postAnnotationRoute
 
-  private val prefix = hubConf.getString("api.prefix")
+  private val prefix = conf.getString("api.prefix")
 
   override def afterAll(): Unit = {
     database.clean()

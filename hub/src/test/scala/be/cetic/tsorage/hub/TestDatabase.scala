@@ -1,16 +1,20 @@
 package be.cetic.tsorage.hub
 
+import java.util.concurrent.Semaphore
+
 import be.cetic.tsorage.common.DateTimeConverter
+import be.cetic.tsorage.common.RichListenableFuture._
 import be.cetic.tsorage.common.sharder.Sharder
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.schemabuilder.SchemaBuilder
 import com.datastax.driver.core.schemabuilder.SchemaBuilder.Direction
 import com.datastax.driver.core.{Cluster, DataType, Session}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 /**
  * Cassandra database for unit tests.
@@ -21,21 +25,19 @@ import scala.util.Try
  * minutes.
  *
  */
-class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) extends LazyLogging {
-  // TODO: move this class to src/test/scala/be/cetic/tsorage/hub/ for production.
-
+class TestDatabase(private val conf: Config) extends LazyLogging {
   private val cassandraHost = conf.getString("cassandra.host")
   private val cassandraPort = conf.getInt("cassandra.port")
 
   private val keyspaceAgg = conf.getString("cassandra.keyspaces.other") // Keyspace containing aggregated data.
   private val keyspaceRaw = conf.getString("cassandra.keyspaces.raw") // Keyspace containing raw data.
 
-  private val session: Session = Cluster.builder
+  private val cluster: Cluster = Cluster.builder
     .addContactPoint(cassandraHost)
     .withPort(cassandraPort)
-    .withoutJMXReporting()
+    .withoutJMXReporting
     .build
-    .connect()
+  private val session: Session = cluster.connect
 
   private val sharder = Sharder(conf.getString("sharder"))
 
@@ -69,7 +71,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     val replication = Map("class" -> "SimpleStrategy", "replication_factor" -> 1.toString.asInstanceOf[AnyRef]).asJava
     Seq(keyspaceAgg, keyspaceRaw).foreach(keyspace =>
       session.execute(
-        SchemaBuilder.createKeyspace(keyspace)
+        SchemaBuilder.createKeyspace(keyspace).ifNotExists()
           .`with`().replication(replication)
           .durableWrites(true)
       )
@@ -83,17 +85,17 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
   private def createUdts(): Unit = {
     Seq(keyspaceAgg, keyspaceRaw).foreach { keyspace =>
       session.execute(
-        SchemaBuilder.createType(keyspace, "tdouble")
+        SchemaBuilder.createType(keyspace, "tdouble").ifNotExists()
           .addColumn("value", DataType.cdouble)
       )
 
       session.execute(
-        SchemaBuilder.createType(keyspace, "tlong")
+        SchemaBuilder.createType(keyspace, "tlong").ifNotExists()
           .addColumn("value", DataType.bigint)
       )
 
       session.execute(
-        SchemaBuilder.createType(keyspace, "date_double")
+        SchemaBuilder.createType(keyspace, "date_double").ifNotExists()
           .addColumn("datetime", DataType.timestamp())
           .addColumn("value", DataType.cdouble)
       )
@@ -106,7 +108,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
    */
   private def createTables(): Unit = {
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "observations")
+      SchemaBuilder.createTable(keyspaceAgg, "observations").ifNotExists()
         .addPartitionKey("metric_", DataType.text)
         .addPartitionKey("shard_", DataType.text)
         .addPartitionKey("interval_", DataType.text)
@@ -119,7 +121,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceRaw, "observations")
+      SchemaBuilder.createTable(keyspaceRaw, "observations").ifNotExists()
         .addPartitionKey("metric_", DataType.text)
         .addPartitionKey("shard_", DataType.text)
         .addClusteringColumn("datetime_", DataType.timestamp)
@@ -130,7 +132,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "static_tagset")
+      SchemaBuilder.createTable(keyspaceAgg, "static_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
         .addClusteringColumn("tagname", DataType.text)
         .addClusteringColumn("tagvalue", DataType.text)
@@ -139,7 +141,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_static_tagset AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_static_tagset AS
          | SELECT metric, tagname, tagvalue
          | FROM $keyspaceAgg.static_tagset
          | WHERE tagname IS NOT NULL AND tagvalue IS NOT NULL
@@ -148,7 +150,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "dynamic_tagset")
+      SchemaBuilder.createTable(keyspaceAgg, "dynamic_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
         .addClusteringColumn("tagname", DataType.text())
         .addColumn("tagvalue", DataType.text())
@@ -156,7 +158,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_dynamic_tagset AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_dynamic_tagset AS
          | SELECT tagname, tagvalue, metric
          | FROM $keyspaceAgg.dynamic_tagset
          | WHERE tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
@@ -165,7 +167,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      SchemaBuilder.createTable(keyspaceAgg, "sharded_dynamic_tagset")
+      SchemaBuilder.createTable(keyspaceAgg, "sharded_dynamic_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
         .addPartitionKey("shard", DataType.text)
         .addClusteringColumn("tagname", DataType.text)
@@ -174,7 +176,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_sharded_dynamic_tagset AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_sharded_dynamic_tagset AS
          | SELECT shard, tagname, tagvalue, metric
          | FROM $keyspaceAgg.sharded_dynamic_tagset
          | WHERE shard IS NOT NULL and tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
@@ -183,7 +185,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW $keyspaceAgg.reverse_sharded_dynamic_tagname AS
+      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_sharded_dynamic_tagname AS
          | SELECT shard, tagname, metric
          | FROM $keyspaceAgg.sharded_dynamic_tagset
          | WHERE shard IS NOT NULL and tagname IS NOT NULL and metric IS NOT NULL
@@ -215,11 +217,13 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
     )
 
     // Extract some UDTs.
-    val tDoubleType = session.getCluster.getMetadata.getKeyspace(keyspaceRaw).getUserType("tdouble")
+    val tDoubleType = cluster.getMetadata.getKeyspace(keyspaceRaw).getUserType("tdouble")
 
     // Generate and add `numData` data for each metric.
     val random = new scala.util.Random(seed)
     val startTimestamp = DateTimeConverter.strToEpochMilli(startTime)
+    val requestSem = new Semaphore(100) // Semaphore for limiting the number of requests (it avoids "Pool is
+    // busy" error).
     metricValueRange.foreach { case (metric, valueRange) =>
       // Add some tagset in order to the database contains the name of `metric`.
       session.executeAsync(
@@ -229,7 +233,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
           .value("tagvalue", "some_value")
       )
 
-      // Generate and add `numData` data for `metric``
+      // Generate and add `numData` data for `metric`.
       for (i <- Seq.range(0, numData)) {
         // Compute the timestamp and the corresponding shard for this data.
         val timestamp = startTimestamp + (i * timeStepSec * 1000)
@@ -240,13 +244,21 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
         value = value - (value % 0.01) // Round to two decimal points.
         val valueDouble = tDoubleType.newValue().setDouble("value", value)
 
-        session.executeAsync(
+        requestSem.acquire()
+        val request = session.executeAsync(
           QueryBuilder.insertInto(keyspaceRaw, "observations")
             .value("metric_", metric)
             .value("shard_", shard)
             .value("datetime_", timestamp)
             .value("value_double_", valueDouble)
-        )
+        ).asScala
+
+        request onComplete {
+          case Success(_) => requestSem.release()
+          case Failure(e) =>
+            requestSem.release()
+            e.printStackTrace()
+        }
       }
     }
   }
@@ -257,7 +269,7 @@ class TestDatabase(private val conf: Config = ConfigFactory.load("test.conf")) e
    */
   def clean(): Unit = {
     Seq(keyspaceAgg, keyspaceRaw).foreach(keyspace =>
-      if (Option(session.getCluster.getMetadata.getKeyspace(keyspace)).isDefined) {
+      if (Option(cluster.getMetadata.getKeyspace(keyspace)).isDefined) {
         // If `keyspace` exists.
         session.execute(
           SchemaBuilder.dropKeyspace(keyspace)

@@ -12,8 +12,9 @@ import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import be.cetic.tsorage.common.messaging.{AuthenticationQuery, User}
+import be.cetic.tsorage.ingestion.IngestionConfig
 import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DoubleBody, DoubleMessage, FloatMessageJsonSupport}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
 
@@ -34,7 +35,7 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
    implicit val materializer = ActorMaterializer()
    implicit val executionContext = system.dispatcher
 
-   private val  conf = ConfigFactory.load("ingest-http.conf")
+   private val conf = IngestionConfig.conf
 
    def verifyToken(conf: Config)(token: String): Future[Option[User]] = {
       val request = HttpRequest(
@@ -119,16 +120,17 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
          }
       }
 
+      val hubListenAddress = System.getenv().getOrDefault("TSORAGE_INGESTION_LISTEN_ADDRESS", "localhost")
+      val bindingFuture = Http().bindAndHandle(concat(routeSeries, routeCheckRun), hubListenAddress, 8080)
 
-      val bindingFuture = Http().bindAndHandle(concat(routeSeries, routeCheckRun), "localhost", 8080)
+      scala.sys.addShutdownHook {
+         println("Shutdown...")
 
-      println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
-      StdIn.readLine() // let it run until user presses return
-      bindingFuture
-         .flatMap(_.unbind()) // trigger unbinding from the port
-         .onComplete(_ => {
-            kafkaProducer.close()
-            system.terminate()
-         }) // and shutdown when done
+         bindingFuture
+           .flatMap(_.unbind()) // trigger unbinding from the port
+           .onComplete(_ => {
+              system.terminate()
+           }) // and shutdown when done
+      }
    }
 }

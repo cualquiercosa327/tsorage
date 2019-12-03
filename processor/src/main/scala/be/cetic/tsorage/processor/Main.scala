@@ -30,7 +30,7 @@ object Main extends LazyLogging with MessageJsonSupport
 
   def main(args: Array[String]): Unit =
   {
-    val conf = ConfigFactory.load("tsorage.conf")
+    val conf = ProcessorConfig.conf
     val cassandraHost = conf.getString("cassandra.host")
     val cassandraPort = conf.getInt("cassandra.port")
     val root: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)

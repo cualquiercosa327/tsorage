@@ -4,8 +4,9 @@ name := "hub"
 
 version:= "0.1"
 
-mainClass in(Compile, run) := Some("be.cetic.tsorage.hub.Site")
-mainClass in(Compile, packageBin) := Some("be.cetic.tsorage.hub.Site")
+mainClass in run := Some("be.cetic.tsorage.hub.Site")
+mainClass in Compile := Some("be.cetic.tsorage.hub.Site")
+mainClass in packageBin := Some("be.cetic.tsorage.hub.Site")
 
 libraryDependencies := Seq(
    "org.scalatest" %% "scalatest" % "3.0.8" % "test",

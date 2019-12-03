@@ -1,18 +1,116 @@
 version: '3'
 
-networks:
-  app-tier:
-    driver: bridge
+#networks:
+#  app-tier:
+#    driver: bridge
 
 services:
-  storage:
+  cassandra:
     image: cassandra:3.11
-    ports:
-      - "9042:9042"
+    container_name: tsorage-cassandra
     volumes:
-      - .:/code
-      - logvolume01:/var/log
-    networks:
-      - app-tier
+      - data:/var/lib/cassandra
+    #volumes:
+    #  - .:/opt/docker
+    #  - logvolume01:/var/log
+    #networks:
+    #  - app-tier
+  cassandra-init:
+    image: cassandra:3.11
+    container_name: tsorage-cassandra-initializer
+    depends_on:
+      - cassandra
+    volumes:
+      - container-sync:/sync
+    command: /bin/bash -c "
+      if [ ! -f '/sync/db_initialized' ]; then
+        apt-get update && apt-get install -y wget &&
+        wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra_prod.cql &&
+        wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh &&
+        chmod +x wait-for-it.sh &&
+        ./wait-for-it.sh cassandra:9042 --strict --timeout=600 -- cqlsh cassandra -f cassandra_prod.cql &&
+        touch /sync/db_initialized &&
+        echo 'The database has just been initialized.';
+      fi
+      "
+  zookeeper:
+    image: zookeeper:3.5
+    container_name: tsorage-zookeeper
+  kafka:
+    image: wurstmeister/kafka:2.12-2.3.0
+    container_name: tsorage-kafka
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ADVERTISED_PORT: 9092
+    depends_on:
+      - zookeeper
+  grafana:
+    image: grafana/grafana:6.4.4
+    container_name: tsorage-grafana
+    environment:
+      GF_INSTALL_PLUGINS: grafana-simple-json-datasource 1.4.0
+    ports:
+      - 3000:3000
+    depends_on:
+      - hub
+    volumes:
+      - grafana:/var/lib/grafana
+  hub:
+    image: ceticasbl/tsorage-hub
+    container_name: tsorage-hub
+    environment:
+      TSORAGE_HUB_LISTEN_ADDRESS: 0.0.0.0
+      TSORAGE_CASSANDRA_HOST: cassandra
+    ports:
+      - 8081:8081
+    depends_on:
+      - cassandra-init
+    read_only: true
+    volumes:
+      - container-sync:/sync
+    entrypoint: [
+      "sh", "-c", "./wait-for cassandra:9042 --timeout=600 -- sh -c \"
+        while [ ! -f '/sync/db_initialized' ]; do
+          sleep 1;
+        done;
+        /opt/docker/bin/hub
+      \""
+    ]
+  ingestion:
+    image: ceticasbl/tsorage-ingestion
+    container_name: tsorage-ingestion
+    environment:
+      TSORAGE_INGESTION_LISTEN_ADDRESS: 0.0.0.0
+      TSORAGE_KAFKA_HOST: kafka
+      TSORAGE_HUB_HOST: "http://hub"
+    depends_on:
+      - hub
+      - kafka
+    entrypoint: ["./wait-for", "hub:8081", "--timeout=600", "--", "/opt/docker/bin/ingestion"]
+  processor:
+    image: ceticasbl/tsorage-processor
+    container_name: tsorage-processor
+    environment:
+      TSORAGE_CASSANDRA_HOST: cassandra
+      TSORAGE_KAFKA_BROKER_ADDRESSES: "[kafka:9092]"
+    depends_on:
+      - cassandra-init
+      - kafka
+    read_only: true
+    volumes:
+      - container-sync:/sync
+    entrypoint: [
+      "sh", "-c", "./wait-for cassandra:9042 --timeout=600 -- sh -c \"
+        while [ ! -f '/sync/db_initialized' ]; do
+          sleep 1;
+        done;
+        /opt/docker/bin/processor
+      \""
+    ]
+
 volumes:
-  logvolume01: {}
+  data:
+  grafana:
+  container-sync:
+#  logvolume01: {}
