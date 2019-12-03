@@ -1,6 +1,4 @@
 import Dependencies.Version
-import com.typesafe.sbt.packager.docker.Cmd
-import NativePackagerHelper._
 import sbt.Keys.libraryDependencies
 
 name := "tsorage"
@@ -13,17 +11,6 @@ val commonSettings = Seq(
    organization := "cetic",
    version := "1.0.0",
    scalaVersion := "2.12.10",
-   // Docker information.
-   //dockerRepository := Some("ceticasbl/tsorage")
-   dockerBaseImage := "openjdk:12-alpine",
-   dockerUpdateLatest := true,
-   //dockerAlias := DockerAlias(dockerRepository.value, dockerUsername.value, name.value),
-   dockerUsername := Some("ceticasbl"),
-   dockerCommands ++= Seq(
-     Cmd("USER", "root"),
-     Cmd("ADD", "https://raw.githubusercontent.com/eficode/wait-for/master/wait-for", "."),
-     Cmd("RUN", "chmod", "+x", "wait-for")
-   )
   )
 
 //PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
@@ -33,6 +20,8 @@ PB.targets in Compile := Seq(
 )
 
  */
+
+
 
 //scalapb.compiler.Version.scalapbVersion
 val akkaVersion = "10.1.10"
@@ -63,10 +52,9 @@ val cassandraDependencies = Seq(
 )
 
 lazy val common = (project in file("common"))
-   .enablePlugins(DockerPlugin, AshScriptPlugin)
+   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
    .settings(
-      name := "tsorage-common",
-      packageName := "tsorage-common",
+      name := "common",
       commonSettings,
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
@@ -77,12 +65,10 @@ lazy val common = (project in file("common"))
    )
 
 lazy val hub = (project in file("hub"))
-   .enablePlugins(DockerPlugin, AshScriptPlugin)
+   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
    .settings(
-      name := "tsorage-hub",
-      packageName := "tsorage-hub",
+      name := "hub",
       commonSettings,
-      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
@@ -92,43 +78,23 @@ lazy val hub = (project in file("hub"))
    ).dependsOn(common)
 
 lazy val ingestion = (project in file("ingestion"))
-  .enablePlugins(DockerPlugin, AshScriptPlugin)
+   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
    .settings(
-      name := "tsorage-ingestion",
-      packageName := "tsorage-ingestion",
+      name := "ingestion",
       commonSettings,
-      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
             "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-            "ch.qos.logback" % "logback-classic" % "1.2.3",
-            "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.3.0" % "test,it",
-            "io.gatling"            % "gatling-test-framework"    % "3.3.0" % "test,it",
-         )
-   ).dependsOn(common)
-
-lazy val gatling = (project in file("gatling"))
-   .enablePlugins(DockerPlugin, GatlingPlugin)
-   .settings(
-      name := "tsorage-gatling",
-      packageName := "tsorage-gatling",
-      commonSettings,
-      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
-      libraryDependencies := commonDependencies ++
-         Seq(
-            "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.3.0",
-            "io.gatling"            % "gatling-test-framework"    % "3.3.0",
+            "ch.qos.logback" % "logback-classic" % "1.2.3"
          )
    ).dependsOn(common)
 
 lazy val processor = (project in file("processor"))
-   .enablePlugins(DockerPlugin, AshScriptPlugin)
+   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
    .settings(
-      name := "tsorage-processor",
-      packageName := "tsorage-processor",
+      name := "processor",
       commonSettings,
-      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
@@ -140,4 +106,7 @@ lazy val processor = (project in file("processor"))
 lazy val root = (project in file("."))
    .settings(
       name := "tsorage"
-   ).aggregate(common, hub, ingestion, processor, gatling)
+   ).aggregate(common, hub, ingestion, processor)
+
+
+
