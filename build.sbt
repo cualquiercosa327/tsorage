@@ -86,21 +86,7 @@ lazy val ingestion = (project in file("ingestion"))
          cassandraDependencies ++
          Seq(
             "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-            "ch.qos.logback" % "logback-classic" % "1.2.3",
-            "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.3.0" % "test,it",
-            "io.gatling"            % "gatling-test-framework"    % "3.3.0" % "test,it",
-         )
-   ).dependsOn(common)
-
-lazy val gatling = (project in file("gatling"))
-   .enablePlugins(GatlingPlugin)
-   .settings(
-      name := "gatling",
-      commonSettings,
-      libraryDependencies := commonDependencies ++
-         Seq(
-            "io.gatling.highcharts" % "gatling-charts-highcharts" % "3.3.0",
-            "io.gatling"            % "gatling-test-framework"    % "3.3.0",
+            "ch.qos.logback" % "logback-classic" % "1.2.3"
          )
    ).dependsOn(common)
 
@@ -120,7 +106,7 @@ lazy val processor = (project in file("processor"))
 lazy val root = (project in file("."))
    .settings(
       name := "tsorage"
-   ).aggregate(common, hub, ingestion, processor, gatling)
+   ).aggregate(common, hub, ingestion, processor)
 
 
 
