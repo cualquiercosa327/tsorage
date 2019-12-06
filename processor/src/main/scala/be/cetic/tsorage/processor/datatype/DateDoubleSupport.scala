@@ -14,7 +14,7 @@ object DateDoubleSupport extends DataTypeSupport[(LocalDateTime, Double)]
 {
    val format = DateTimeFormatter.ISO_DATE_TIME
 
-   override val colname = "value_date_double_"
+   override val colname = "value_date_double"
    override def `type` = "date_double"
 
    override def asJson(value: (LocalDateTime, Double)): JsValue = JsObject(

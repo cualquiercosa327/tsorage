@@ -6,7 +6,7 @@ import be.cetic.tsorage.common.sharder.Sharder
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.querybuilder.QueryBuilder.select
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
@@ -14,7 +14,7 @@ import collection.JavaConverters._
 /**
  * An access to the Cassandra cluster
  */
-class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) extends LazyLogging {
+class Cassandra(private val conf: Config) extends LazyLogging {
   private val cassandraHost = conf.getString("cassandra.host")
   private val cassandraPort = conf.getInt("cassandra.port")
 
@@ -29,12 +29,6 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
       .connect()
 
   val sharder = Sharder(conf.getString("sharder"))
-
-  private val getDynamicTagsetStatement = session.prepare(
-      QueryBuilder.select("tagname", "tagvalue")
-         .from(keyspaceAgg, "dynamic_tagset")
-         .where(QueryBuilder.eq("metric", QueryBuilder.bindMarker("metric")))
-   )
 
   /**
     * Updates a subset of the static tags associated with a metric.
@@ -110,23 +104,7 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
          .mapValues(v => v.map(_._2).toSet)
    }
 
- /**
-    * @param metric  A metric.
-    * @param shards  A set of shards.
-    * @return  All the dynamic tagsets associated with the metric during the specified shards.
-    */
-   def getDynamicTagset(metric: String, shards: Set[String]): Set[(String, String)] =
-   {
-      val statement = getDynamicTagsetStatement.bind()
-            .setString("metric", metric)
-            .setSet("shards", shards.asJava)
-            .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      session
-         .execute(statement).asScala
-         .map(row => (row.getString("tagname"), row.getString("tagvalue")))
-         .toSet
-   }
 
   /**
    * Get data from a time range for a single metric.

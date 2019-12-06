@@ -2,6 +2,9 @@ package be.cetic.tsorage.processor.flow
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
+import be.cetic.tsorage.common.FutureManager
+import be.cetic.tsorage.processor.database.Cassandra
+import be.cetic.tsorage.processor.update.RawUpdate
 import com.datastax.driver.core._
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -11,9 +14,8 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
   * that replace a static prepared statement by a function of the input,
   * which allow dynamic column insertions.
   */
-object AltCassandraFlow
+object AltCassandraFlow extends FutureManager
 {
-   implicit def resultSetFutureToFutureResultSet(rsf: ResultSetFuture)(implicit ec: ExecutionContextExecutor): Future[ResultSet]=Future(rsf.get())
 
    def createWithPassThrough[T](
                                   parallelism: Int,
@@ -26,5 +28,4 @@ object AltCassandraFlow
               fut.map(_ => t)
          }
       ).named("Async Cassandra Sink")
-
 }

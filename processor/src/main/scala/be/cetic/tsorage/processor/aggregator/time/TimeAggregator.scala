@@ -16,16 +16,14 @@ abstract class TimeAggregator() extends LazyLogging
    def shunk(dt: LocalDateTime): LocalDateTime
 
    def shunk(update: RawUpdate): RawUpdate = new RawUpdate(
-      update.metric,
-      update.tagset,
+      update.ts,
       shunk(update.datetime),
       update.`type`,
       update.value
    )
 
    def shunk(update: AggUpdate): AggUpdate = new AggUpdate(
-      update.metric,
-      update.tagset,
+      update.ts,
       update.interval,
       shunk(update.datetime),
       update.`type`,

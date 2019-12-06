@@ -37,7 +37,9 @@ tags:
       description: "Find out more"
       url: "https://grafana.com/grafana/plugins/grafana-simple-json-datasource"
   - name: "metric"
-    description: "Metrics management"
+    description: "Metric management"
+  - name: "ts"
+    description: "Time series management"
   - name: "tag"
     description: "Tags associated with metrics (static tags) or with specific observations (dynamic tags)"
   - name: "search"
@@ -118,6 +120,57 @@ paths:
               schema:
                 type: "array"
                 example: ["pump.temperature", "pump.debit", "pump.current"]
+        "401":
+          description: "Authorization information is missing or invalid."
+        "405":
+          description: "Invalid input."
+        "5XX":
+          description: "Unexpected error."
+
+  /search/ts:
+    post:
+      summary: "Lists all the time series corresponding to the specified condition."
+      description: "Lists all the time series that match the specified tag constraints.
+        The constraints are checked against the static tagset of the metric associated with the time series,
+        as well as the dynamic tagset of the time series. If a time range is specified, the constraints are checked against
+        the static tagset, and the dynamic tagset associated with each of the shards covering the specified time range.
+
+        If no filters are specified, or if the filter implies accessing the entire set of time series, no time series are returned.
+        For instance, the ['not', ['+', 'quality']] is not accepted and will result in a 405 response (whatever the content of the database),
+        because satisfying this filter implies to get all the time series, and to filter out the ones with a 'quality' tagname.
+
+        On the other hand, ['and', ['+', 'owner'], ['not', ['+', 'quality']]] will be accepted, because filtering out the time series
+        with a 'quality' tagname can be done after only time series with a 'owner' tagname are retrieved.
+
+        Generally speaking, providing a filter with at least a positive condition (no negation) is enough to ensure an appropriate answer.
+        "
+      operationId: "postTimeSeriesSearch"
+      tags:
+        - ts
+        - search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+            example:
+              metric: "my_sensor"
+              filter: ["and", ["=", "owner", "nsa"], ["+", "quality"]]
+              range:
+                type: "absolute"
+                start: "2019-01-02T12:34:56.789"
+                end: "2019-06-07T21:43:15"
+
+      responses:
+        "200":
+          description: "Successful operation. A list of time series is returned. Each time series is defined as
+          a metric with a dynamic tagset."
+          content:
+            application/json:
+              schema:
+                type: "array"
+              # example: [{"metric": "pump.temperature", "tagset": {"quality": "good", "owner": "nsa"}}]
         "401":
           description: "Authorization information is missing or invalid."
         "405":

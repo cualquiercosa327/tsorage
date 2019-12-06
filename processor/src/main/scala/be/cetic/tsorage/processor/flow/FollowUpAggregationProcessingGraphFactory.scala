@@ -27,7 +27,7 @@ object FollowUpAggregationProcessingGraphFactory  extends LazyLogging
      * @return objects representing the aggregated values that have been updated.
      */
    private def processAggUpdate(timeAggregator: TimeAggregator)(update: AggUpdate): AggUpdate = {
-      DataTypeSupport.inferSupport(update)prepareAggUpdate(update, timeAggregator)
+      DataTypeSupport.inferSupport(update).prepareAggUpdate(update, timeAggregator)
    }
 
    /**
@@ -41,9 +41,6 @@ object FollowUpAggregationProcessingGraphFactory  extends LazyLogging
       // Define internal flow shapes
 
       val worker = builder.add(Flow.fromFunction(processAggUpdate(timeAggregator)))
-
-      // Combine shapes into a graph
-      worker
 
       // Expose port
       FlowShape(worker.in, worker.out)

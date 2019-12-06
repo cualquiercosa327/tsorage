@@ -1,25 +1,53 @@
 package be.cetic.tsorage.processor.database
 
 import java.sql.Timestamp
-import java.time.{LocalDateTime, ZoneOffset}
-import java.util.Date
+import java.time.ZoneOffset
+
 
 import be.cetic.tsorage.common.sharder.{DaySharder, MonthSharder, Sharder}
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
-import be.cetic.tsorage.processor.ProcessorConfig
+import be.cetic.tsorage.processor.{Message, ProcessorConfig}
+import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
-import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
+import com.datastax.driver.core.{BatchStatement, Cluster, ConsistencyLevel, PreparedStatement, ResultSet, ResultSetFuture, Session}
+import com.google.common.util.concurrent.{FutureCallback, Futures}
 import com.typesafe.scalalogging.LazyLogging
+
+import collection.JavaConverters._
+import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
+import scala.language.implicitConversions
+import scala.language.postfixOps
+import scala.util.Try
+
 
 object Cassandra extends LazyLogging {
   private val conf = ProcessorConfig
 
-  private val rawKS = conf.rawKS
-  private val aggKS = conf.aggKS
+  val rawKS = conf.rawKS
+  val aggKS = conf.aggKS
 
   private val cassandraHost = conf.conf.getString("cassandra.host")
   private val cassandraPort = conf.conf.getInt("cassandra.port")
+
+  /**
+   * Converts a `ResultSetFuture` into a Scala `Future[ResultSet]`
+   * @param f ResultSetFuture to convert
+   * @return Converted Future
+   */
+  private def resultSetFutureToScala(f: ResultSetFuture): Future[ResultSet] = {
+    val p = Promise[ResultSet]()
+    Futures.addCallback(f,
+      new FutureCallback[ResultSet] {
+        def onSuccess(r: ResultSet) = p success r
+        def onFailure(t: Throwable) = p failure t
+      })
+    p.future
+  }
+
+  // (tagnames, type) -> prepared statement
+  private var rawStatementcache: Map[String, PreparedStatement] = Map()
+  private var aggStatementCache: Map[String, PreparedStatement] = Map()
 
   val session: Session = Cluster.builder
     .addContactPoint(cassandraHost)
@@ -30,58 +58,113 @@ object Cassandra extends LazyLogging {
 
   val sharder = Sharder(conf.conf.getString("sharder"))
 
-  /**
-    * Synchronously submits a raw value in the raw table.
-    *
-    * @param update The raw update to submit to Cassandra.
-    */
-  def submitRawUpdate[T](update: RawUpdate): Unit =
+  private def preparedStatementRawInsert(msg: Message): PreparedStatement =
   {
-    val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
+    val key = msg.`type`
 
-    val support = DataTypeSupport.inferSupport(update)
+    if (rawStatementcache contains key)
+    {
+      rawStatementcache(key)
+    }
+    else
+    {
+      val support = DataTypeSupport.inferSupport(msg.`type`)
 
-    val baseStatement = insertInto(rawKS, "observations")
-       .value("metric_", update.metric)
-       .value("shard_", sharder.shard(update.datetime))
-       .value("datetime_", ts)
-       .value(support.colname, support.asRawUdtValue(update.value))
+      val statement = QueryBuilder
+         .insertInto(rawKS, "observations")
+         .value("metric", QueryBuilder.bindMarker("metric"))
+         .value("tagset", QueryBuilder.bindMarker("tagset"))
+         .value("shard", QueryBuilder.bindMarker("shard"))
+         .value("datetime", QueryBuilder.bindMarker("datetime"))
+         .value(support.colname, QueryBuilder.bindMarker("value"))
 
-    val statement = update.tagset
-       .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
-       .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+      val prepared = session.prepare(statement)
 
-    logger.info(s"Cassandra submits raw value ${statement}")
-    session.execute(statement.toString)
+      rawStatementcache = rawStatementcache ++ Map(key -> prepared)
 
+      prepared
+    }
+  }
+
+  private def preparedStatementAggInsert(update: AggUpdate): PreparedStatement =
+  {
+    val key = update.`type`
+
+    if (aggStatementCache contains key)
+    {
+      aggStatementCache(key)
+    }
+    else
+    {
+      val support = DataTypeSupport.inferSupport(update.`type`)
+
+      val statement = QueryBuilder
+         .insertInto(aggKS, "observations")
+         .value("metric", QueryBuilder.bindMarker("metric"))
+         .value("tagset", QueryBuilder.bindMarker("tagset"))
+         .value("shard", QueryBuilder.bindMarker("shard"))
+         .value("datetime", QueryBuilder.bindMarker("datetime"))
+         .value("interval", QueryBuilder.bindMarker("interval"))
+         .value("aggregator", QueryBuilder.bindMarker("aggregator"))
+         .value(support.colname, QueryBuilder.bindMarker("value"))
+
+      val prepared = session.prepare(statement)
+                            .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+
+      aggStatementCache = aggStatementCache ++ Map(key -> prepared)
+
+      prepared
+    }
   }
 
   /**
-    * Synchronously submits an aggregated value in the raw table.
-    *
-    * @param update The aggregated update to submit to Cassandra.
-    */
-  def submitAggUpdate[T](update: AggUpdate): Unit =
+   * Asynchroneously submits the raw values of a message to Cassandra.
+   * In order to keep a reasonable pressure to the Cassandra nodes,
+   * the values are expected to belong to as few shards as possible, typically a single one.
+   *
+   * @param msg       The message to submit.
+   * @param context
+   * @return          The message itself, wrapped in a Future that will be achieved as soon as the values
+   *                  are effectively submitted.
+   *
+   */
+  def submitMessageAsync(msg: Message)(implicit context: ExecutionContextExecutor): Future[Message] =
   {
-    val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
-    val support = DataTypeSupport.inferSupport(update)
+    val support = DataTypeSupport.inferSupport(msg.`type`)
 
-    val baseStatement = insertInto(aggKS, "observations")
-       .value("metric_", update.metric)
-       .value("shard_", Cassandra.sharder.shard(update.datetime))
-       .value("interval_", update.interval)
-       .value("aggregator_", update.aggregation)
-       .value("datetime_", ts)
-       .value(support.colname, support.asAggUdtValue(update.value))
+    val prepared = preparedStatementRawInsert(msg)
 
-    logger.debug(s"Base statement is ${baseStatement}")
+    val statements = msg.values.map(record =>
+      {
+        prepared.bind()
+           .setString("metric", msg.metric)
+           .setMap("tagset", msg.tagset.asJava)
+           .setString("shard", sharder.shard(record._1))
+           .setTimestamp("datetime", Timestamp.from(record._1.atOffset(ZoneOffset.UTC).toInstant))
+           .setUDTValue("value", support.asRawUdtValue(record._2))
+      }
+    )
 
-    val statement = update.tagset
-       .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
+    val batch = new BatchStatement(BatchStatement.Type.UNLOGGED)
+       .addAll(statements.asJava)
        .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
 
-    logger.debug(s"Cassandra submits agg value ${statement}")
+    resultSetFutureToScala(session.executeAsync(batch)).map(rs => msg)
+  }
 
-    session.execute(statement.toString)
+  def submitAggUpdateAsync(update: AggUpdate)(implicit context: ExecutionContextExecutor): Future[AggUpdate] =
+  {
+    val support = DataTypeSupport.inferSupport(update)
+
+    val bound = preparedStatementAggInsert(update).bind()
+       .setString("metric", update.ts.metric)
+       .setMap("tagset", update.ts.tagset.asJava)
+       .setString("shard", sharder.shard(update.datetime))
+       .setString("interval", update.interval)
+       .setString("aggregator", update.aggregation)
+       .setTimestamp("datetime", Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant))
+       .setUDTValue("value", support.asAggUdtValue(update.value))
+
+    resultSetFutureToScala(session.executeAsync(bound)).map(rs => update)
   }
 }

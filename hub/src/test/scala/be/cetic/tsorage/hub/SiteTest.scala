@@ -3,7 +3,6 @@ package be.cetic.tsorage.hub
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.io.Source
@@ -12,7 +11,7 @@ class SiteTest extends WordSpec with Matchers with ScalatestRouteTest {
   val connectionTestRoute: Route = Site.connectionTestRoute
   val swaggerRoute: Route = Site.swaggerRoute
 
-  private val conf = ConfigFactory.load("hub.conf")
+  private val conf = HubConfig.conf
   private val prefix = conf.getString("api.prefix")
 
   "The service" should {

@@ -1,19 +1,14 @@
 package be.cetic.tsorage.hub.tag
 
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-
 import akka.event.Logging
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, MetricManager, TagManager}
+import be.cetic.tsorage.hub.HubConfig
+import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, TagManager}
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
-import be.cetic.tsorage.hub.tag.TagValueQuery
-import com.datastax.driver.core.Session
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -28,7 +23,7 @@ class TagHttpService(val cassandra: Cassandra)(implicit executionContext: Execut
       with LazyLogging
       with FilterJsonProtocol
 {
-   private val conf = ConfigFactory.load("hub.conf")
+   private val conf = HubConfig.conf
    private val tagManager = TagManager(cassandra, conf)
 
    private val session = cassandra.session
@@ -41,7 +36,7 @@ class TagHttpService(val cassandra: Cassandra)(implicit executionContext: Execut
       tagname =>
          get {
             DebuggingDirectives.logRequest(s"Values of static tag name ${tagname} are queried ", Logging.InfoLevel) {
-               val results = new Cassandra().getStaticTagValues(tagname)
+               val results = new Cassandra(conf).getStaticTagValues(tagname)
 
                if(results.isEmpty) complete(StatusCodes.NoContent, HttpEntity.Empty)
                else complete(HttpEntity(ContentTypes.`application/json`, results.toJson.compactPrint))

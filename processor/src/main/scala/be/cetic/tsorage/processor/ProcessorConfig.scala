@@ -1,17 +1,31 @@
 package be.cetic.tsorage.processor
 
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
 
 /**
-  * A representation of the Processor configuration
+  * A representation of the Processor configuration.
+ *
+ * Path of configuration file is tsorage/ingestion/src/main/resources/tsorage.conf.
+ *
+ * To configure Cassandra host, you have to set the TSORAGE_CASSANDRA_HOST environment variable (defaults to localhost).
+ * To configure list of addresses of Kafka brokers in a bootstrap Kafka cluster, you have to set the
+ * TSORAGE_KAFKA_BROKER_ADDRESSES environment variable (defaults to [localhost:9092]).
+ *
   */
 object ProcessorConfig extends LazyLogging
 {
-   val conf = ConfigFactory.load("tsorage.conf")
+   private val cassandraHost = System.getenv().getOrDefault("TSORAGE_CASSANDRA_HOST", "localhost")
+   private val kafkaBrokerAddresses = System.getenv().getOrDefault("TSORAGE_KAFKA_BROKER_ADDRESSES", "[localhost:9092]")
+   private val kafkaBrokerAddressList = kafkaBrokerAddresses.substring(1, kafkaBrokerAddresses.length - 1)
+        .split(",").toList // Convert a String (of the form "[x,y,z]") to a List.
+
+   val conf: Config = ConfigFactory.load("tsorage.conf")
+     .withValue("cassandra.host", ConfigValueFactory.fromAnyRef(s"$cassandraHost"))
+     .withValue("kafka.bootstrap", ConfigValueFactory.fromIterable(kafkaBrokerAddressList.asJava))
 
    val forbiddenTagnames = conf.getStringList("forbidden_tags")
 

@@ -20,7 +20,7 @@ class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends
    * @return the response to the search request (in this case, the name of metrics).
    */
   def responseSearchRequest(request: Option[SearchRequest]): Try[SearchResponse] = {
-    Success(SearchResponse(metricManager.getAllMetrics().toSeq))
+    Success(SearchResponse(metricManager.getAllMetrics().toSeq.map(_.name)))
   }
 
   /**
@@ -266,7 +266,7 @@ class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends
     val metrics = request.targets.flatMap(_.target)
 
     // Check if all metrics in `metrics` exist.
-    if (!metrics.toSet.subsetOf(metricManager.getAllMetrics())) {
+    if (!metrics.toSet.subsetOf(metricManager.getAllMetrics().map(_.name))) {
       return Failure(new NoSuchElementException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
