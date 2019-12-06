@@ -6,7 +6,7 @@ import be.cetic.tsorage.common.sharder.Sharder
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.querybuilder.QueryBuilder.select
 import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
@@ -14,7 +14,7 @@ import collection.JavaConverters._
 /**
  * An access to the Cassandra cluster
  */
-class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) extends LazyLogging {
+class Cassandra(private val conf: Config) extends LazyLogging {
   private val cassandraHost = conf.getString("cassandra.host")
   private val cassandraPort = conf.getInt("cassandra.port")
 

@@ -1,0 +1,7 @@
+# Depends on docker-compose.yml.
+version: '3'
+
+services:
+  cassandra:
+    ports:
+      - 9042:9042

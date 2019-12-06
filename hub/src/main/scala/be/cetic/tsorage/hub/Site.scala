@@ -15,97 +15,70 @@ import be.cetic.tsorage.hub.metric.MetricHttpService
 import be.cetic.tsorage.hub.tag.TagHttpService
 import be.cetic.tsorage.hub.ts.TimeSeriesService
 import com.typesafe.config.ConfigFactory
-
 import scala.io.StdIn
 
+
+import scala.concurrent.ExecutionContextExecutor
 
 /**
  * The global entry point for all the services.
  */
 object Site extends RouteConcatenation with Directives
 {
-   private val conf = ConfigFactory.load("hub.conf")
-   private implicit var system: ActorSystem = _
-   private var database: TestDatabase = _
+   private val conf = HubConfig.conf
 
    // Route to test the connection with the server.
    val connectionTestRoute: Route = path("api" / conf.getString("api.version")) {
       get {
-         DebuggingDirectives.logRequestResult(s"Connection test route (${conf.getString("api.prefix")})", Logging.InfoLevel) {
+         DebuggingDirectives.logRequestResult(s"Connection test route (${conf.getString("api.prefix")})",
+            Logging.InfoLevel) {
             complete(StatusCodes.OK)
          }
       }
    }
 
+   // Route to documentation.
    val swaggerRoute: Route = path("swagger") { getFromResource("swagger-ui/index.html") } ~
      getFromResourceDirectory("swagger-ui") ~
      pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
 
-   private def onShutdown(): Unit = {
-      database.clean()
-
-      system.terminate()
-   }
-
    def main(args: Array[String]): Unit =
    {
-      //implicit val system = ActorSystem("authentication")
-      system = ActorSystem("authentication")
-      implicit val materializer = ActorMaterializer()
-      implicit val executionContext = system.dispatcher
-
-      // Create a test database.
-      database = new TestDatabase() // TODO: use a real database for production.
-      database.clean()
-      database.create()
+      implicit val system: ActorSystem = ActorSystem("authentication")
+      implicit val materializer: ActorMaterializer = ActorMaterializer()
+      implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
       // Create the database handler.
-      val databaseConf = ConfigFactory.load("test.conf") // TODO: change "test.conf" to "common.conf"
-      val hubConf = ConfigFactory.load("hub.conf")
-      val cassandra = new Cassandra(databaseConf)
+      val cassandra = new Cassandra(conf)
 
+      // Routes.
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService(cassandra).routes
       val tagRoutes = new TagHttpService(cassandra).routes
       val tsRoutes = new TimeSeriesService(cassandra).routes
-
-      val grafanaRoutes = new GrafanaService(cassandra, MetricManager(cassandra, databaseConf)).routes
-
-      // Route to test the connection with the server.
-      val testConnectionRoute = path("") {
-         get {
-            DebuggingDirectives.logRequestResult("Connection test route (/)", Logging.InfoLevel) {
-               complete(StatusCodes.OK)
-            }
-         }
-      }
-
-      val swaggerRoute = path("swagger") { getFromResource("swagger-ui/index.html") } ~
-         getFromResourceDirectory("swagger-ui") ~
-         pathPrefix("api-docs") { getFromResourceDirectory("api-docs") }
+      val grafanaRoutes = new GrafanaService(cassandra, MetricManager(cassandra, conf)).routes
 
       val routes = (
          authRoute ~
-         metricRoutes ~
-         grafanaRoutes ~
-         connectionTestRoute ~
-         swaggerRoute ~
-         tagRoutes ~
-         tsRoutes
-      )
+            metricRoutes ~
+            grafanaRoutes ~
+            connectionTestRoute ~
+            swaggerRoute ~
+            tagRoutes ~
+            tsRoutes
+         )
 
-      val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))
+      val hubListenAddress = System.getenv().getOrDefault("TSORAGE_HUB_LISTEN_ADDRESS", "localhost")
+      val bindingFuture = Http().bindAndHandle(routes, hubListenAddress, conf.getInt("port"))
 
-      scala.sys.addShutdownHook{
-         onShutdown()
+      scala.sys.addShutdownHook {
+         println("Shutdown...")
+
+         bindingFuture
+           .flatMap(_.unbind()) // trigger unbinding from the port
+           .onComplete(_ => {
+              system.terminate()
+           }) // and shutdown when done
       }
-
-      println(s"Server online at http://localhost:${conf.getInt("port")}/\nPress RETURN to stop...")
-      StdIn.readLine() // let it run until user presses return
-      bindingFuture
-         .flatMap(_.unbind()) // trigger unbinding from the port
-         .onComplete(_ => {
-            Site.onShutdown()
-         }) // and shutdown when done
    }
 }

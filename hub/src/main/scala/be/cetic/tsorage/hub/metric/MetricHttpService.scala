@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.sharder.Sharder
-import com.typesafe.config.ConfigFactory
+import be.cetic.tsorage.hub.HubConfig
 import com.typesafe.scalalogging.LazyLogging
 import be.cetic.tsorage.hub.filter.{Filter, FilterJsonProtocol, Metric, MetricManager, TagFilter}
 
@@ -20,7 +20,7 @@ class MetricHttpService(cassandra: Cassandra)(implicit executionContext: Executi
    extends Directives
    with MessageJsonSupport with LazyLogging with FilterJsonProtocol
 {
-   private val conf = ConfigFactory.load("hub.conf")
+   private val conf = HubConfig.conf
 
    private val metricManager = MetricManager(cassandra, conf)
 
@@ -49,7 +49,7 @@ class MetricHttpService(cassandra: Cassandra)(implicit executionContext: Executi
          {
             query => {
                logger.info(s"Update static tagset for ${metricId}: ${query}")
-               new Cassandra().updateStaticTagset(metricId, query)
+               new Cassandra(conf).updateStaticTagset(metricId, query)
                complete(StatusCodes.NoContent, HttpEntity.Empty)
             }
          }
@@ -67,7 +67,7 @@ class MetricHttpService(cassandra: Cassandra)(implicit executionContext: Executi
             {
                query => {
                   logger.info(s"Set static tagset for ${metricId}: ${query}")
-                  new Cassandra().setStaticTagset(metricId, query)
+                  new Cassandra(conf).setStaticTagset(metricId, query)
                   complete(StatusCodes.NoContent, HttpEntity.Empty)
                }
             }
