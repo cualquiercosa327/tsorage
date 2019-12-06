@@ -2,22 +2,18 @@
 
 package be.cetic.tsorage.ingestion.producer
 //package scalapb
-import com.google.protobuf.util.raw2.{Raw2Proto, SENSOR2}
 import java.time.LocalDateTime
-import java.time._
-import java.time.temporal.ChronoField
-import com.google.protobuf.timestamp._
-import spray.json.DefaultJsonProtocol._
-import be.cetic.tsorage.common.codec.Codec
-import be.cetic.tsorage.common.messaging.Message
+
 import akka.actor.ActorSystem
 import akka.kafka.ProducerSettings
 import akka.serialization.SerializationExtension
 import akka.stream.ActorMaterializer
+import be.cetic.tsorage.common.codec.Codec
+import be.cetic.tsorage.common.messaging.Message
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
+import spray.json.DefaultJsonProtocol._
 import spray.json._
-import java.time.ZoneOffset
 object Producer1 {
 
   implicit val system = ActorSystem("http-interface")

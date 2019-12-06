@@ -1,16 +1,13 @@
 package be.cetic.tsorage.hub.filter
 
-import java.time.LocalDateTime
-
-import be.cetic.tsorage.common.{Cassandra, FutureManager, TimeSeries}
-import be.cetic.tsorage.hub.CandidateTimeSeries
+import be.cetic.tsorage.common.{Cassandra, FutureManager}
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
-import com.datastax.driver.core.{ConsistencyLevel, ResultSetFuture, Session, Statement}
+import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /**
  * An entity for manipulating metric collections based on specified predicates.

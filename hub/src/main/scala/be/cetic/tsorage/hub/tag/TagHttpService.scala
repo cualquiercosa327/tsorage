@@ -10,9 +10,9 @@ import be.cetic.tsorage.hub.HubConfig
 import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, TagManager}
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
 import com.typesafe.scalalogging.LazyLogging
+import spray.json._
 
 import scala.concurrent.ExecutionContext
-import spray.json._
 
 /**
  * A service for managing tags.

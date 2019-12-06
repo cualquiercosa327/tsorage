@@ -6,8 +6,8 @@ import java.time.{LocalDateTime, ZoneOffset}
 import be.cetic.tsorage.common.TimeSeries
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import com.datastax.driver.core.{BoundStatement, ConsistencyLevel, PreparedStatement}
 import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.{BoundStatement, ConsistencyLevel, PreparedStatement}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._

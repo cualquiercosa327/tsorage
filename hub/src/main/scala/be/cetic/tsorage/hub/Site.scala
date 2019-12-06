@@ -14,9 +14,6 @@ import be.cetic.tsorage.hub.grafana.GrafanaService
 import be.cetic.tsorage.hub.metric.MetricHttpService
 import be.cetic.tsorage.hub.tag.TagHttpService
 import be.cetic.tsorage.hub.ts.TimeSeriesService
-import com.typesafe.config.ConfigFactory
-import scala.io.StdIn
-
 
 import scala.concurrent.ExecutionContextExecutor
 

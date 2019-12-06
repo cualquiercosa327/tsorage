@@ -2,11 +2,12 @@ package be.cetic.tsorage.ingestion.message
 
 import java.time.{LocalDateTime, ZoneOffset}
 
-import be.cetic.tsorage.common.messaging.User
+import be.cetic.tsorage.common.messaging.{Message, User}
 import be.cetic.tsorage.ingestion.IngestionConfig
+import spray.json.JsNumber
 
 /**
- * A message, provided by an external client.
+ * A message, provided by an external, Datadog-compliant client.
  */
 case class DoubleMessage(
                           metric: String,
@@ -17,7 +18,12 @@ case class DoubleMessage(
                           tags: List[String] // format: "key:value"
                        )
 {
-   def prepared(user: User) = {
+   /**
+    * Transform a double message in order to comply with the internal message format.
+    * @param user The user associated with the message.
+    * @return  The message in the internal format
+    */
+   def prepare(user: User): Message = {
 
       val preparedTags = tags.map(tag => tag.split(":", 2)).filter(tag => tag.size == 2).map(tag => tag(0) -> tag(1)).toMap
 
@@ -41,13 +47,13 @@ case class DoubleMessage(
          case false => preparedTagsWithHost
       }
 
-      PreparedDoubleMessage(
+      Message(
          metric,
          preparedTagsWithUser,
          "tdouble",
          points.map(point => (
             LocalDateTime.ofEpochSecond(point._1.toLong, 0, ZoneOffset.UTC),
-            point._2
+            JsNumber(point._2)
          ))
       )
    }

@@ -7,7 +7,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /**
  * Services for managing time series.

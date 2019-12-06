@@ -5,13 +5,12 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives
 import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.hub.HubConfig
+import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, Metric, MetricManager}
 import com.typesafe.scalalogging.LazyLogging
-import be.cetic.tsorage.hub.filter.{Filter, FilterJsonProtocol, Metric, MetricManager, TagFilter}
+import spray.json._
 
 import scala.concurrent.ExecutionContext
-import spray.json._
 
 /**
  * A service for managing metrics.

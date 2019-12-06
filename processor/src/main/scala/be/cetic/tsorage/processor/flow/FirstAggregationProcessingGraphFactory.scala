@@ -1,17 +1,15 @@
 package be.cetic.tsorage.processor.flow
 
-import java.time.LocalDateTime
-
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL}
 import be.cetic.tsorage.processor.ProcessorConfig
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate, TimeAggregatorRawUpdate}
+import be.cetic.tsorage.processor.update.{AggUpdate, TimeAggregatorRawUpdate}
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.ExecutionContextExecutor
 
 /**
   * A factory for creating processing graph handling the first aggregation.

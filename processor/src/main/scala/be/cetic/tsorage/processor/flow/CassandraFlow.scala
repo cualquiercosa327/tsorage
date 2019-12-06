@@ -3,17 +3,17 @@ package be.cetic.tsorage.processor.flow
 import akka.NotUsed
 import akka.stream.SinkShape
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
-import akka.stream.alpakka.cassandra.scaladsl.{CassandraFlow, CassandraSink}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
+import akka.stream.alpakka.cassandra.scaladsl.CassandraFlow
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink}
 import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.update.{ShardedMessageUpdate, ShardedTagUpdate, TagUpdate}
 import be.cetic.tsorage.processor.{Message, ProcessorConfig}
-import com.datastax.driver.core.{BoundStatement, ConsistencyLevel, PreparedStatement}
 import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.{BoundStatement, ConsistencyLevel, PreparedStatement}
 
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
-import collection.JavaConverters._
 import scala.concurrent.duration._
 
 

@@ -9,7 +9,7 @@ import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /**
  * An access to the Cassandra cluster

@@ -1,9 +1,7 @@
 package be.cetic.tsorage.hub
 
 import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.hub.filter.{AllFilter, And, Filter, Metric, Not, Or, TagExist, TagFilter}
-import com.datastax.driver.core.Session
-import com.typesafe.config.Config
+import be.cetic.tsorage.hub.filter._
 
 /**
  * A time series with its static tagset.

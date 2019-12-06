@@ -1,7 +1,6 @@
 package be.cetic.tsorage.hub.filter
 
 import spray.json._
-import DefaultJsonProtocol._
 
 
 trait TimeSeriesQueryJsonProtocol extends TimeSeriesJsonProtocol
