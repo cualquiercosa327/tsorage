@@ -73,3 +73,10 @@ To stop it, run this command:
 docker-compose -f docker-compose.yml -f docker-compose.demo.yml down
 ```
 
+### Current Default Ports
+
+These are the default port configuration currently used by TSorage. This configuration is subject to change without prior warning.
+
+- Cassandra : 9042
+- HTTP ingestion: 8080
+- HTTP services : 8081
