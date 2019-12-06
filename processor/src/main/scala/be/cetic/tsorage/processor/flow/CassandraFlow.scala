@@ -7,7 +7,7 @@ import akka.stream.alpakka.cassandra.scaladsl.{CassandraFlow, CassandraSink}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
 import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.update.{DynamicTagUpdate, ShardedDynamicTagUpdate}
+import be.cetic.tsorage.processor.update.{ShardedMessageUpdate, ShardedTagUpdate, TagUpdate}
 import be.cetic.tsorage.processor.{Message, ProcessorConfig}
 import com.datastax.driver.core.{BoundStatement, ConsistencyLevel, PreparedStatement}
 import com.datastax.driver.core.querybuilder.QueryBuilder
@@ -26,31 +26,55 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
 
   private implicit val session = Cassandra.session
 
-  private def dynamicStatement(table: String) = session.prepare(
-    QueryBuilder.insertInto(aggKeyspace, table)
+  private val dynamicStatement = session.prepare(
+    QueryBuilder.insertInto(aggKeyspace, "dynamic_tagset")
        .value("metric", QueryBuilder.bindMarker("metric"))
-       .value("tagname", QueryBuilder.bindMarker("tagname"))
-       .value("tagvalue", QueryBuilder.bindMarker("tagvalue"))
        .value("tagset", QueryBuilder.bindMarker("tagset"))
   ).setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
 
-  private val dynamicTagBinder: (DynamicTagUpdate, PreparedStatement) => BoundStatement =
+  private val dynamicTagBinder: (Message, PreparedStatement) => BoundStatement =
+    (update, stm) => stm.bind()
+       .setString("metric", update.metric)
+       .setMap("tagset", update.tagset.asJava)
+
+  private val reverseDynamicStatement = session.prepare(
+    QueryBuilder.insertInto(aggKeyspace, "reverse_dynamic_tagset")
+       .value("metric", QueryBuilder.bindMarker("metric"))
+       .value("tagname", QueryBuilder.bindMarker("tagname"))
+       .value("tagbalue", QueryBuilder.bindMarker("tagvalue"))
+       .value("tagset", QueryBuilder.bindMarker("tagset"))
+  ).setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+
+  private val reverseDynamicTagBinder: (TagUpdate, PreparedStatement) => BoundStatement =
     (update, stm) => stm.bind()
        .setString("metric", update.metric)
        .setString("tagname", update.tagname)
        .setString("tagvalue", update.tagvalue)
        .setMap("tagset", update.tagset.asJava)
 
-  private def shardedDynamicStatement(table: String) = session.prepare(
-    QueryBuilder.insertInto(aggKeyspace, table)
+  private val shardedDynamicStatement = session.prepare(
+    QueryBuilder.insertInto(aggKeyspace, "sharded_dynamic_tagset")
        .value("metric", QueryBuilder.bindMarker("metric"))
        .value("shard", QueryBuilder.bindMarker("shard"))
-       .value("tagname", QueryBuilder.bindMarker("tagname"))
-       .value("tagvalue", QueryBuilder.bindMarker("tagvalue"))
        .value("tagset", QueryBuilder.bindMarker("tagset"))
   ).setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
 
-  private val shardedDynamicTagBinder: (ShardedDynamicTagUpdate, PreparedStatement) => BoundStatement =
+  private val shardedDynamicTagBinder: (ShardedMessageUpdate, PreparedStatement) => BoundStatement =
+    (update, stm) => stm.bind()
+       .setString("metric", update.metric)
+       .setString("shard", update.shard)
+       .setMap("tagset", update.tagset.asJava)
+
+  private val shardedReverseDynamicStatement = session.prepare(
+    QueryBuilder.insertInto(aggKeyspace, "reverse_sharded_dynamic_tagset")
+       .value("metric", QueryBuilder.bindMarker("metric"))
+       .value("shard", QueryBuilder.bindMarker("shard"))
+       .value("tagset", QueryBuilder.bindMarker("tagset"))
+       .value("tagname", QueryBuilder.bindMarker("tagname"))
+       .value("tagvalue", QueryBuilder.bindMarker("tagvalue"))
+  )
+
+  private val shardedReverseDynamicTagBinder: (ShardedTagUpdate, PreparedStatement) => BoundStatement =
     (update, stm) => stm.bind()
        .setString("metric", update.metric)
        .setString("shard", update.shard)
@@ -59,21 +83,27 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
        .setMap("tagset", update.tagset.asJava)
 
   /**
-   * Converts messages into (tagname, tagvalue, message).
-   * @return
+   * Converts messages into (metric, tagname, tagvalue, tagset).
    */
-  private def splitTagset =
-    Flow[Message].mapConcat(message => message.tagset.map(tag => DynamicTagUpdate(message.metric, tag._1, tag._2, message.tagset)))
+  private def splitByTag =
+    Flow[Message].mapConcat(message => message.tagset.map(tag => TagUpdate(message.metric, tag._1, tag._2, message.tagset)))
 
   /**
-   * Converts messages into (tagname, tagvalue, shard, message).
-   * @return
+   * Converts messages into (metric, shard, tagset).
    */
-  private def splitShardedTagset =
-    Flow[Message].mapConcat(message => {
-      val shards = message.values.map(v => Cassandra.sharder.shard(v._1)).distinct
+  private def splitByShard =
+    Flow[Message].mapConcat(message => message.values.map(v =>
+      sharder.shard(v._1)).toSet.map(shard => ShardedMessageUpdate(message.metric, shard, message.tagset)))
 
-      shards.flatMap(shard => message.tagset.map(tag => ShardedDynamicTagUpdate(message.metric, shard, tag._1, tag._2, message.tagset)))
+
+  /**
+   * Converts messages into (metric, shard, tagname, tagvalue, tagset).
+   */
+  private def splitByTagAndShard =
+    Flow[Message].mapConcat(message => {
+      val shards = message.values.map(v => sharder.shard(v._1)).distinct
+
+      shards.flatMap(shard => message.tagset.map(tag => ShardedTagUpdate(message.metric, shard, tag._1, tag._2, message.tagset)))
     })
 
   /**
@@ -81,26 +111,15 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
     */
   private def notifyDynamicTags =
   {
-    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[DynamicTagUpdate, String](
+    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[Message, String](
       8,
-      dynamicStatement("dynamic_tagset"),
+      dynamicStatement,
       dynamicTagBinder,
-      (update => update.metric),
+      (message => message.metric),
       CassandraBatchSettings(1000, 2.minutes)
     ).named("notify dynamic tags")
 
     flow.to(Sink.ignore)
-
-    /*
-    val sink = CassandraSink(
-      config.getInt("parallelism"),
-      dynamicStatement("dynamic_tagset"),
-      dynamicTagBinder
-    )
-
-    Flow[DynamicTagUpdate].to(sink)
-
-     */
   }
 
   /**
@@ -108,68 +127,36 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
    */
   private def notifyShardedDynamicTags =
   {
-    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[ShardedDynamicTagUpdate, String](
+    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[ShardedMessageUpdate, String](
       8,
-      shardedDynamicStatement("sharded_dynamic_tagset"),
+      shardedDynamicStatement,
       shardedDynamicTagBinder,
       (update => update.metric + update.shard),
       CassandraBatchSettings(1000, 2.minutes)
     ).named("notify sharded dynamic tags")
 
     flow.to(Sink.ignore)
-
-    /*
-    val sink = CassandraSink(
-      config.getInt("parallelism"),
-      shardedDynamicStatement("sharded_dynamic_tagset"),
-      shardedDynamicTagBinder
-    )
-
-    Flow[ShardedDynamicTagUpdate].to(sink)
-
-     */
   }
 
   private def notifyReverseDynamicTags =
   {
-/*
-    val sink = CassandraSink(
-      config.getInt("parallelism"),
-      dynamicStatement("reverse_dynamic_tagset"),
-      dynamicTagBinder
-    )
-
-    Flow[DynamicTagUpdate].to(sink)
-*/
-
-    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[DynamicTagUpdate, String](
+    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[TagUpdate, String](
       8,
-      dynamicStatement("reverse_dynamic_tagset"),
-      dynamicTagBinder,
+      reverseDynamicStatement,
+      reverseDynamicTagBinder,
       (update => update.tagname),
       CassandraBatchSettings(1000, 2.minutes)
     ).named("notify reverse dynamic tags")
 
     flow.to(Sink.ignore)
-
   }
 
   private def notifyShardedReverseDynamicTags =
   {
-    /*
-    val sink = CassandraSink(
-      config.getInt("parallelism"),
-      shardedDynamicStatement("reverse_sharded_dynamic_tagset"),
-      shardedDynamicTagBinder
-    )
-
-    Flow[ShardedDynamicTagUpdate].to(sink)
-     */
-
-    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[ShardedDynamicTagUpdate, String](
+    val flow = CassandraFlow.createUnloggedBatchWithPassThrough[ShardedTagUpdate, String](
       8,
-      shardedDynamicStatement("reverse_sharded_dynamic_tagset"),
-      shardedDynamicTagBinder,
+      shardedReverseDynamicStatement,
+      shardedReverseDynamicTagBinder,
       (update => (update.shard + update.tagname)),
       CassandraBatchSettings(1000, 2.minutes)
     ).named("notify sharded reverse dynamic tags")
@@ -182,31 +169,12 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
     implicit builder: GraphDSL.Builder[NotUsed] =>
     import GraphDSL.Implicits._
 
-    val bcast = builder.add(Broadcast[Message](2))
+    val bcast = builder.add(Broadcast[Message](4))
 
-    val tagSplitter = builder.add(splitTagset.async)
-    val bcastDynamicTag = builder.add(Broadcast[DynamicTagUpdate](2))
-    val tagUpdateBuffer = builder.add(
-      Flow[DynamicTagUpdate]
-         .groupedWithin(1000, 2.minutes)
-         .mapConcat(_.distinct)
-    )
-
-    val shardTagSplitter = builder.add(splitShardedTagset)
-    val bcastShardedDynamicTag = builder.add(Broadcast[ShardedDynamicTagUpdate](2))
-
-    val shardedTagUpdateBuffer = builder.add(
-      Flow[ShardedDynamicTagUpdate]
-         .groupedWithin(1000, 2.minutes)
-         .mapConcat(_.distinct)
-    )
-
-
-    bcast ~> tagSplitter ~> tagUpdateBuffer ~> bcastDynamicTag ~> notifyReverseDynamicTags
-                                               bcastDynamicTag ~> notifyDynamicTags
-
-      bcast ~> shardTagSplitter ~> shardedTagUpdateBuffer ~> bcastShardedDynamicTag ~> notifyShardedReverseDynamicTags
-                                                             bcastShardedDynamicTag ~> notifyShardedDynamicTags
+     bcast ~> notifyDynamicTags                         // Uses Message
+     bcast ~> splitByTag ~> notifyReverseDynamicTags   // Uses TagUpdate
+     bcast ~> splitByShard ~> notifyShardedDynamicTags // Uses ShardedMessageUpdate
+     bcast ~> splitByTagAndShard ~> notifyShardedReverseDynamicTags // Uses ShardedTagUpdate
 
     SinkShape[Message](bcast.in)
   }

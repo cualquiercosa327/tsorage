@@ -5,4 +5,4 @@ package be.cetic.tsorage.processor.update
  * informations relevant for managing sharded dynamic tag indices,
  * according to a specific sharder.
  */
-case class ShardedDynamicTagUpdate(metric: String, shard: String, tagname: String, tagvalue: String, tagset: Map[String, String])
+case class ShardedMessageUpdate(metric: String, shard: String, tagset: Map[String, String])

@@ -11,7 +11,6 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
-import scala.concurrent.{ExecutionContextExecutor, Future}
 
 /**
  * An entity for manipulating metric collections based on specified predicates.
@@ -117,6 +116,7 @@ case class MetricManager(cassandra: Cassandra, conf: Config) extends LazyLogging
    def getMetrics(query: MetricSearchQuery): Set[Metric] = query.filter match
    {
       case None => getAllMetrics()
+      case Some(AllFilter) => getAllMetrics()
       case Some(filter) => {
          val timeSeriesManager = TimeSeriesManager(cassandra, conf)
          timeSeriesManager

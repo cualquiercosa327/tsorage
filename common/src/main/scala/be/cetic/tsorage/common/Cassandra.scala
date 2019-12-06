@@ -30,12 +30,6 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
 
   val sharder = Sharder(conf.getString("sharder"))
 
-  private val getDynamicTagsetStatement = session.prepare(
-      QueryBuilder.select("tagname", "tagvalue")
-         .from(keyspaceAgg, "dynamic_tagset")
-         .where(QueryBuilder.eq("metric", QueryBuilder.bindMarker("metric")))
-   )
-
   /**
     * Updates a subset of the static tags associated with a metric.
     * @param metric  The metric to update.
@@ -110,23 +104,7 @@ class Cassandra(private val conf: Config = ConfigFactory.load("common.conf")) ex
          .mapValues(v => v.map(_._2).toSet)
    }
 
- /**
-    * @param metric  A metric.
-    * @param shards  A set of shards.
-    * @return  All the dynamic tagsets associated with the metric during the specified shards.
-    */
-   def getDynamicTagset(metric: String, shards: Set[String]): Set[(String, String)] =
-   {
-      val statement = getDynamicTagsetStatement.bind()
-            .setString("metric", metric)
-            .setSet("shards", shards.asJava)
-            .setConsistencyLevel(ConsistencyLevel.ONE)
 
-      session
-         .execute(statement).asScala
-         .map(row => (row.getString("tagname"), row.getString("tagvalue")))
-         .toSet
-   }
 
   /**
    * Get data from a time range for a single metric.

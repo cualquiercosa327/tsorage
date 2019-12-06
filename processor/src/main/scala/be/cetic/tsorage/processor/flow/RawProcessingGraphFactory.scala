@@ -24,7 +24,7 @@ object RawProcessingGraphFactory
       val notEmpty = builder.add(Flow[Message].filter(message => !message.values.isEmpty))
       val dropBadTags = builder.add(Flow[Message].map(ProcessorConfig.dropBadTags))
       val bcast = builder.add(Broadcast[Message](2).async)
-      val declareTags = cassandraFlow.tagIndexGraph   // dynamic column management
+      val declareTags = cassandraFlow.tagIndexGraph
 
       val writeMessages = builder.add(CassandraWriter.createMessageCassandraFlow(context))
 

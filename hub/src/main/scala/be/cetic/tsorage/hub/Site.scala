@@ -13,6 +13,7 @@ import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.GrafanaService
 import be.cetic.tsorage.hub.metric.MetricHttpService
 import be.cetic.tsorage.hub.tag.TagHttpService
+import be.cetic.tsorage.hub.ts.TimeSeriesService
 import com.typesafe.config.ConfigFactory
 
 import scala.io.StdIn
@@ -66,6 +67,7 @@ object Site extends RouteConcatenation with Directives
       val authRoute = new AuthenticationService().route
       val metricRoutes = new MetricHttpService(cassandra).routes
       val tagRoutes = new TagHttpService(cassandra).routes
+      val tsRoutes = new TimeSeriesService(cassandra).routes
 
       val grafanaRoutes = new GrafanaService(cassandra, MetricManager(cassandra, databaseConf)).routes
 
@@ -88,7 +90,8 @@ object Site extends RouteConcatenation with Directives
          grafanaRoutes ~
          connectionTestRoute ~
          swaggerRoute ~
-         tagRoutes
+         tagRoutes ~
+         tsRoutes
       )
 
       val bindingFuture = Http().bindAndHandle(routes, "localhost", conf.getInt("port"))

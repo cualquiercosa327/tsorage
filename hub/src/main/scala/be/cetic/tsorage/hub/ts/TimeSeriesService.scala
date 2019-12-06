@@ -34,6 +34,7 @@ case class TimeSeriesService(cassandra: Cassandra)(implicit executionContext: Ex
       post {
          entity(as[TimeSeriesQuery]) {
             query => {
+               println(query)
                val ts = timeseriesManager.getTimeSeries(query)
                complete(HttpEntity(ContentTypes.`application/json`, ts.toJson.compactPrint))
             }

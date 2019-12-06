@@ -9,7 +9,6 @@ import com.typesafe.scalalogging.LazyLogging
 
 import collection.JavaConverters._
 
-
 /**
  * Services for managing time series.
  */
@@ -56,6 +55,17 @@ case class TimeSeriesManager(cassandra: Cassandra, conf: Config) extends LazyLog
          .and(QueryBuilder.eq("shard", QueryBuilder.bindMarker("shard")))
    ).setConsistencyLevel(ConsistencyLevel.ONE)
 
+   private val allTimeSeriesStatement = session.prepare(
+      QueryBuilder
+         .select("metric", "tagset")
+         .from(keyspace, "dynamic_tagset")
+   ).setConsistencyLevel(ConsistencyLevel.ONE)
+
+   private val shardedAllTimeSeriesStatement = session.prepare(
+      QueryBuilder
+         .select("metric", "tagset")
+         .from(keyspace, "sharded_dynamic_tagset")
+   ).setConsistencyLevel(ConsistencyLevel.ONE)
 
    /**
     * @param tagname    The name of a tag
@@ -208,6 +218,34 @@ case class TimeSeriesManager(cassandra: Cassandra, conf: Config) extends LazyLog
    }
 
    /**
+    * @return All the available time series.
+    */
+   private def getAllTimeSeries(): Set[TimeSeries] =
+   {
+      session
+         .execute(allTimeSeriesStatement.bind())
+         .asScala
+         .map(row => TimeSeries(row.getString("metric"), row.getMap("tagset", classOf[String], classOf[String]).asScala.toMap))
+         .toSet
+   }
+
+   /**
+    * @param shard
+    * @return All the time series available in a shard.
+    */
+   private def getAllTimeSeries(shard: String): Set[TimeSeries] =
+   {
+      session
+         .execute(
+            shardedAllTimeSeriesStatement.bind()
+               .setString("shard", shard)
+         )
+         .asScala
+         .map(row => TimeSeries(row.getString("metric"), row.getMap("tagset", classOf[String], classOf[String]).asScala.toMap))
+         .toSet
+   }
+
+   /**
     * Replaces pieces of the filter by its evaluation as a set of candidate time series.
     * @param f A filter
     */
@@ -225,6 +263,14 @@ case class TimeSeriesManager(cassandra: Cassandra, conf: Config) extends LazyLog
          case None => EvaluatedFilter(toCandidateTimeSeries(getTimeSeriesWithTagname(tagname)))
          case Some(s) => EvaluatedFilter(toCandidateTimeSeries(getTimeSeriesWithTagname(tagname, s)))
       }
+
+      case AllFilter => shard match
+      {
+         case None => EvaluatedFilter(toCandidateTimeSeries(getAllTimeSeries()))
+         case Some(s) => EvaluatedFilter(toCandidateTimeSeries(getAllTimeSeries(s)))
+      }
+
+      case Not(AllFilter) => EvaluatedFilter(Set.empty)
 
       // Simplify double negations
       case Not(Not(x)) => eval(x, shard)
@@ -248,11 +294,19 @@ case class TimeSeriesManager(cassandra: Cassandra, conf: Config) extends LazyLog
       case And(a, b: Or) => eval(a, shard) filter b
       case And(a: Or, b) => eval(b, shard) filter a
 
+      // And -- a "all" filter has no effect
+      case And(a, AllFilter) => eval(a, shard)
+      case And(AllFilter, b) => eval(b, shard)
+
       // And -- General case. For instance, And(And(a,b), And(c,d)).
       // Arbitrary eval the left branch, which could turn out to not be the best decision
       case And(a, b)  => eval(a, shard) filter b
 
-      // Or
+      // Or -- A "all" filter means all time series must be retrieved
+      case Or(_, AllFilter) => eval(AllFilter, shard)
+      case Or(AllFilter, _) => eval(AllFilter, shard)
+
+      // Or -- General case
       case Or(a, b) => eval(a, shard) union eval(b, shard)
 
       // Not -- De Morgan
@@ -260,6 +314,6 @@ case class TimeSeriesManager(cassandra: Cassandra, conf: Config) extends LazyLog
       case Not(Or(a, b)) => eval(And(Not(a), Not(b)), shard)
 
       // Worst situation: one has to retrieves the entire time series collection, minus the specific filter
-      case Not(_:Filter) => throw UnsupportedQueryException(f)
+      case n: Not => eval(And(AllFilter, n), shard)
    }
 }

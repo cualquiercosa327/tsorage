@@ -21,6 +21,17 @@ sealed trait Filter
 }
 
 /**
+ * A filter accepting everything.
+ */
+object AllFilter extends Filter
+{
+   /**
+    * @return All the tag names used in the filter.
+    */
+   override def involvedTagNames: Set[String] = Set.empty
+}
+
+/**
  * A filter representing the fact that a tag must exist with a particular name and a particular value
  * @param name    The name of the filtering tag.
  * @param value   The value of the filtering tag

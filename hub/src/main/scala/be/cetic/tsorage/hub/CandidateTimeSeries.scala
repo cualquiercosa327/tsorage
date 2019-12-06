@@ -1,7 +1,7 @@
 package be.cetic.tsorage.hub
 
 import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.hub.filter.{And, Filter, Metric, Not, Or, TagExist, TagFilter}
+import be.cetic.tsorage.hub.filter.{AllFilter, And, Filter, Metric, Not, Or, TagExist, TagFilter}
 import com.datastax.driver.core.Session
 import com.typesafe.config.Config
 
@@ -29,6 +29,8 @@ case class CandidateTimeSeries(metric: String, staticTagset: Map[String, String]
       case And(a, b) => accept(a) && accept(b)
 
       case Or(a, b) => accept(a) || accept(b)
+
+      case AllFilter => true
    }
 
    def toTimeSeries: TimeSeries = TimeSeries(metric, dynamicTagset)
