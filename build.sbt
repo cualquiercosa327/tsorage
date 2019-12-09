@@ -86,7 +86,8 @@ lazy val ingestion = (project in file("ingestion"))
          cassandraDependencies ++
          Seq(
             "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-            "ch.qos.logback" % "logback-classic" % "1.2.3"
+            "ch.qos.logback" % "logback-classic" % "1.2.3",
+            "com.lightbend.akka" %% "akka-stream-alpakka-mqtt-streaming" % "1.1.2"     // MQTT
          )
    ).dependsOn(common)
 

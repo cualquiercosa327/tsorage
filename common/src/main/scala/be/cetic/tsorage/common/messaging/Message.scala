@@ -16,6 +16,7 @@ case class Message(
                     values: List[(LocalDateTime, JsValue)]
                   ) extends Serializable
 
+
 object Message extends MessageJsonSupport
 {
   implicit def messageFormat = new RootJsonFormat[Message] {

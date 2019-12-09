@@ -80,3 +80,5 @@ These are the default port configuration currently used by TSorage. This configu
 - Cassandra : 9042
 - HTTP ingestion: 8080
 - HTTP services : 8081
+- MQTT ingestion over TCP : 1883
+- MQTT ingestion over TLS : 8883
