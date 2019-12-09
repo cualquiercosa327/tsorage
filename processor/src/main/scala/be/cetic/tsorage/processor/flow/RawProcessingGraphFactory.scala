@@ -6,7 +6,6 @@ import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL}
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.{Message, ProcessorConfig}
 
-import scala.concurrent.duration._
 import scala.concurrent.ExecutionContextExecutor
 
 /**

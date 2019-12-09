@@ -1,13 +1,13 @@
 package be.cetic.tsorage.hub.filter
 
-import be.cetic.tsorage.common.Cassandra
+import be.cetic.tsorage.hub.Cassandra
 import be.cetic.tsorage.hub.tag.TagValueQuery
-import com.datastax.driver.core.{ConsistencyLevel, Session}
+import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 
 /**

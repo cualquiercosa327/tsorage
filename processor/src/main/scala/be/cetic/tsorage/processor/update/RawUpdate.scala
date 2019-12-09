@@ -3,7 +3,6 @@ package be.cetic.tsorage.processor.update
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import spray.json.JsValue
 

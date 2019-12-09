@@ -2,16 +2,14 @@ package be.cetic.tsorage.hub.ts
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives
-import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, MetricManager, TimeSeriesJsonProtocol, TimeSeriesManager, TimeSeriesQuery, TimeSeriesQueryJsonProtocol}
-import be.cetic.tsorage.hub.metric.MetricSearchQuery
+import be.cetic.tsorage.hub.Cassandra
+import be.cetic.tsorage.hub.filter.{TimeSeriesJsonProtocol, TimeSeriesManager, TimeSeriesQuery, TimeSeriesQueryJsonProtocol}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
+import spray.json._
 
 import scala.concurrent.ExecutionContext
-import spray.json._
-import DefaultJsonProtocol._
 
 /**
  * A service for managing time series.

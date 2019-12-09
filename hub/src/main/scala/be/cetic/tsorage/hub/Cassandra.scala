@@ -1,7 +1,8 @@
-package be.cetic.tsorage.common
+package be.cetic.tsorage.hub
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.common.DateTimeConverter
 import be.cetic.tsorage.common.sharder.Sharder
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.querybuilder.QueryBuilder.select
@@ -9,7 +10,7 @@ import com.datastax.driver.core.{Cluster, ConsistencyLevel, Session}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /**
  * An access to the Cassandra cluster

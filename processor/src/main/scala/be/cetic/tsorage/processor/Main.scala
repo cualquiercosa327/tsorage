@@ -3,20 +3,16 @@ package be.cetic.tsorage.processor
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import akka.kafka.scaladsl.Consumer
-import akka.kafka.{ConsumerSettings, Subscriptions}
+import akka.kafka.ConsumerSettings
 import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.processor.aggregator.time.{DayAggregator, HourAggregator, MinuteAggregator}
 import be.cetic.tsorage.processor.flow.GlobalProcessingGraphFactory
 import be.cetic.tsorage.processor.source.RandomMessageIterator
-import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.{Logger, LoggerFactory}
-import spray.json._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor

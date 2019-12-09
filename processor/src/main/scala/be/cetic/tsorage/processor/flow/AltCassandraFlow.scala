@@ -3,8 +3,6 @@ package be.cetic.tsorage.processor.flow
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import be.cetic.tsorage.common.FutureManager
-import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.update.RawUpdate
 import com.datastax.driver.core._
 
 import scala.concurrent.{ExecutionContextExecutor, Future}

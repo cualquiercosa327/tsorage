@@ -1,11 +1,11 @@
 package be.cetic.tsorage.hub.filter
 
 import be.cetic.tsorage.common.TimeSeries
-import com.datastax.driver.core.{ConsistencyLevel, Session}
 import com.datastax.driver.core.querybuilder.QueryBuilder
+import com.datastax.driver.core.{ConsistencyLevel, Session}
 import com.typesafe.config.Config
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 
 /**

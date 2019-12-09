@@ -2,7 +2,6 @@ package be.cetic.tsorage.ingestion.producer
 //package scalapb
 
 
-import be.cetic.tsorage.common
 import akka.actor.ActorSystem
 import akka.kafka.ProducerSettings
 import akka.serialization.SerializationExtension
@@ -11,6 +10,7 @@ import com.google.protobuf.util.raw.SENSOR
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ByteArraySerializer, StringSerializer}
 import play.api.libs.json.{JsArray, JsValue, Json}
+
 import scala.io.Source
 
 object Producer {

@@ -3,22 +3,18 @@ package be.cetic.tsorage.processor.database
 import java.sql.Timestamp
 import java.time.ZoneOffset
 
-
-import be.cetic.tsorage.common.sharder.{DaySharder, MonthSharder, Sharder}
+import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
+import be.cetic.tsorage.processor.update.AggUpdate
 import be.cetic.tsorage.processor.{Message, ProcessorConfig}
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
-import com.datastax.driver.core.{BatchStatement, Cluster, ConsistencyLevel, PreparedStatement, ResultSet, ResultSetFuture, Session}
+import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
-import scala.language.implicitConversions
-import scala.language.postfixOps
-import scala.util.Try
+import scala.language.{implicitConversions, postfixOps}
 
 
 object Cassandra extends LazyLogging {

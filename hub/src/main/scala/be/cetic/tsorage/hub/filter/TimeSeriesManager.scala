@@ -1,13 +1,13 @@
 package be.cetic.tsorage.hub.filter
 
-import be.cetic.tsorage.common.{Cassandra, FutureManager, TimeSeries}
-import be.cetic.tsorage.hub.CandidateTimeSeries
+import be.cetic.tsorage.common.{FutureManager, TimeSeries}
+import be.cetic.tsorage.hub.{CandidateTimeSeries, Cassandra}
 import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 /**
  * Services for managing time series.

@@ -2,13 +2,11 @@ package be.cetic.tsorage.processor.flow
 
 import akka.NotUsed
 import akka.stream.FlowShape
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL}
-import be.cetic.tsorage.common.{Cassandra, TimeSeries}
+import akka.stream.scaladsl.{Flow, GraphDSL}
+import be.cetic.tsorage.common.TimeSeries
 import be.cetic.tsorage.processor.Message
-import be.cetic.tsorage.processor.aggregator.time.{HourAggregator, MinuteAggregator, TimeAggregator}
-import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate, TimeAggregatorRawUpdate}
-import com.datastax.oss.protocol.internal.ProtocolConstants.DataType
+import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
+import be.cetic.tsorage.processor.update.{AggUpdate, TimeAggregatorRawUpdate}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._

@@ -1,29 +1,23 @@
 package be.cetic.tsorage.ingestion.http
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.{Http, server}
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.OAuth2BearerToken
-import akka.http.scaladsl.server.{AuthenticationFailedRejection, AuthorizationFailedRejection, Directive1}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, Unmarshal, Unmarshaller}
-import akka.kafka.{ProducerMessage, ProducerSettings}
-import akka.kafka.scaladsl.Producer
+import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive1}
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
 import be.cetic.tsorage.common.messaging.{AuthenticationQuery, User}
 import be.cetic.tsorage.ingestion.IngestionConfig
-import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DoubleBody, DoubleMessage, FloatMessageJsonSupport}
+import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DoubleBody, FloatMessageJsonSupport}
 import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
-
-import scala.io.StdIn
 import spray.json._
 
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success}
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Success
 
 /**
  * An AKKA system that runs an HTTP server waiting for Datadog compliant messages.
@@ -82,7 +76,7 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
 
                            entity(as[DoubleBody])
                            { body =>
-                              val messages = body.series.map(s => s.prepared(user))
+                              val messages = body.series.map(s => s.prepare(user))
 
                               messages.map(message => new ProducerRecord[String, String](conf.getString("kafka.topic"), message.toJson.compactPrint))
                                  .foreach(pr => kafkaProducer.send(pr))
