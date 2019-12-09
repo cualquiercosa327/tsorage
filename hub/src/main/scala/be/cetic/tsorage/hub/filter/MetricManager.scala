@@ -1,6 +1,7 @@
 package be.cetic.tsorage.hub.filter
 
-import be.cetic.tsorage.common.{Cassandra, FutureManager}
+import be.cetic.tsorage.common.FutureManager
+import be.cetic.tsorage.hub.Cassandra
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
 import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.querybuilder.QueryBuilder

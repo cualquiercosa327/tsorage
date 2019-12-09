@@ -7,7 +7,6 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import akka.http.scaladsl.server.{Directives, Route, RouteConcatenation}
 import akka.stream.ActorMaterializer
-import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.hub.auth.AuthenticationService
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.GrafanaService

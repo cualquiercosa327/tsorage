@@ -3,9 +3,8 @@ package be.cetic.tsorage.hub.metric
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives
-import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.hub.HubConfig
+import be.cetic.tsorage.hub.{Cassandra, HubConfig}
 import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, Metric, MetricManager}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._

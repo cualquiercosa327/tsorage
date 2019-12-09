@@ -1,6 +1,6 @@
 package be.cetic.tsorage.hub.filter
 
-import be.cetic.tsorage.common.Cassandra
+import be.cetic.tsorage.hub.Cassandra
 import be.cetic.tsorage.hub.tag.TagValueQuery
 import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.querybuilder.QueryBuilder

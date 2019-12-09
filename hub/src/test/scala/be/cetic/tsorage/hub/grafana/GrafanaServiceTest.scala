@@ -4,10 +4,10 @@ import akka.http.scaladsl.model.MediaTypes.`application/json`
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
+import be.cetic.tsorage.common.DateTimeConverter
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.jsonsupport._
-import be.cetic.tsorage.hub.{HubConfig, TestDatabase}
+import be.cetic.tsorage.hub.{Cassandra, HubConfig, TestDatabase}
 import com.typesafe.config.{Config, ConfigValueFactory}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import spray.json._

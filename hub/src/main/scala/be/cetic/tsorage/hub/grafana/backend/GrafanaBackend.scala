@@ -2,7 +2,8 @@ package be.cetic.tsorage.hub.grafana.backend
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
-import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
+import be.cetic.tsorage.common.DateTimeConverter
+import be.cetic.tsorage.hub.Cassandra
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.jsonsupport._
 
