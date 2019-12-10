@@ -12,7 +12,7 @@ object TextSupport extends DataTypeSupport[Text] with TextJsonProtocol
 {
    override def colname: String = "value_text"
 
-   override def `type`: String = "text"
+   override def `type`: String = "ttext"
 
    override def asJson(value: Text): JsValue = value.toJson
 
@@ -39,8 +39,5 @@ object TextSupport extends DataTypeSupport[Text] with TextJsonProtocol
     * @param update The update from which an aggregation must be found.
     * @return The aggregation associated with the update.
     */
-   override def findAggregation(update: AggUpdate): DataAggregation[_, Text] = update match {
-      case _ =>
-      // TODO : no relevant aggregation, change the API to support it
-   }
+   override def findAggregation(update: AggUpdate): DataAggregation[_, Text] = ??? // TODO : no relevant aggregation, change the API to support it
 }
