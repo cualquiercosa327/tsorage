@@ -295,8 +295,11 @@ class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends
 
         // Retrieve the data points from the metric data.
         val dataPoints = metricData.map(singleData => {
-          val (datetime, value) = singleData
+          val datetime = singleData.datetime
+          val value = singleData.value
+
           val timestamp = DateTimeConverter.localDateTimeToEpochMilli(datetime)
+
           Tuple2[BigDecimal, Long](value, timestamp)
         })
 
