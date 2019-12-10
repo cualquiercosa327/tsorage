@@ -7,9 +7,9 @@ import org.scalatest.{Matchers, WordSpec}
 
 import scala.io.Source
 
-class SiteTest extends WordSpec with Matchers with ScalatestRouteTest {
-  val connectionTestRoute: Route = Site.connectionTestRoute
-  val swaggerRoute: Route = Site.swaggerRoute
+class HubTest extends WordSpec with Matchers with ScalatestRouteTest {
+  val connectionTestRoute: Route = Hub.connectionTestRoute
+  val swaggerRoute: Route = Hub.swaggerRoute
 
   private val conf = HubConfig.conf
   private val prefix = conf.getString("api.prefix")

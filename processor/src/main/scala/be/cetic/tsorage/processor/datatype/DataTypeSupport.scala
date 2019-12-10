@@ -147,7 +147,8 @@ object DataTypeSupport
    val availableSupports: Map[String, DataTypeSupport[_]] = List(
       DoubleSupport,
       LongSupport,
-      DateDoubleSupport
+      DateDoubleSupport,
+      Position2DSupport
    ).map(support => support.`type` -> support).toMap
 
    def inferSupport(`type`: String) = availableSupports(`type`)

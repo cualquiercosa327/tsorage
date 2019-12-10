@@ -8,7 +8,7 @@ import be.cetic.tsorage.processor.datatype.{DataTypeSupport, DataValue, DoubleSu
 /**
   * Aggregation by taking the minimum of the values.
   */
-object MinimumAggregation extends DataAggregation[Double, Double] with DoubleAggregation
+object MinimumAggregation extends DataAggregation[Double, Double]
 {
    override def name: String = "min"
 

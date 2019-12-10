@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContextExecutor
 /**
  * The global entry point for all the services.
  */
-object Site extends RouteConcatenation with Directives
+object Hub extends RouteConcatenation with Directives
 {
    private val conf = HubConfig.conf
 

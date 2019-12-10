@@ -3,10 +3,11 @@ package be.cetic.tsorage.processor
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import akka.kafka.ConsumerSettings
+import akka.kafka.{ConsumerSettings, Subscriptions}
+import akka.kafka.scaladsl.Consumer
 import akka.stream.ActorMaterializer
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.processor.flow.GlobalProcessingGraphFactory
 import be.cetic.tsorage.processor.source.RandomMessageIterator
@@ -18,7 +19,9 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
 
-object Main extends LazyLogging with MessageJsonSupport
+import spray.json._
+
+object Processor extends LazyLogging with MessageJsonSupport
 {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
@@ -40,12 +43,11 @@ object Main extends LazyLogging with MessageJsonSupport
        .withGroupId(conf.getString("kafka.group"))
     //  .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
-/*
     def inboundMessagesConnector(): Source[Message, _] = Consumer
        .plainSource(consumerSettings, Subscriptions.topics(conf.getString("kafka.topic")))
        .map(record => Message.messageFormat.read(record.value().parseJson))
-*/
-     def inboundMessagesConnector() = RandomMessageIterator.source()
+
+//     def inboundMessagesConnector() = RandomMessageIterator.source()
 
     val settings: CassandraBatchSettings = CassandraBatchSettings(1000, FiniteDuration(20, TimeUnit.SECONDS))
 
