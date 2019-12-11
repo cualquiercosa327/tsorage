@@ -70,7 +70,7 @@ class Cassandra(private val conf: Config) extends LazyLogging {
       updateStaticTagset(metric, tagset)
    }
 
-/**
+    /**
     * @param tagname    The name of a static tag.
     * @param tagvalue   The value of a static tag.
     * @return  The names of all the metrics having the specified static tag.

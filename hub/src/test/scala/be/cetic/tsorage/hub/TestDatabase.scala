@@ -109,26 +109,28 @@ class TestDatabase(private val conf: Config) extends LazyLogging {
   private def createTables(): Unit = {
     session.execute(
       SchemaBuilder.createTable(keyspaceAgg, "observations").ifNotExists()
-        .addPartitionKey("metric_", DataType.text)
-        .addPartitionKey("shard_", DataType.text)
-        .addPartitionKey("interval_", DataType.text)
-        .addPartitionKey("aggregator_", DataType.text)
-        .addClusteringColumn("datetime_", DataType.timestamp)
-        .addUDTColumn("value_double_", SchemaBuilder.udtLiteral("tdouble"))
-        .addUDTColumn("value_long_", SchemaBuilder.udtLiteral("tlong"))
-        .addUDTColumn("value_date_double_", SchemaBuilder.udtLiteral("date_double"))
-        .withOptions().clusteringOrder("datetime_", Direction.DESC)
+        .addPartitionKey("metric", DataType.text)
+        .addPartitionKey("tagset", DataType.frozenMap(DataType.text, DataType.text))
+        .addPartitionKey("shard", DataType.text)
+        .addPartitionKey("interval", DataType.text)
+        .addPartitionKey("aggregator", DataType.text)
+        .addClusteringColumn("datetime", DataType.timestamp)
+        .addUDTColumn("value_double", SchemaBuilder.udtLiteral("tdouble"))
+        .addUDTColumn("value_long", SchemaBuilder.udtLiteral("tlong"))
+        .addUDTColumn("value_date_double", SchemaBuilder.udtLiteral("date_double"))
+        .withOptions().clusteringOrder("datetime", Direction.DESC)
     )
 
     session.execute(
       SchemaBuilder.createTable(keyspaceRaw, "observations").ifNotExists()
-        .addPartitionKey("metric_", DataType.text)
-        .addPartitionKey("shard_", DataType.text)
-        .addClusteringColumn("datetime_", DataType.timestamp)
-        .addUDTColumn("value_double_", SchemaBuilder.udtLiteral("tdouble"))
-        .addUDTColumn("value_long_", SchemaBuilder.udtLiteral("tlong"))
-        .addUDTColumn("value_date_double_", SchemaBuilder.udtLiteral("date_double"))
-        .withOptions().clusteringOrder("datetime_", Direction.DESC)
+        .addPartitionKey("metric", DataType.text)
+        .addPartitionKey("tagset", DataType.frozenMap(DataType.text, DataType.text))
+        .addPartitionKey("shard", DataType.text)
+        .addClusteringColumn("datetime", DataType.timestamp)
+        .addUDTColumn("value_double", SchemaBuilder.udtLiteral("tdouble"))
+        .addUDTColumn("value_long", SchemaBuilder.udtLiteral("tlong"))
+        .addUDTColumn("value_date_double", SchemaBuilder.udtLiteral("date_double"))
+        .withOptions().clusteringOrder("datetime", Direction.DESC)
     )
 
     session.execute(
@@ -152,45 +154,38 @@ class TestDatabase(private val conf: Config) extends LazyLogging {
     session.execute(
       SchemaBuilder.createTable(keyspaceAgg, "dynamic_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
-        .addClusteringColumn("tagname", DataType.text())
-        .addColumn("tagvalue", DataType.text())
-        .withOptions().clusteringOrder("tagname", Direction.ASC)
+        .addClusteringColumn("tagset", DataType.frozenMap(DataType.text, DataType.text))
+        .withOptions().clusteringOrder("tagset", Direction.ASC)
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_dynamic_tagset AS
-         | SELECT tagname, tagvalue, metric
-         | FROM $keyspaceAgg.dynamic_tagset
-         | WHERE tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
-         | PRIMARY KEY (tagname, tagvalue, metric)
-         | WITH CLUSTERING ORDER BY (tagvalue ASC, metric ASC);""".stripMargin
+      SchemaBuilder.createTable(keyspaceAgg, "reverse_dynamic_tagset").ifNotExists()
+        .addPartitionKey("tagname", DataType.text)
+        .addClusteringColumn("tagvalue", DataType.text)
+        .addClusteringColumn("metric", DataType.text)
+        .addClusteringColumn("tagset", DataType.frozenMap(DataType.text, DataType.text))
+        .withOptions().clusteringOrder("tagvalue", Direction.ASC)
+        .clusteringOrder("metric", Direction.ASC)
+        .clusteringOrder("tagset", Direction.ASC)
     )
 
     session.execute(
       SchemaBuilder.createTable(keyspaceAgg, "sharded_dynamic_tagset").ifNotExists()
         .addPartitionKey("metric", DataType.text)
         .addPartitionKey("shard", DataType.text)
-        .addClusteringColumn("tagname", DataType.text)
-        .addColumn("tagvalue", DataType.text)
-        .withOptions().clusteringOrder("tagname", Direction.ASC)
+        .addClusteringColumn("tagset", DataType.frozenMap(DataType.text, DataType.text))
+        .withOptions().clusteringOrder("tagset", Direction.ASC)
     )
 
     session.execute(
-      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_sharded_dynamic_tagset AS
-         | SELECT shard, tagname, tagvalue, metric
-         | FROM $keyspaceAgg.sharded_dynamic_tagset
-         | WHERE shard IS NOT NULL and tagname IS NOT NULL and tagvalue IS NOT NULL and metric IS NOT NULL
-         | PRIMARY KEY ((shard, tagname), tagvalue, metric)
-         | WITH CLUSTERING ORDER BY (tagvalue ASC, metric ASC);""".stripMargin
-    )
-
-    session.execute(
-      s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspaceAgg.reverse_sharded_dynamic_tagname AS
-         | SELECT shard, tagname, metric
-         | FROM $keyspaceAgg.sharded_dynamic_tagset
-         | WHERE shard IS NOT NULL and tagname IS NOT NULL and metric IS NOT NULL
-         | PRIMARY KEY (shard, tagname, metric)
-         | WITH CLUSTERING ORDER BY (tagname ASC);""".stripMargin
+      SchemaBuilder.createTable(keyspaceAgg, "reverse_sharded_dynamic_tagset").ifNotExists()
+        .addPartitionKey("shard", DataType.text)
+        .addPartitionKey("tagname", DataType.text)
+        .addClusteringColumn("tagvalue", DataType.text)
+        .addClusteringColumn("metric", DataType.text)
+        .addClusteringColumn("tagset", DataType.frozenMap(DataType.text, DataType.text))
+        .withOptions().clusteringOrder("tagvalue", Direction.ASC)
+        .clusteringOrder("metric", Direction.ASC)
     )
   }
 
@@ -216,28 +211,69 @@ class TestDatabase(private val conf: Config) extends LazyLogging {
       "The range of values must be valid; the first component must be less than the second component."
     )
 
+    // Compute dynamic tagsets.
+    val dynTagnamesTagvalues = Map(
+      "quality" -> List("very good", "good", "pretty bad", "bad"),
+      "weather" -> List("sunny", "cloudy", "rainy")
+    )
+    // Create a list of sublists of maps. Each sublist corresponds to a tag and each map is composed of (key, value)
+    // where key is a tagname and value is a (single) tagvalue
+    // For here, we have: List(
+    //     List({"quality" -> "very good"}, {"quality" -> "good"}, ...),
+    //     List({"weather" -> "sunny"}, {"weather" -> "cloudy"}, ...),
+    //     ...
+    // )
+    val dynTagnameTagvalueList = dynTagnamesTagvalues.map { case (tagname, tagvalues) =>
+      tagvalues.map(tagvalue =>
+        Map(tagname -> tagvalue)
+      )
+    }
+    // Compute the cross product of all sublists.
+    val dynTagsets = Seq(Map()) ++ dynTagnameTagvalueList.tail.scanLeft(dynTagnameTagvalueList.head)(
+      (tagsetList1, tagsetList2) =>
+        tagsetList1.flatMap(tagset1 =>
+          tagsetList2.map(tagset2 =>
+            tagset1 ++ tagset2 // Merge the two tagsets (each one is a map).
+          )
+        )
+    ).flatten
+
+    // Insert dynamic tagsets.
+    val requestSem = new Semaphore(100) // Semaphore for limiting the number of requests (it avoids "Pool is
+    // busy" error).
+    metricValueRange.foreach { case (metric, _) =>
+      dynTagsets.foreach { tagset =>
+        requestSem.acquire()
+        val request = session.executeAsync(
+          QueryBuilder.insertInto(keyspaceAgg, "dynamic_tagset")
+            .value("metric", metric)
+            .value("tagset", tagset.asJava)
+        ).asScala
+
+        request onComplete {
+          case Success(_) => requestSem.release()
+          case Failure(e) =>
+            requestSem.release()
+            e.printStackTrace()
+        }
+      }
+    }
+
     // Extract some UDTs.
     val tDoubleType = cluster.getMetadata.getKeyspace(keyspaceRaw).getUserType("tdouble")
 
     // Generate and add `numData` data for each metric.
     val random = new scala.util.Random(seed)
     val startTimestamp = DateTimeConverter.strToEpochMilli(startTime)
-    val requestSem = new Semaphore(100) // Semaphore for limiting the number of requests (it avoids "Pool is
-    // busy" error).
     metricValueRange.foreach { case (metric, valueRange) =>
-      // Add some tagset in order to the database contains the name of `metric`.
-      session.executeAsync(
-        QueryBuilder.insertInto(keyspaceAgg, "static_tagset")
-          .value("metric", metric)
-          .value("tagname", "some_tag")
-          .value("tagvalue", "some_value")
-      )
-
       // Generate and add `numData` data for `metric`.
       for (i <- Seq.range(0, numData)) {
         // Compute the timestamp and the corresponding shard for this data.
         val timestamp = startTimestamp + (i * timeStepSec * 1000)
         val shard = sharder.shard(DateTimeConverter.epochMilliToLocalDateTime(timestamp))
+
+        // Pick a random tagset.
+        val tagset = dynTagsets(random.nextInt(dynTagsets.size))
 
         // Generate a single value.
         var value = valueRange._1 + random.nextDouble() * (valueRange._2 - valueRange._1)
@@ -247,10 +283,11 @@ class TestDatabase(private val conf: Config) extends LazyLogging {
         requestSem.acquire()
         val request = session.executeAsync(
           QueryBuilder.insertInto(keyspaceRaw, "observations")
-            .value("metric_", metric)
-            .value("shard_", shard)
-            .value("datetime_", timestamp)
-            .value("value_double_", valueDouble)
+            .value("metric", metric)
+            .value("tagset", tagset.asJava)
+            .value("shard", shard)
+            .value("datetime", timestamp)
+            .value("value_double", valueDouble)
         ).asScala
 
         request onComplete {
