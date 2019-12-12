@@ -12,6 +12,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
@@ -202,55 +203,45 @@ class Cassandra(private val conf: Config) extends LazyLogging {
     }
 
     /**
-     * Merge two sorted lists into one sorted list.
+     * Merge a sequence of ascending sorted lists into one ascending sorted list.
      *
-     * @param list1 A first sorted list.
-     * @param list2 A second sorted list.
-     * @param compare Compare two items. If the first one is less than the second one, then this function returns true,
-     *                otherwise, it returns false.
-     * @tparam A Some item (Int, Double, Object, etc.).
-     * @return The merger of the two lists.
-     */
-    def mergeLists[A](list1: List[A], list2: List[A], compare: (A, A) => Boolean): List[A] = {
-      (list1, list2) match {
-        case (Nil, Nil) => Nil // `list1` and `list2` are empty.
-        case (head1::tail1, Nil) => list1 // `list1` contains at least one item and `list2` is empty.
-        case (Nil, head2::tail2) => list2 // `list2` contains at least one item and `list1` is empty.
-        case (head1::tail1, head2::tail2) => { // // `list1` and `list2` contain at least one item.
-          if (compare(head1, head2)) {
-            head1 :: mergeLists(tail1, list2, compare)
-          } else {
-            head2 :: mergeLists(list1, tail2, compare)
-          }
-        }
-      }
-    }
-
-    /**
-     * Merge a sequence of sorted lists into one sorted list.
-     *
-     * @param listSeq A sequence of sorted lists.
+     * @param lists A sequence of lists of elements where each one is sorted in ascending order.
      * @param compare Compare two items. If the first one is less than the second one, then this function returns true,
      *                otherwise, it returns false.
      * @tparam A Some item (Int, Double, Any, List, etc.).
      * @return The merger of all lists.
      */
-    @scala.annotation.tailrec
-    def mergeListSeq[A](listSeq: Seq[List[A]], compare: (A, A) => Boolean): Seq[A] = {
-      // Group lists two by two and sort them.
-      val sortedListSeq = listSeq.grouped(2).map { listPair => // `grouped(2)` tries to create pairs.
-        if (listPair.size == 1) { // If `listPair` is not a pair.
-          listPair.head // Yield the only list contained in `listPair`.
-        } else { // If `listPair` is a pair.
-          mergeLists(listPair.head, listPair(1), compare) // Merge the two lists.
-        }
-      }.toSeq
+    def mergeListSeq[A](lists: Seq[List[A]], compare: (A, A) => Boolean): Seq[A] = {
+      // Convert the `lists` sequence to an ArrayBuffer.
+      val listsArrayBuffer = lists.to[ArrayBuffer]
 
-      if (sortedListSeq.size == 1) { // All lists have been merged.
-        sortedListSeq.head
-      } else { // All lists have not yet been merged.
-        mergeListSeq(sortedListSeq, compare)
+      // Sort all elements contained in the lists of `lists`.
+      val allSortedElements: ListBuffer[A] = ListBuffer()
+      while (! listsArrayBuffer.forall(_.isEmpty)) { // While all sorted lists are not empty.
+        // Search the list whose its head is the lowest among all heads of each list. When it is found, return it and
+        // its index in the `listsArrayBuffer.
+        val (minList, i) = listsArrayBuffer.zipWithIndex.reduce{(minListIndex, listIndex) =>
+          val minList = minListIndex._1
+          val list = listIndex._1
+
+          if (minList.isEmpty) {
+            listIndex
+          } else if (list.isEmpty) {
+            minListIndex
+          } else {
+            // Yield the list (between `minList` and `list`) whose its head is the lowest.
+            if (compare(minList.head, list.head)) minListIndex else listIndex
+          }
+        }
+
+        // Add the lowest head to `listSortedSeq`.
+        allSortedElements.append(minList.head)
+
+        // Remove the lowest head.
+        listsArrayBuffer.update(i, minList.tail)
       }
+
+      allSortedElements.toList
     }
 
     // Get all time series of this metric.
