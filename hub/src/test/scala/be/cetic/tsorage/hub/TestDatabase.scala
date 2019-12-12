@@ -90,13 +90,25 @@ class TestDatabase(private val conf: Config) extends LazyLogging {
       )
 
       session.execute(
-        SchemaBuilder.createType(keyspace, "tlong").ifNotExists()
-          .addColumn("value", DataType.bigint)
+        SchemaBuilder.createType(keyspace, "pos2d").ifNotExists()
+          .addColumn("longitude", DataType.cdouble)
+          .addColumn("latitude", DataType.cdouble)
+      )
+
+      session.execute(
+        SchemaBuilder.createType(keyspace, "ttext").ifNotExists()
+          .addColumn("value", DataType.text)
+          .addColumn("latitude", DataType.cdouble)
+      )
+
+      session.execute(
+      SchemaBuilder.createType(keyspace, "tlong").ifNotExists()
+        .addColumn("value", DataType.bigint)
       )
 
       session.execute(
         SchemaBuilder.createType(keyspace, "date_double").ifNotExists()
-          .addColumn("datetime", DataType.timestamp())
+          .addColumn("datetime", DataType.timestamp)
           .addColumn("value", DataType.cdouble)
       )
     }
@@ -116,6 +128,8 @@ class TestDatabase(private val conf: Config) extends LazyLogging {
         .addPartitionKey("aggregator", DataType.text)
         .addClusteringColumn("datetime", DataType.timestamp)
         .addUDTColumn("value_double", SchemaBuilder.udtLiteral("tdouble"))
+        .addUDTColumn("value_pos2d", SchemaBuilder.udtLiteral("pos2d"))
+        .addUDTColumn("value_text", SchemaBuilder.udtLiteral("ttext"))
         .addUDTColumn("value_long", SchemaBuilder.udtLiteral("tlong"))
         .addUDTColumn("value_date_double", SchemaBuilder.udtLiteral("date_double"))
         .withOptions().clusteringOrder("datetime", Direction.DESC)
@@ -128,6 +142,8 @@ class TestDatabase(private val conf: Config) extends LazyLogging {
         .addPartitionKey("shard", DataType.text)
         .addClusteringColumn("datetime", DataType.timestamp)
         .addUDTColumn("value_double", SchemaBuilder.udtLiteral("tdouble"))
+        .addUDTColumn("value_pos2d", SchemaBuilder.udtLiteral("pos2d"))
+        .addUDTColumn("value_text", SchemaBuilder.udtLiteral("ttext"))
         .addUDTColumn("value_long", SchemaBuilder.udtLiteral("tlong"))
         .addUDTColumn("value_date_double", SchemaBuilder.udtLiteral("date_double"))
         .withOptions().clusteringOrder("datetime", Direction.DESC)
