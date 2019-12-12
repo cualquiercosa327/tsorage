@@ -41,7 +41,7 @@ class CassandraFlow(sharder: Sharder)(implicit val ec: ExecutionContextExecutor)
     QueryBuilder.insertInto(aggKeyspace, "reverse_dynamic_tagset")
        .value("metric", QueryBuilder.bindMarker("metric"))
        .value("tagname", QueryBuilder.bindMarker("tagname"))
-       .value("tagbalue", QueryBuilder.bindMarker("tagvalue"))
+       .value("tagvalue", QueryBuilder.bindMarker("tagvalue"))
        .value("tagset", QueryBuilder.bindMarker("tagset"))
   ).setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
 

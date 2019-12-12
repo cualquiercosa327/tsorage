@@ -12,6 +12,7 @@ import akka.util.ByteString
 import be.cetic.tsorage.common.messaging.Message
 import be.cetic.tsorage.ingestion.IngestionConfig
 import be.cetic.tsorage.ingestion.http.HTTPInterface.{conf, system}
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
@@ -37,6 +38,7 @@ object MQTTInterface extends LazyLogging
    implicit val executionContext = system.dispatcher
 
    private val conf = IngestionConfig.conf
+   private val commonConf = ConfigFactory.load("common.conf")
 
    def main(args: Array[String]): Unit =
    {

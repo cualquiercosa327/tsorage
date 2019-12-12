@@ -8,7 +8,7 @@ import be.cetic.tsorage.processor.datatype.{DataTypeSupport, DataValue, DoubleSu
 /**
   * Aggregation by taking the maximum of the values
   */
-object MaximumAggregation extends DataAggregation[Double, Double] with DoubleAggregation
+object MaximumAggregation extends DataAggregation[Double, Double]
 {
    override def name: String = "max"
 

@@ -6,7 +6,7 @@ import be.cetic.tsorage.processor.aggregator.time.DayAggregator
 import org.scalatest.{FlatSpec, Matchers}
 
 
-class DayTimeAggregator extends FlatSpec with Matchers
+class DayTimeAggregatorTest extends FlatSpec with Matchers
 {
    val dt1 = LocalDateTime.of(2019, 8, 9, 12, 34, 56, 789000)
    val borderDT = LocalDateTime.of(2019, 8, 9, 0, 0, 0)
