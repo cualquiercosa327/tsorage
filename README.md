@@ -57,6 +57,12 @@ To stop TSorage, run this command:
 docker-compose down
 ```
 
+To use Grafana, add a SimpleJson data source and put this HTTP URL:
+
+```
+http://hub:8081/api/v1/grafana
+```
+
 ### Demonstration
 
 [Datadog](https://www.datadoghq.com) agent is a service that sends metrics and events from your host to Datadog. In the case of our demonstration, we use [Docker image of the Datadog agent](https://hub.docker.com/r/datadog/agent) and have configured it to send data to the ingestion service.
