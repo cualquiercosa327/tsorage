@@ -2,7 +2,6 @@ package be.cetic.tsorage.processor.datatype
 
 import be.cetic.tsorage.processor.aggregator.data.{DataAggregation, LastAggregation}
 import be.cetic.tsorage.processor.aggregator.data.text.{Text, TextJsonProtocol}
-import be.cetic.tsorage.processor.datatype.Position2DSupport.rawUDTType
 import be.cetic.tsorage.processor.update.AggUpdate
 import com.datastax.driver.core.UDTValue
 import spray.json.JsValue
@@ -10,9 +9,9 @@ import spray.json._
 
 object TextSupport extends DataTypeSupport[Text] with TextJsonProtocol
 {
-   override def colname: String = "value_text"
+   override val colname: String = "value_text"
 
-   override def `type`: String = "ttext"
+   override val `type`: String = "ttext"
 
    override def asJson(value: Text): JsValue = value.toJson
 

@@ -22,19 +22,19 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
   */
 abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
 {
-   def colname: String
-   def `type`: String
+   val colname: String
+   val `type`: String
 
-   protected val rawUDTType : UserType = Cassandra.session
+   protected lazy val rawUDTType : UserType = Cassandra.session
       .getCluster
       .getMetadata
       .getKeyspace(ProcessorConfig.rawKS)
       .getUserType(s"${`type`}")
 
-   protected val aggUDTType : UserType = Cassandra.session
+   protected lazy val aggUDTType : UserType = Cassandra.session
       .getCluster
       .getMetadata
-      .getKeyspace(ProcessorConfig.rawKS)
+      .getKeyspace(ProcessorConfig.aggKS)
       .getUserType(s"${`type`}")
 
    def asJson(value: T): JsValue
