@@ -31,8 +31,7 @@ services:
         ./wait-for-it.sh cassandra:9042 --strict --timeout=600 -- cqlsh cassandra -f cassandra_prod.cql &&
         touch /sync/db_initialized &&
         echo 'The database has just been initialized.';
-      fi
-      "
+      fi"
   zookeeper:
     image: zookeeper:3.5
     container_name: tsorage-zookeeper

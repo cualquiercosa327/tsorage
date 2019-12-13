@@ -54,7 +54,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
       Get(s"${prefix}/grafana/search") ~> getMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().map(_.name).toSet
       }
 
       val request = SearchRequest(Some("Temperature"))
@@ -62,7 +62,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
         postMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().map(_.name).toSet
       }
     }
 

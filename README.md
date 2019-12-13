@@ -40,9 +40,9 @@ TSorage uses several environment variables to configure certain parts of the sof
 In this project, we use [Docker Compose](https://docs.docker.com/compose/) for deployment. To run TSorage, make sure you have [Docker Engine](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your computer. Then, create Docker image of each module as follows:
 
 ```bash
-sbt hub/docker:publishLocal
-sbt ingestion/docker:publishLocal
-sbt processor/docker:publishLocal
+sudo sbt hub/docker:publishLocal
+sudo sbt ingestion/docker:publishLocal
+sudo sbt processor/docker:publishLocal
 ```
 
 Finally, run TSorage using this command in a terminal:
@@ -55,6 +55,12 @@ To stop TSorage, run this command:
 
 ```bash
 docker-compose down
+```
+
+To use Grafana, add a SimpleJson data source and put this HTTP URL:
+
+```
+http://hub:8081/api/v1/grafana
 ```
 
 ### Demonstration
