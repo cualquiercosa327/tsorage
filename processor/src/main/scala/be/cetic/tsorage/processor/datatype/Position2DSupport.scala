@@ -8,9 +8,9 @@ import spray.json._
 
 object Position2DSupport extends DataTypeSupport[Position2D] with Position2DJsonProtocol
 {
-   override def colname: String = "value_pos2d"
+   override val colname: String = "value_pos2d"
 
-   override def `type`: String = "pos2d"
+   override val `type`: String = "pos2d"
 
    override def asJson(value: Position2D): JsValue = value.toJson
 
