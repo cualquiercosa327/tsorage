@@ -1,7 +1,6 @@
 package be.cetic.tsorage.hub.tag
 
 import be.cetic.tsorage.hub.filter.{AbsoluteQueryDateRange, Filter, FilterJsonProtocol, QueryDateRange}
-import be.cetic.tsorage.hub.metric.MetricSearchQuery.jsonFormat2
 import spray.json.DefaultJsonProtocol
 
 /**

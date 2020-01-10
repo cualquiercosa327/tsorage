@@ -1,13 +1,13 @@
 package be.cetic.tsorage.hub.filter
 
-import be.cetic.tsorage.common.Cassandra
+import be.cetic.tsorage.hub.Cassandra
 import be.cetic.tsorage.hub.tag.TagValueQuery
-import com.datastax.driver.core.{ConsistencyLevel, Session}
+import com.datastax.driver.core.ConsistencyLevel
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 
 
 /**
@@ -18,8 +18,30 @@ case class TagManager(cassandra: Cassandra, conf: Config) extends LazyLogging
    private val keyspace = conf.getString("cassandra.keyspaces.other")
 
    private lazy val metricManager = MetricManager(cassandra, conf)
+   private lazy val timeSeriesManager = TimeSeriesManager(cassandra, conf)
 
    private val session = cassandra.session
+
+   private val staticValueQuery = session.prepare(QueryBuilder
+      .select("tagvalue")
+      .from(keyspace, "reverse_static_tagset")
+      .where(QueryBuilder.eq("tagname", QueryBuilder.bindMarker("tagname")))
+   ).setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+
+   private val dynamicGlobalValueQuery = session.prepare(
+      QueryBuilder
+         .select("tagvalue")
+         .from(keyspace, "reverse_dynamic_tagset")
+         .where(QueryBuilder.eq("tagname", QueryBuilder.bindMarker("tagname")))
+   ).setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+
+   private val dynamicShardedValueQuery = session.prepare(
+      QueryBuilder.select("tagvalue")
+         .from(keyspace, "reverse_sharded_dynamic_tagset")
+         .where(QueryBuilder.eq("tagname", QueryBuilder.bindMarker("tagname")))
+         .and(QueryBuilder.eq("shard", QueryBuilder.bindMarker("shard")))
+   ).setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
+
 
    /**
     * Retrieves the names of all tags recorded in the system.
@@ -84,20 +106,46 @@ case class TagManager(cassandra: Cassandra, conf: Config) extends LazyLogging
     */
    def suggestTagNames(filter: Filter, range: Option[QueryDateRange]): Set[String] =
    {
-      val filteredMetrics = metricManager.getMetrics(filter, range)
+      // TODO : allow empty filter, so that all tag names must be retrieved
 
-      val staticTagNames = filteredMetrics.par
-         .map(metric => metricManager.getStaticTagset(metric).keySet)
-         .reduce( (n1, n2) => n1 union n2)
-
-      val dynamicTagNames = filteredMetrics.par
-         .map(metric => metricManager.getDynamicTagset(metric, range).keySet)
-         .reduce( (n1, n2) => n1 union n2)
-
-      val tagNames = staticTagNames ++ dynamicTagNames
+      val inUse = timeSeriesManager
+         .getCandidateTimeSeries(TimeSeriesQuery(None, filter, range))
+         .flatMap(c => c.tagnames)
 
       // remove names of tags already used in the filter
-      tagNames -- filter.involvedTagNames
+      inUse -- filter.involvedTagNames
+   }
+
+   /**
+    * @param tagname A tag name
+    * @param range An optional time range constraint.
+    * @return  The values associated with the given tag name, optionally in the specified time range.
+    */
+   def getTagValues(tagname: String, range: Option[AbsoluteQueryDateRange]): Set[String] =
+   {
+      val staticValues = session.execute(
+         staticValueQuery.bind().setString("tagname", tagname)
+      ).asScala.map(row => row.getString("tagvalue")).toSet
+
+      val dynamicValues = range match {
+         case None => session.execute(
+            dynamicGlobalValueQuery.bind("tagname", tagname)
+         ).asScala.map(row => row.getString("tagvalue")).toSet
+
+         case Some(QueryDateRange(start, end)) => {   // With time range
+            val shards = cassandra.sharder.shards(start, end)
+            shards.par.map(shard => session.execute(
+               dynamicShardedValueQuery.bind()
+                  .setString("tagname", tagname)
+                  .setString("shard", shard)
+            ).asScala
+               .map(row => row.getString("tagvalue"))
+               .toSet
+            ).reduce( (v1, v2) => v1 union v2)
+         }
+      }
+
+      staticValues union dynamicValues
    }
 
    /**
@@ -107,91 +155,12 @@ case class TagManager(cassandra: Cassandra, conf: Config) extends LazyLogging
     */
    def suggestTagValues(context: TagValueQuery): Set[String] = context.filter match
    {
-      case None => { // No filter
-
-         val staticValues = session.execute(
-            QueryBuilder
-               .select("tagvalue")
-               .from(keyspace, "reverse_static_tagset")
-               .where(QueryBuilder.eq("tagname", context.tagname))
-               .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
-         ).asScala.map(row => row.getString("tagvalue")).toSet
-
-         val dynamicValues = context.range match {
-            case None => session.execute(
-                  QueryBuilder
-                     .select("tagvalue")
-                     .from(keyspace, "reverse_dynamic_tagset")
-                     .where(QueryBuilder.eq("tagname", context.tagname))
-                     .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
-               ).asScala.map(row => row.getString("tagvalue")).toSet
-
-            case Some(QueryDateRange(start, end)) => {   // With time range
-               val shards = cassandra.sharder.shards(start, end)
-               shards.par.map(shard => session.execute(
-                     QueryBuilder.select("tagvalue")
-                        .from(keyspace, "reverse_sharded_dynamic_tagset")
-                        .where(QueryBuilder.eq("tagname", context.tagname))
-                        .and(QueryBuilder.eq("shard", shard))
-                        .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
-                  ).asScala
-                  .map(row => row.getString("tagvalue"))
-                  .toSet
-               ).reduce( (v1, v2) => v1 union v2)
-            }
-         }
-
-         staticValues union dynamicValues
-      }
+      case None => getTagValues(context.tagname, context.range)
 
       case Some(filter) => {
-         val metrics = metricManager.getMetrics(filter, context.range)
+         val candidates = timeSeriesManager.getCandidateTimeSeries(TimeSeriesQuery(None, filter, context.range))
 
-         val staticValues = metrics.par.map(metric => session.execute(
-               QueryBuilder
-                  .select("tagvalue")
-                  .from(keyspace, "static_tagset")
-                  .where(QueryBuilder.eq("metric", metric))
-                  .and(QueryBuilder.eq("tagname", context.tagname))
-                  .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
-            ).asScala
-            .map(row => row.getString("tagvalue"))
-            .toSet
-         ).reduce( (v1, v2) => v1 union v2)
-
-         val dynamicValues = context.range match {
-            case None => metrics.par.map(metric => session.execute(
-               QueryBuilder
-                  .select("tagvalue")
-                  .from(keyspace, "dynamic_tagset")
-                  .where(QueryBuilder.eq("metric", metric))
-                  .and(QueryBuilder.eq("tagname", context.tagname))
-                  .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
-               ).asScala
-               .map(row => row.getString("tagvalue"))
-               .toSet
-            ).reduce( (v1, v2) => v1 union v2)
-
-            case Some(QueryDateRange(start, end)) => {
-               val shards = cassandra.sharder.shards(start, end)
-
-               metrics.par.map(metric => shards.par.map(shard => {
-                  cassandra.session.execute(
-                     QueryBuilder.select("tagvalue")
-                        .from(keyspace, "sharded_dynamic_tagset")
-                        .where(QueryBuilder.eq("metric", metric))
-                        .and(QueryBuilder.eq("shard", shard))
-                        .and(QueryBuilder.eq("tagname", context.tagname))
-                        .setConsistencyLevel(ConsistencyLevel.LOCAL_ONE)
-                  ).asScala
-                     .map(row => row.getString("tagvalue"))
-                     .toSet
-               })
-               ).flatten.reduce( (v1, v2) => v1 union v2)
-            }
-         }
-
-         staticValues union dynamicValues
+         candidates.flatMap(c => c.tagvalues(context.tagname))
       }
    }
 }

@@ -2,9 +2,10 @@ package be.cetic.tsorage.hub.grafana.backend
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{Directives, StandardRoute}
-import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
+import be.cetic.tsorage.common.DateTimeConverter
+import be.cetic.tsorage.hub.Cassandra
 import be.cetic.tsorage.hub.filter.MetricManager
-import be.cetic.tsorage.hub.grafana.jsonsupport.{AnnotationObject, AnnotationRequest, AnnotationResponse, DataPoints, GrafanaJsonSupport, QueryRequest, QueryResponse, SearchRequest, SearchResponse}
+import be.cetic.tsorage.hub.grafana.jsonsupport._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -20,7 +21,7 @@ class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends
    * @return the response to the search request (in this case, the name of metrics).
    */
   def responseSearchRequest(request: Option[SearchRequest]): Try[SearchResponse] = {
-    Success(SearchResponse(metricManager.getAllMetrics().toSeq))
+    Success(SearchResponse(metricManager.getAllMetrics().toSeq.map(_.name)))
   }
 
   /**
@@ -266,7 +267,7 @@ class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends
     val metrics = request.targets.flatMap(_.target)
 
     // Check if all metrics in `metrics` exist.
-    if (!metrics.toSet.subsetOf(metricManager.getAllMetrics())) {
+    if (!metrics.toSet.subsetOf(metricManager.getAllMetrics().map(_.name))) {
       return Failure(new NoSuchElementException(s"All metrics in ${request.targets} must appear in the database."))
     }
 
@@ -294,8 +295,11 @@ class GrafanaBackend(cassandra: Cassandra, metricManager: MetricManager) extends
 
         // Retrieve the data points from the metric data.
         val dataPoints = metricData.map(singleData => {
-          val (datetime, value) = singleData
+          val datetime = singleData.datetime
+          val value = singleData.value
+
           val timestamp = DateTimeConverter.localDateTimeToEpochMilli(datetime)
+
           Tuple2[BigDecimal, Long](value, timestamp)
         })
 

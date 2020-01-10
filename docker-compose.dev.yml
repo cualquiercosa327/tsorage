@@ -5,3 +5,6 @@ services:
   cassandra:
     ports:
       - 9042:9042
+  ingestion:
+    ports:
+      - 8080:8080

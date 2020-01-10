@@ -6,6 +6,5 @@ trait FloatMessageJsonSupport extends MessageJsonSupport
 {
    implicit val messageFormat = jsonFormat6(DoubleMessage)
    implicit val bodyFormat = jsonFormat1(DoubleBody)
-   implicit val preparedMessageFormat = jsonFormat4(PreparedDoubleMessage)
    implicit val checkRunMessageFormat = jsonFormat6(CheckRunMessage)
 }

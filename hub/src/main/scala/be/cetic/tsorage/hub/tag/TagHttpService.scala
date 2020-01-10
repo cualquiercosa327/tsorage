@@ -1,23 +1,17 @@
 package be.cetic.tsorage.hub.tag
 
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-
 import akka.event.Logging
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.directives.DebuggingDirectives
-import be.cetic.tsorage.common.Cassandra
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.hub.HubConfig
-import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, MetricManager, TagManager}
+import be.cetic.tsorage.hub.{Cassandra, HubConfig}
+import be.cetic.tsorage.hub.filter.{FilterJsonProtocol, TagManager}
 import be.cetic.tsorage.hub.metric.MetricSearchQuery
-import be.cetic.tsorage.hub.tag.TagValueQuery
-import com.datastax.driver.core.Session
 import com.typesafe.scalalogging.LazyLogging
+import spray.json._
 
 import scala.concurrent.ExecutionContext
-import spray.json._
 
 /**
  * A service for managing tags.

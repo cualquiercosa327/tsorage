@@ -1,11 +1,34 @@
 package be.cetic.tsorage.hub.filter
 
+import be.cetic.tsorage.hub.CandidateTimeSeries
+
+/**
+ * Evaluated filter, ie a filter that has been converted into its value
+ * according to the current state of the database.
+ */
+case class EvaluatedFilter(candidates: Set[CandidateTimeSeries])
+{
+   def filter(f: Filter): EvaluatedFilter = EvaluatedFilter(candidates.filter(c => c.accept(f)))
+   def union(other: EvaluatedFilter) = EvaluatedFilter(candidates union other.candidates)
+}
+
 sealed trait Filter
 {
    /**
-    * @return The names of the tags explicitly involved in the filter.
+    * @return  All the tag names used in the filter.
     */
    def involvedTagNames: Set[String]
+}
+
+/**
+ * A filter accepting everything.
+ */
+object AllFilter extends Filter
+{
+   /**
+    * @return All the tag names used in the filter.
+    */
+   override def involvedTagNames: Set[String] = Set.empty
 }
 
 /**

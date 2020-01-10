@@ -3,15 +3,13 @@ package be.cetic.tsorage.processor.datatype
 import java.time.LocalDateTime
 import java.util.Date
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Flow, GraphDSL}
+import be.cetic.tsorage.common.FutureManager
 import be.cetic.tsorage.processor.aggregator.data.DataAggregation
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.flow.FutureManager
 import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate, TimeAggregatorRawUpdate}
 import be.cetic.tsorage.processor.{DAO, ProcessorConfig}
-import com.datastax.driver.core.{ConsistencyLevel, SimpleStatement, UDTValue, UserType}
+import com.datastax.driver.core.{UDTValue, UserType}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
@@ -24,19 +22,19 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
   */
 abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
 {
-   def colname: String
-   def `type`: String
+   val colname: String
+   val `type`: String
 
-   protected val rawUDTType : UserType = Cassandra.session
+   protected lazy val rawUDTType : UserType = Cassandra.session
       .getCluster
       .getMetadata
       .getKeyspace(ProcessorConfig.rawKS)
       .getUserType(s"${`type`}")
 
-   protected val aggUDTType : UserType = Cassandra.session
+   protected lazy val aggUDTType : UserType = Cassandra.session
       .getCluster
       .getMetadata
-      .getKeyspace(ProcessorConfig.rawKS)
+      .getKeyspace(ProcessorConfig.aggKS)
       .getUserType(s"${`type`}")
 
    def asJson(value: T): JsValue
@@ -65,12 +63,12 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
       val coveringShards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       val queryStatements = coveringShards.map(shard =>
-         DAO.getRawShunkValues(update.metric, shard, shunkStart, shunkEnd, update.tagset, colname).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+         DAO.getRawShunkValues(update.ts, shard, shunkStart, shunkEnd, update.`type`)
       )
 
       Future.reduceLeft(queryStatements.map(statement =>
          resultSetFutureToFutureResultSet(Cassandra.session.executeAsync(statement))
-            .map(rs => rs.asScala.map(row => (row.getTimestamp("datetime_"), fromUDTValue(row.getUDTValue(colname))))
+            .map(rs => rs.asScala.map(row => (row.getTimestamp("datetime"), fromUDTValue(row.getUDTValue(colname))))
             ))
       )( (l1, l2) => l1 ++ l2)
    }
@@ -121,24 +119,23 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
       val coveringShards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       val statements = coveringShards.map(shard => DAO.getAggShunkValues(
-         update.metric,
+         update.ts,
          shard,
          timeAggregator.previousName,
          update.aggregation,
-         colname,
+         update.`type`,
          shunkStart,
-         shunkEnd,
-         update.tagset
-      ).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
+         shunkEnd
+      ))
       // logger.info(s"QUERIES: ${queries.mkString(" ; ")}")
 
       val results = statements.par
          .map(statement => Cassandra.session.execute(statement).all().asScala)
          .reduce((l1, l2) => l1 ++ l2)
-         .map(row => (row.getTimestamp("datetime_"), fromUDTValue(row.getUDTValue(colname)))).toIterable
+         .map(row => (row.getTimestamp("datetime"), fromUDTValue(row.getUDTValue(colname)))).toIterable
 
       val value = dataAggregation.aggAggregation(results)
-      new AggUpdate(update.metric, update.tagset, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
+      new AggUpdate(update.ts, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
    }
 
    final def asRawUdtValue(value: JsValue): UDTValue = asRawUdtValue(fromJson(value))
@@ -150,7 +147,8 @@ object DataTypeSupport
    val availableSupports: Map[String, DataTypeSupport[_]] = List(
       DoubleSupport,
       LongSupport,
-      DateDoubleSupport
+      DateDoubleSupport,
+      Position2DSupport
    ).map(support => support.`type` -> support).toMap
 
    def inferSupport(`type`: String) = availableSupports(`type`)

@@ -2,20 +2,15 @@ package be.cetic.tsorage.processor.consumer
 
 import java.time.Duration
 import java.util
-import scala.collection.JavaConverters._
 
+import akka.actor.ActorSystem
+import akka.kafka.ConsumerSettings
+import akka.stream.ActorMaterializer
 import be.cetic.tsorage.common.codec.Codec
 import be.cetic.tsorage.common.messaging.Message
-import akka.actor.ActorSystem
-import akka.kafka.{ConsumerSettings, ProducerSettings}
-import akka.serialization.SerializationExtension
-import akka.stream.ActorMaterializer
-import be.cetic.tsorage.processor.consumer.Consumer.{consumer, i}
-import com.google.protobuf.util.raw.SENSOR
-import org.apache.kafka.clients.consumer.ConsumerRecords
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.serialization.{ByteArrayDeserializer, ByteArraySerializer, StringDeserializer, StringSerializer}
-import spray.json.JsValue
+import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
+
+import scala.collection.JavaConverters._
 
 
 object Consumer1 {

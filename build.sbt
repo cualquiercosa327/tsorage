@@ -1,5 +1,7 @@
 import Dependencies.Version
 import sbt.Keys.libraryDependencies
+import com.typesafe.sbt.packager.docker.Cmd
+import NativePackagerHelper._
 
 name := "tsorage"
 
@@ -11,7 +13,18 @@ val commonSettings = Seq(
    organization := "cetic",
    version := "1.0.0",
    scalaVersion := "2.12.10",
-  )
+   // Docker information.
+   //dockerRepository := Some("ceticasbl/tsorage")
+   dockerBaseImage := "openjdk:12-alpine",
+   dockerUpdateLatest := true,
+   //dockerAlias := DockerAlias(dockerRepository.value, dockerUsername.value, name.value),
+   dockerUsername := Some("ceticasbl"),
+   dockerCommands ++= Seq(
+     Cmd("USER", "root"),
+     Cmd("ADD", "https://raw.githubusercontent.com/eficode/wait-for/master/wait-for", "."),
+     Cmd("RUN", "chmod", "+x", "wait-for")
+   )
+)
 
 //PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
 /*
@@ -19,9 +32,7 @@ PB.targets in Compile := Seq(
   scalapb.gen() -> (sourceManaged in Compile).value/ "protos",
 )
 
- */
-
-
+*/
 
 //scalapb.compiler.Version.scalapbVersion
 val akkaVersion = "10.1.10"
@@ -37,12 +48,9 @@ val commonDependencies = Seq(
    //"com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     "com.typesafe.play" %% "play-json" % "2.7.4",
    "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
-  "com.thesamet.scalapb" %% "scalapb-runtime" % "0.9.5",
+   "com.thesamet.scalapb" %% "scalapb-runtime" % "0.9.5",
    "org.apache.commons" % "commons-collections4" % "4.4",
-"com.thesamet.scalapb" %% "scalapb-json4s" % "0.9.3"
-
-
-
+   "com.thesamet.scalapb" %% "scalapb-json4s" % "0.9.3"
 )
 
 val cassandraDependencies = Seq(
@@ -52,23 +60,28 @@ val cassandraDependencies = Seq(
 )
 
 lazy val common = (project in file("common"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
+   .enablePlugins(DockerPlugin, AshScriptPlugin)
    .settings(
-      name := "common",
+      name := "tsorage-common",
+      packageName := "tsorage-common",
       commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
          "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
          "ch.qos.logback" % "logback-classic" % "1.2.3"
       )
+
    )
 
 lazy val hub = (project in file("hub"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
+   .enablePlugins(DockerPlugin, AshScriptPlugin)
    .settings(
-      name := "hub",
+      name := "tsorage-hub",
+      packageName := "tsorage-hub",
       commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
@@ -78,29 +91,34 @@ lazy val hub = (project in file("hub"))
    ).dependsOn(common)
 
 lazy val ingestion = (project in file("ingestion"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
+   .enablePlugins(DockerPlugin, AshScriptPlugin)
    .settings(
-      name := "ingestion",
+      name := "tsorage-ingestion",
+      packageName := "tsorage-ingestion",
       commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
             "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-            "ch.qos.logback" % "logback-classic" % "1.2.3"
+            "ch.qos.logback" % "logback-classic" % "1.2.3",
+            "com.lightbend.akka" %% "akka-stream-alpakka-mqtt-streaming" % "1.1.2"     // MQTT
          )
    ).dependsOn(common)
 
 lazy val processor = (project in file("processor"))
-   //.enablePlugins(DockerPlugin, JavaAppPackaging, GitVersioning)
-   .settings(
-      name := "processor",
-      commonSettings,
-      libraryDependencies := commonDependencies ++
-         cassandraDependencies ++
-         Seq(
-         "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+  .enablePlugins(DockerPlugin, AshScriptPlugin)
+  .settings(
+    name := "tsorage-processor",
+    packageName := "tsorage-processor",
+    commonSettings,
+    mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
+    libraryDependencies := commonDependencies ++
+      cassandraDependencies ++
+      Seq(
+        "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
       )
-   ).dependsOn(common)
+  ).dependsOn(common)
 
 
 lazy val root = (project in file("."))

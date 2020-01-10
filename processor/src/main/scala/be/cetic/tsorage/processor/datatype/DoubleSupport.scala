@@ -11,8 +11,8 @@ import spray.json.{JsNumber, JsValue}
   */
 object DoubleSupport extends DataTypeSupport[Double]
 {
-   override val colname = "value_double_"
-   override def `type` = "tdouble"
+   override val colname = "value_double"
+   override val `type` = "tdouble"
 
    override def asJson(value: Double): JsValue = JsNumber(value)
    override def fromJson(value: JsValue): Double = value match {

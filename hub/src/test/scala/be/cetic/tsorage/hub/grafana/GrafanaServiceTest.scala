@@ -1,13 +1,13 @@
 package be.cetic.tsorage.hub.grafana
 
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.MediaTypes.`application/json`
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import be.cetic.tsorage.common.{Cassandra, DateTimeConverter}
-import be.cetic.tsorage.hub.{HubConfig, TestDatabase}
+import be.cetic.tsorage.common.DateTimeConverter
 import be.cetic.tsorage.hub.filter.MetricManager
 import be.cetic.tsorage.hub.grafana.jsonsupport._
+import be.cetic.tsorage.hub.{Cassandra, HubConfig, TestDatabase}
 import com.typesafe.config.{Config, ConfigValueFactory}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 import spray.json._
@@ -54,7 +54,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
       Get(s"${prefix}/grafana/search") ~> getMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().map(_.name).toSet
       }
 
       val request = SearchRequest(Some("Temperature"))
@@ -62,7 +62,7 @@ class GrafanaServiceTest extends WordSpec with Matchers with BeforeAndAfterAll w
         postMetricNamesRoute ~> check {
         val response = responseAs[SearchResponse]
 
-        response.targets.toSet shouldEqual metricManager.getAllMetrics().toSet
+        response.targets.toSet shouldEqual metricManager.getAllMetrics().map(_.name).toSet
       }
     }
 

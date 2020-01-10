@@ -13,7 +13,7 @@ trait FilterJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
          case Not(f) => new JsArray(Vector(JsString("not"), write(f)))
          case TagFilter(name, value) => JsArray(Vector(JsString("="), JsString(name), JsString(value)))
          case TagExist(name) => JsArray(Vector(JsString("+"), JsString(name)))
-
+         case AllFilter => JsArray(Vector(JsString("all")))
       }
 
       override def read(json: JsValue): Filter = json match {
@@ -22,6 +22,7 @@ trait FilterJsonProtocol extends DefaultJsonProtocol with SprayJsonSupport
          case JsArray(Vector(JsString("not"), f)) => Not(read(f))
          case JsArray(Vector(JsString("="), JsString(a), JsString(b))) => TagFilter(a, b)
          case JsArray(Vector(JsString("+"), JsString(name))) => TagExist(name)
+         case JsArray(Vector(JsString("all"))) => AllFilter
       }
    }
 }

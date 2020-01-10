@@ -1,24 +1,20 @@
 package be.cetic.tsorage.processor.database
 
 import java.sql.Timestamp
-import java.time.{LocalDateTime, ZoneOffset}
-import java.util.{Collections, Date}
+import java.time.ZoneOffset
 
-import be.cetic.tsorage.common.sharder.{DaySharder, MonthSharder, Sharder}
+import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
+import be.cetic.tsorage.processor.update.AggUpdate
 import be.cetic.tsorage.processor.{Message, ProcessorConfig}
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.datastax.driver.core.querybuilder.QueryBuilder.insertInto
-import com.datastax.driver.core.{BatchStatement, Cluster, ConsistencyLevel, PreparedStatement, ResultSet, ResultSetFuture, Session}
+import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 import com.typesafe.scalalogging.LazyLogging
 
-import collection.JavaConverters._
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
-import scala.language.implicitConversions
-import scala.language.postfixOps
-import scala.util.Try
+import scala.language.{implicitConversions, postfixOps}
 
 
 object Cassandra extends LazyLogging {
@@ -46,7 +42,8 @@ object Cassandra extends LazyLogging {
   }
 
   // (tagnames, type) -> prepared statement
-  private var rawStatementcache: Map[(Set[String], String), PreparedStatement] = Map()
+  private var rawStatementcache: Map[String, PreparedStatement] = Map()
+  private var aggStatementCache: Map[String, PreparedStatement] = Map()
 
   val session: Session = Cluster.builder
     .addContactPoint(cassandraHost)
@@ -59,7 +56,7 @@ object Cassandra extends LazyLogging {
 
   private def preparedStatementRawInsert(msg: Message): PreparedStatement =
   {
-    val key = (msg.tagset.keySet, msg.`type`)
+    val key = msg.`type`
 
     if (rawStatementcache contains key)
     {
@@ -69,17 +66,48 @@ object Cassandra extends LazyLogging {
     {
       val support = DataTypeSupport.inferSupport(msg.`type`)
 
-      val baseStatement = QueryBuilder
+      val statement = QueryBuilder
          .insertInto(rawKS, "observations")
-         .value("metric_", QueryBuilder.bindMarker("metric"))
-         .value("shard_", QueryBuilder.bindMarker("shard"))
-         .value("datetime_", QueryBuilder.bindMarker("datetime"))
+         .value("metric", QueryBuilder.bindMarker("metric"))
+         .value("tagset", QueryBuilder.bindMarker("tagset"))
+         .value("shard", QueryBuilder.bindMarker("shard"))
+         .value("datetime", QueryBuilder.bindMarker("datetime"))
          .value(support.colname, QueryBuilder.bindMarker("value"))
 
-      val statement = msg.tagset.foldLeft(baseStatement)((base, tag) => base.value(tag._1, QueryBuilder.bindMarker(tag._1)))
       val prepared = session.prepare(statement)
 
       rawStatementcache = rawStatementcache ++ Map(key -> prepared)
+
+      prepared
+    }
+  }
+
+  private def preparedStatementAggInsert(update: AggUpdate): PreparedStatement =
+  {
+    val key = update.`type`
+
+    if (aggStatementCache contains key)
+    {
+      aggStatementCache(key)
+    }
+    else
+    {
+      val support = DataTypeSupport.inferSupport(update.`type`)
+
+      val statement = QueryBuilder
+         .insertInto(aggKS, "observations")
+         .value("metric", QueryBuilder.bindMarker("metric"))
+         .value("tagset", QueryBuilder.bindMarker("tagset"))
+         .value("shard", QueryBuilder.bindMarker("shard"))
+         .value("datetime", QueryBuilder.bindMarker("datetime"))
+         .value("interval", QueryBuilder.bindMarker("interval"))
+         .value("aggregator", QueryBuilder.bindMarker("aggregator"))
+         .value(support.colname, QueryBuilder.bindMarker("value"))
+
+      val prepared = session.prepare(statement)
+                            .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
+
+      aggStatementCache = aggStatementCache ++ Map(key -> prepared)
 
       prepared
     }
@@ -104,13 +132,12 @@ object Cassandra extends LazyLogging {
 
     val statements = msg.values.map(record =>
       {
-        val base = prepared.bind()
+        prepared.bind()
            .setString("metric", msg.metric)
+           .setMap("tagset", msg.tagset.asJava)
            .setString("shard", sharder.shard(record._1))
            .setTimestamp("datetime", Timestamp.from(record._1.atOffset(ZoneOffset.UTC).toInstant))
            .setUDTValue("value", support.asRawUdtValue(record._2))
-
-        msg.tagset.foldLeft(base)( (b, tag) => b.setString(tag._1, tag._2))
       }
     )
 
@@ -123,23 +150,17 @@ object Cassandra extends LazyLogging {
 
   def submitAggUpdateAsync(update: AggUpdate)(implicit context: ExecutionContextExecutor): Future[AggUpdate] =
   {
-    val ts = Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant)
     val support = DataTypeSupport.inferSupport(update)
 
-    val baseStatement = insertInto(aggKS, "observations")
-       .value("metric_", update.metric)
-       .value("shard_", Cassandra.sharder.shard(update.datetime))
-       .value("interval_", update.interval)
-       .value("aggregator_", update.aggregation)
-       .value("datetime_", ts)
-       .value(support.colname, support.asAggUdtValue(update.value))
+    val bound = preparedStatementAggInsert(update).bind()
+       .setString("metric", update.ts.metric)
+       .setMap("tagset", update.ts.tagset.asJava)
+       .setString("shard", sharder.shard(update.datetime))
+       .setString("interval", update.interval)
+       .setString("aggregator", update.aggregation)
+       .setTimestamp("datetime", Timestamp.from(update.datetime.atOffset(ZoneOffset.UTC).toInstant))
+       .setUDTValue("value", support.asAggUdtValue(update.value))
 
-    val statement = update.tagset
-       .foldLeft(baseStatement)((st, tag) => st.value(tag._1, tag._2))
-       .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
-
-    //logger.debug(s"Cassandra submits agg value ${statement}")
-
-    resultSetFutureToScala(session.executeAsync(statement)).map(rs => update)
+    resultSetFutureToScala(session.executeAsync(bound)).map(rs => update)
   }
 }

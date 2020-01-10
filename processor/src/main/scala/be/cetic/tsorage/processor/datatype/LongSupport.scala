@@ -9,8 +9,8 @@ import spray.json.{JsNumber, JsValue}
   */
 object LongSupport extends DataTypeSupport[Long]
 {
-   override val colname = "value_long_"
-   override def `type` = "tlong"
+   override val colname = "value_long"
+   override val `type` = "tlong"
 
    override def rawAggregations: List[DataAggregation[Long, _]] = List()
 
