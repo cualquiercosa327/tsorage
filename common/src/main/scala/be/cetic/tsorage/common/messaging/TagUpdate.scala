@@ -1,4 +1,4 @@
-package be.cetic.tsorage.processor.update
+package be.cetic.tsorage.common.messaging
 
 /**
  * A raw update, simplified in order to only show

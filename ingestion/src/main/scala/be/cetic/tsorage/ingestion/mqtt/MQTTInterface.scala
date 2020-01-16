@@ -9,6 +9,7 @@ import akka.stream.alpakka.mqtt.streaming.{Command, ConnAck, ConnAckFlags, ConnA
 import akka.stream.alpakka.mqtt.streaming.scaladsl.{ActorMqttServerSession, Mqtt}
 import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, Sink, Source, Tcp}
 import akka.util.ByteString
+import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.Message
 import be.cetic.tsorage.ingestion.IngestionConfig
 import be.cetic.tsorage.ingestion.http.HTTPInterface.{conf, system}
@@ -31,7 +32,7 @@ import scala.util.Try
  *
  * mqtt pub -h localhost -p 1883 --topic "timeseries" --message "{\"metric\": \"my-sensor\", \"tagset\": {\"source\": \"mqtt\", \"quality\": \"good\", \"owner\": \"nsa\"}, \"type\": \"tdouble\", \"values\": [[\"2019-12-09T12:43:12\", 123.456],[\"2019-12-09T12:44:27\", 789.123]]}" -V 3
  */
-object MQTTInterface extends LazyLogging
+object MQTTInterface extends LazyLogging with MessageJsonSupport
 {
    implicit val system = ActorSystem("mqtt-interface")
    implicit val materializer = ActorMaterializer()
@@ -90,12 +91,6 @@ object MQTTInterface extends LazyLogging
                }
             )
 
-      // Towards Kafka
-      val kafkaSink = Flow[String]
-         .map(msg => msg.parseJson.convertTo[Message](Message.messageFormat)) // To Message
-         .map(value => new ProducerRecord[String, String](kafkaTopic, value.toJson.compactPrint))
-         .to(Producer.plainSink(producerSettings))
-
       val (bound: Future[Tcp.ServerBinding], server: UniqueKillSwitch) = bindSource
          .viaMat(KillSwitches.single)(Keep.both)
          .map(value => value match {
@@ -103,7 +98,7 @@ object MQTTInterface extends LazyLogging
             case _ => None
          })
          .filter(_.isDefined).map(_.get)
-         .map(jvalue => Try(jvalue.convertTo[Message](Message.messageFormat)).toEither.left.map(t => {logger.warn(t.getMessage); jvalue})) // To Either[Json, Message]
+         .map(jvalue => Try(jvalue.convertTo[Message]).toEither.left.map(t => {logger.warn(t.getMessage); jvalue})) // To Either[Json, Message]
          .map(msg => msg match {
             case Left(value: JsValue) => {logger.warn(s"The following MQTT message cannot be converted to Message: ${value}");  None }
             case Right(m: Message) => Some(m)

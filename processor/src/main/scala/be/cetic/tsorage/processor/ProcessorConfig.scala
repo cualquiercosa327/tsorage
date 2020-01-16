@@ -1,5 +1,6 @@
 package be.cetic.tsorage.processor
 
+import be.cetic.tsorage.common.messaging.Message
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import com.typesafe.scalalogging.LazyLogging
@@ -57,7 +58,7 @@ object ProcessorConfig extends LazyLogging
    {
       val names = conf.getStringList("aggregators").asScala
 
-      val aggs = names.scanLeft(("raw", Option.empty[TimeAggregator])){ case ((previousName, previousAgg), name) => (name, Some(TimeAggregator(name, previousName))) }
+      val aggs = names.scanLeft(("raw", Option.empty[TimeAggregator])){ case ((previousName, _), name) => (name, Some(TimeAggregator(name, previousName))) }
       aggs.toList.flatMap(agg => agg._2)
    }
 

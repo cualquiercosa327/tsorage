@@ -4,7 +4,7 @@ import java.time.{Duration, LocalDateTime}
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import be.cetic.tsorage.processor.Message
+import be.cetic.tsorage.common.messaging.Message
 import spray.json.JsNumber
 
 import scala.util.Random

@@ -3,12 +3,12 @@ package be.cetic.tsorage.processor.database
 import java.sql.Timestamp
 import java.time.ZoneOffset
 
+import be.cetic.tsorage.common.messaging.{AggUpdate, Message, Observation}
 import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import be.cetic.tsorage.processor.update.AggUpdate
-import be.cetic.tsorage.processor.{Message, ProcessorConfig}
+import be.cetic.tsorage.processor.ProcessorConfig
+import com.datastax.driver.core.{BatchStatement, Cluster, ConsistencyLevel, PreparedStatement, ResultSet, ResultSetFuture, Session}
 import com.datastax.driver.core.querybuilder.QueryBuilder
-import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures}
 import com.typesafe.scalalogging.LazyLogging
 
@@ -54,18 +54,14 @@ object Cassandra extends LazyLogging {
 
   val sharder = Sharder(conf.conf.getString("sharder"))
 
-  private def preparedStatementRawInsert(msg: Message): PreparedStatement =
+  private def preparedStatementObservationInsert(support: DataTypeSupport[_]) =
   {
-    val key = msg.`type`
-
-    if (rawStatementcache contains key)
+    if (rawStatementcache contains support.`type`)
     {
-      rawStatementcache(key)
+      rawStatementcache(support.`type`)
     }
     else
     {
-      val support = DataTypeSupport.inferSupport(msg.`type`)
-
       val statement = QueryBuilder
          .insertInto(rawKS, "observations")
          .value("metric", QueryBuilder.bindMarker("metric"))
@@ -76,10 +72,16 @@ object Cassandra extends LazyLogging {
 
       val prepared = session.prepare(statement)
 
-      rawStatementcache = rawStatementcache ++ Map(key -> prepared)
+      rawStatementcache = rawStatementcache ++ Map(support.`type` -> prepared)
 
       prepared
     }
+  }
+
+  private def preparedStatementRawInsert(msg: Message): PreparedStatement =
+  {
+    val support = DataTypeSupport.inferSupport(msg.`type`)
+    preparedStatementObservationInsert(support)
   }
 
   private def preparedStatementAggInsert(update: AggUpdate): PreparedStatement =
@@ -126,6 +128,8 @@ object Cassandra extends LazyLogging {
    */
   def submitMessageAsync(msg: Message)(implicit context: ExecutionContextExecutor): Future[Message] =
   {
+    logger.debug(s"Submit message ${msg}")
+
     val support = DataTypeSupport.inferSupport(msg.`type`)
 
     val prepared = preparedStatementRawInsert(msg)
@@ -162,5 +166,25 @@ object Cassandra extends LazyLogging {
        .setUDTValue("value", support.asAggUdtValue(update.value))
 
     resultSetFutureToScala(session.executeAsync(bound)).map(rs => update)
+  }
+
+  /**
+   * Inserts a raw observation to Cassandra.
+   * @param obs   The observation to insert.
+   * @param context
+   * @return a Future of obs, that becomes reality once the observation has been inserted.
+   */
+  def submitObservationAsync(obs: Observation)(implicit context: ExecutionContextExecutor): Future[Observation] =
+  {
+    val support = DataTypeSupport.inferSupport(obs.`type`)
+
+    val bound = preparedStatementObservationInsert(support).bind()
+       .setString("metric", obs.metric)
+       .setMap("tagset", obs.tagset.asJava)
+       .setString("shard", sharder.shard(obs.datetime))
+       .setTimestamp("datetime", Timestamp.from(obs.datetime.atOffset(ZoneOffset.UTC).toInstant))
+       .setUDTValue("value",support.asRawUdtValue(obs.value))
+
+    resultSetFutureToScala(session.executeAsync(bound)).map(rs => obs)
   }
 }

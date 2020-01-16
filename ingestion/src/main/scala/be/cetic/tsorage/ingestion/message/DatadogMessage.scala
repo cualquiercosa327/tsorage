@@ -9,7 +9,7 @@ import spray.json.JsNumber
 /**
  * A message, provided by an external, Datadog-compliant client.
  */
-case class DoubleMessage(
+case class DatadogMessage(
                           metric: String,
                           points: List[(Double, Double)], // The first term of the pair is the Unix timestamp, in second (with optional decimal)
                           `type`: Option[String],

@@ -2,10 +2,12 @@ package be.cetic.tsorage.processor
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.common.json.MessageJsonSupport
+import be.cetic.tsorage.common.messaging.Message
 import org.scalatest.{FlatSpec, Matchers}
 import spray.json._
 
-class MessageTest extends FlatSpec with Matchers with DefaultJsonProtocol
+class MessageTest extends FlatSpec with Matchers with DefaultJsonProtocol with MessageJsonSupport
 {
    "A Double Message" should "be correctly parsed from JSON" in {
       val content =
@@ -18,7 +20,7 @@ class MessageTest extends FlatSpec with Matchers with DefaultJsonProtocol
            | }
            |""".stripMargin
 
-      val result = Message.messageFormat.read(content.parseJson)
+      val result = content.parseJson.convertTo[Message]
 
       result shouldBe Message(
          "my_sensor",

@@ -1,95 +1,70 @@
 package be.cetic.tsorage.processor.flow
 
+import java.time.LocalDateTime
+
 import akka.NotUsed
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge}
-import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.processor.{Message, Observation}
+import akka.actor.ActorSystem
+import akka.kafka.ProducerSettings
+import akka.stream.{ActorMaterializer, ClosedShape, FlowShape, SinkShape}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Sink}
+import be.cetic.tsorage.common.json.{AggUpdateJsonSupport, ObservationJsonSupport}
+import be.cetic.tsorage.common.{TimeSeries, messaging}
+import be.cetic.tsorage.common.messaging.{AggUpdate, InformationVector, Message, Observation}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.datatype.DataTypeSupport
-import be.cetic.tsorage.processor.update.{AggUpdate, TimeAggregatorRawUpdate}
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.kafka.clients.producer.ProducerRecord
+import GraphDSL.Implicits._
+import be.cetic.tsorage.processor.aggregator.followup.AggAggregator
+import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawAggregator}
+import be.cetic.tsorage.processor.database.Cassandra
+import be.cetic.tsorage.processor.update.{ShardedTagsetUpdate, TimeAggregatorRawUpdate}
 
 import scala.concurrent.ExecutionContextExecutor
-import scala.concurrent.duration._
+import spray.json._
 
 /**
   * A factory for preparing the global processing graph
   */
 object GlobalProcessingGraphFactory extends LazyLogging
+   with ObservationJsonSupport
 {
-   /*
-   def createGraph(timeAggregators: List[TimeAggregator])(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-      import GraphDSL.Implicits._
+   private val tagUpdate = TagUpdateBlock(Cassandra.session)
 
-      val cassandraFlow = new CassandraFlow(Cassandra.sharder)
+   def createGraph(
+                     timeAggregators: List[TimeAggregator],
+                     obsObsDerivators: List[Observation => Seq[Observation]],
+                     obsAggDerivators: List[Observation => Seq[AggUpdate]],
+                     followUpAggregators: List[AggAggregator],
+                     aggObsDerivators: List[AggUpdate => Seq[Observation]],
+                     msgAggDerivators: List[SimpleRawAggregator],
+                     kafkaSink: Sink[ProducerRecord[String, String], _]
+                  )(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
 
-      // A - Check whether a support is available for this message; log invalid types
-      val messageValidation = builder.add(Flow[Message]
-         .map(msg => DataTypeSupport.availableSupports.get(msg.`type`) match {
-            case None => { logger.warn(s"No support found for ${msg}"); None }
-            case Some(support) => Some(msg)
-         }).filter(_.isDefined).map(_.get))
+      val messageBlock = builder.add(MessageBlock.createGraph(timeAggregators.headOption, msgAggDerivators).async)
+      val observationBlock = builder.add(ObservationBlock.createGraph(timeAggregators.headOption, List(), List()).async)
+      val aggregationBlock = builder.add(AggregationBlock.createGraph(followUpAggregators, timeAggregators, List()).async)
+      val tagUpdateBlock = builder.add(tagUpdate.createGraph)
 
-      FlowShape(messageValidation.in, messageValidation.out)
-   }
-    */
+      val tuCollector = builder.add(Merge[ShardedTagsetUpdate](3).async)
+      val kafkaCollector = builder.add(Merge[ProducerRecord[String, String]](2).async)
+      val auCollector = builder.add(Merge[AggUpdate](2).async)
 
-   def createGraph(timeAggregators: List[TimeAggregator])(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-      import GraphDSL.Implicits._
+      messageBlock.tu ~> tuCollector
+      messageBlock.au ~> auCollector
+      messageBlock.processedMessage ~> observationBlock.messageIn
 
-      // Define internal flow shapes
+      aggregationBlock.kafka ~> kafkaCollector
+      aggregationBlock.tu ~> tuCollector
+      aggregationBlock.processedAU ~> observationBlock.auIn
 
-      val rawProcessor = builder.add(Flow.fromGraph(RawProcessingGraphFactory.createGraph))
+      observationBlock.tu ~> tuCollector
+      observationBlock.au ~> auCollector
+      observationBlock.kafka ~> kafkaCollector
 
-      if(timeAggregators.isEmpty)
-      {
-         FlowShape(rawProcessor.in, rawProcessor.out)
-      }
-      else
-      {
-         val firstAggregator = timeAggregators.head
-         val aggCassandraFlow = CassandraWriter.createAggCassandraFlow
+      tuCollector ~> tagUpdateBlock
+      kafkaCollector ~> kafkaSink
+      auCollector ~> aggregationBlock.au
 
-         val timeAggUpdate = builder.add(
-            Flow[Message].mapConcat(message =>
-               message.values
-                  .map(v => firstAggregator.shunk(v._1))
-                  .toSet
-                  .map(shunk => TimeAggregatorRawUpdate(TimeSeries(message.metric, message.tagset), shunk, message.`type`)) )
-         )
-
-         val buffer = builder.add(
-            Flow[TimeAggregatorRawUpdate]
-               .groupedWithin(1000, 2.minutes)
-               .mapConcat(_.distinct)
-         )
-
-         val firstAggregation = builder.add(FirstAggregationProcessingGraphFactory.createGraph(firstAggregator))
-         val firstAggCassandraWriter = builder.add(aggCassandraFlow)
-
-         rawProcessor ~> timeAggUpdate ~> buffer ~> firstAggregation ~> firstAggCassandraWriter
-
-         var previous = firstAggCassandraWriter
-
-         val followUpAggregators = timeAggregators.tail
-
-         val aggregatorShapes = followUpAggregators.map(aggregator =>
-            builder.add(Flow.fromGraph(FollowUpAggregationProcessingGraphFactory.createGraph(aggregator)).async))
-
-         // Combine shapes into a graph
-         aggregatorShapes.foreach(agg => {
-            val cassandraWriter = builder.add(aggCassandraFlow)
-
-            previous ~> agg ~> cassandraWriter;
-            previous = cassandraWriter;
-         })
-
-         val out = builder.add(Flow[AggUpdate].log(name = "myStream"))
-
-         previous ~> out
-         FlowShape(rawProcessor.in, out.out)
-      }
+      SinkShape[Message](messageBlock.message)
    }
 }
