@@ -1,8 +1,7 @@
 package be.cetic.tsorage.processor
 
-/**
-  * Created by Mathieu Goeminne.
-  */
+import be.cetic.tsorage.common.messaging.Message
+
 case class UnknownTypeMessageError(message: Message) extends Error
 {
 

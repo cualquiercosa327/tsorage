@@ -3,7 +3,9 @@ package be.cetic.tsorage.processor.source
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.Source
-import be.cetic.tsorage.processor.{Message, ProcessorConfig}
+import be.cetic.tsorage.common.json.MessageJsonSupport
+import be.cetic.tsorage.common.messaging.Message
+import be.cetic.tsorage.processor.ProcessorConfig
 import com.typesafe.config.ConfigFactory
 import org.apache.kafka.clients.consumer.{ConsumerConfig, ConsumerRecord}
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
@@ -24,7 +26,8 @@ object KafkaConsumer {
 }
 
 
-class KafkaConsumer() extends DefaultJsonProtocol {
+class KafkaConsumer() extends DefaultJsonProtocol with MessageJsonSupport
+{
 
   private val config = ProcessorConfig.conf
   private val topic = config.getString("kafka.topic")
@@ -36,7 +39,7 @@ class KafkaConsumer() extends DefaultJsonProtocol {
   def deserializedSource(): Source[Message, Consumer.Control] = {
     source.map { consumerRecord =>
       val value: Array[Byte] = consumerRecord.value()
-      val data = Message.messageFormat.read(value.toJson)
+      val data = value.toJson.convertTo[Message]
       data
     }
   }

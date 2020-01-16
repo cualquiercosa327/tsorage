@@ -8,9 +8,10 @@ import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive1}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.kafka.ProducerSettings
 import akka.stream.ActorMaterializer
+import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.{AuthenticationQuery, User}
 import be.cetic.tsorage.ingestion.IngestionConfig
-import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DoubleBody, FloatMessageJsonSupport}
+import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DatadogBody, DatadogMessageJsonSupport}
 import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
@@ -23,7 +24,9 @@ import scala.util.Success
  * An AKKA system that runs an HTTP server waiting for Datadog compliant messages.
  * It implements a part of the Datadog Metrics API : https://docs.datadoghq.com/api/?lang=python#post-timeseries-points
  */
-object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
+object HTTPInterface extends DatadogMessageJsonSupport
+   with DefaultJsonProtocol
+   with MessageJsonSupport
 {
    implicit val system = ActorSystem("http-interface")
    implicit val materializer = ActorMaterializer()
@@ -74,9 +77,9 @@ object HTTPInterface extends FloatMessageJsonSupport with DefaultJsonProtocol
                      authorize(conf, system, executionContext, materializer)(api_key){
                         user =>
 
-                           entity(as[DoubleBody])
+                           entity(as[DatadogBody])
                            { body =>
-                              val messages = body.series.map(s => s.prepare(user))
+                              val messages = body.series.map(ddMsg => ddMsg.prepare(user))
 
                               messages.map(message => new ProducerRecord[String, String](conf.getString("kafka.topic"), message.toJson.compactPrint))
                                  .foreach(pr => kafkaProducer.send(pr))

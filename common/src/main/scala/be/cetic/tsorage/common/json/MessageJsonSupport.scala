@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import be.cetic.tsorage.common.messaging.{AuthenticationQuery, AuthenticationResponse, User}
+import be.cetic.tsorage.common.messaging.{AuthenticationQuery, AuthenticationResponse, Message, User}
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat, deserializationError}
 
 
@@ -20,7 +20,8 @@ trait MessageJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
    }
 
    implicit val authQueryMessageFormat = jsonFormat1(AuthenticationQuery)
-
    implicit val authResponseMessageFormat = jsonFormat3(AuthenticationResponse)
    implicit val userMessageFormat = jsonFormat3(User)
+
+   implicit val messageFormat = jsonFormat4(Message)
 }

@@ -1,8 +1,9 @@
-package be.cetic.tsorage.processor.update
+package be.cetic.tsorage.common.messaging
 
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.common.TimeSeries
+import be.cetic.tsorage.common.sharder.Sharder
 import spray.json.JsValue
 
 /**
@@ -17,11 +18,31 @@ import spray.json.JsValue
   * @param aggregation A representation of the type of aggregation performed on lower-level observations.
   *                    For instance, "sum" or "count" for the sum or the counting of the observations, respectively.
   */
-class AggUpdate(
+case class AggUpdate(
    ts: TimeSeries,
-   val interval: String,
+   interval: String,
    datetime: LocalDateTime,
    `type`: String,
    value: JsValue,
-   val aggregation: String
-) extends Update(ts, datetime, `type`, value)
+   aggregation: String
+) extends InformationVector
+{
+   override def metric = ts.metric
+   override def tagset = ts.tagset
+
+   override def splitByShard(sharder: Sharder) = List(ShardedInformationVector(
+      ts.metric,
+      sharder.shard(datetime),
+      tagset
+   ))
+
+   override def splitByTagAndShard(sharder: Sharder) = tagset.map(tag =>
+      ShardedTagUpdate(
+         ts.metric,
+         sharder.shard(datetime),
+         tag._1,
+         tag._2,
+         tagset
+      )
+   )
+}

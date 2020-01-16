@@ -2,7 +2,7 @@ package be.cetic.tsorage.processor.aggregator.time
 
 import java.time.LocalDateTime
 
-import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate}
+import be.cetic.tsorage.common.messaging.AggUpdate
 import com.typesafe.scalalogging.LazyLogging
 
 abstract class TimeAggregator() extends LazyLogging
@@ -14,13 +14,6 @@ abstract class TimeAggregator() extends LazyLogging
      * @return    The moment at which the datetime will be aggregated
      */
    def shunk(dt: LocalDateTime): LocalDateTime
-
-   def shunk(update: RawUpdate): RawUpdate = new RawUpdate(
-      update.ts,
-      shunk(update.datetime),
-      update.`type`,
-      update.value
-   )
 
    def shunk(update: AggUpdate): AggUpdate = new AggUpdate(
       update.ts,

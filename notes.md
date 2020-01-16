@@ -48,7 +48,7 @@ kafka-console-consumer --bootstrap-server localhost:9092 --topic raw --new-consu
 To run Cassandra:
 
 ```
-cd /apache-cassandra/bin
+cd ~/apache-cassandra-3.9/bin
 export JAVA_HOME=`/usr/libexec/java_home -v 1.8`; ./cassandra
 ```
 

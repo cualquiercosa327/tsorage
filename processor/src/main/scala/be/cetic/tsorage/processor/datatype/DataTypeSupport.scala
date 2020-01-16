@@ -1,15 +1,16 @@
 package be.cetic.tsorage.processor.datatype
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime, ZoneId}
 import java.util.Date
 
 import be.cetic.tsorage.common.FutureManager
+import be.cetic.tsorage.common.messaging.AggUpdate
 import be.cetic.tsorage.processor.aggregator.data.DataAggregation
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.update.{AggUpdate, RawUpdate, TimeAggregatorRawUpdate}
+import be.cetic.tsorage.processor.update.TimeAggregatorRawUpdate
 import be.cetic.tsorage.processor.{DAO, ProcessorConfig}
-import com.datastax.driver.core.{UDTValue, UserType}
+import com.datastax.driver.core.{Row, UDTValue, UserType}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json._
 
@@ -40,6 +41,8 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
    def asJson(value: T): JsValue
    def fromJson(value: JsValue): T
 
+   private def date2ldt(d: Date): LocalDateTime = Instant.ofEpochMilli(d.getTime()).atZone(ZoneId.of("GMT")).toLocalDateTime()
+
    /**
      * Converts a value into a Cassandra UDT Value
      * @param value The value to convert
@@ -50,16 +53,13 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
 
    def fromUDTValue(value: UDTValue): T
 
-   /**
-     * @return The list of all aggregations that must be applied on raw values of the supported type.
-     */
-   def rawAggregations: List[DataAggregation[T, _]]
+   def udt2json(value: UDTValue): JsValue = asJson(fromUDTValue(value))
 
    def getRawValues(
                       update: TimeAggregatorRawUpdate,
                       shunkStart: LocalDateTime,
                       shunkEnd: LocalDateTime)
-                   (implicit ec: ExecutionContextExecutor): Future[Iterable[(Date, T)]] = {
+                   (implicit ec: ExecutionContextExecutor): Future[Iterable[(LocalDateTime, JsValue)]] = {
       val coveringShards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       val queryStatements = coveringShards.map(shard =>
@@ -68,74 +68,40 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
 
       Future.reduceLeft(queryStatements.map(statement =>
          resultSetFutureToFutureResultSet(Cassandra.session.executeAsync(statement))
-            .map(rs => rs.asScala.map(row => (row.getTimestamp("datetime"), fromUDTValue(row.getUDTValue(colname))))
+            .map(rs => rs.asScala.map(row => (date2ldt(row.getTimestamp("datetime")), udt2json(row.getUDTValue(colname))))
             ))
       )( (l1, l2) => l1 ++ l2)
    }
 
-
    /**
-     * Transforms a raw update into a list of aggregated updates.
-     * @param update The raw update to transform.
-     * @param timeAggregator  The time aggregator involved in this transformation.
-     * @return A list of aggregated updates.
-     */
-   def prepareAggUpdate(
-                          update: TimeAggregatorRawUpdate,
-                          timeAggregator: TimeAggregator)
-                       (implicit ec: ExecutionContextExecutor)
-   : Future[List[AggUpdate]] =
+    * Retrieve all the aggregated values that relate to a shunk to be updated.
+    * @param au   The aggupdate that causes the update.
+    * @param timeAggregator   The next level of aggregation.
+    * @return
+    */
+   def getHistoryValues(au: AggUpdate, timeAggregator: TimeAggregator)(implicit ec: ExecutionContextExecutor):
+   Future[List[(LocalDateTime, JsValue)]] =
    {
-      val datetime = update.shunk
-      val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = timeAggregator.range(datetime)
-      val results = getRawValues(update, shunkStart: LocalDateTime, shunkEnd: LocalDateTime)
-
-      val aggs = rawAggregations.map(agg => {
-            results.map(events => List(agg.rawAggregation(events).asAggUpdate(update, timeAggregator, datetime, agg.name)))
-      })
-
-      Future.reduceLeft(aggs)(_++_)
-   }
-
-   /**
-     * Finds the aggregation corresponding to a particular aggregated update.
-     * @param update The update from which an aggregation must be found.
-     * @return The aggregation associated with the update.
-     */
-   def findAggregation(update: AggUpdate): DataAggregation[_, T]
-
-   /**
-     * Transfors an aggregated update into an higher level aggregated update.
-     * @param update The aggregated update to transform.
-     * @param timeAggregator The time aggregator involved in this transformation.
-     * @return The higher level aggregated update.
-     */
-   def prepareAggUpdate(update: AggUpdate, timeAggregator: TimeAggregator): AggUpdate =
-   {
-      val dataAggregation: DataAggregation[_,T] = findAggregation(update)
-      val datetime = timeAggregator.shunk(update.datetime)
-
-      val (shunkStart: LocalDateTime, shunkEnd: LocalDateTime) = timeAggregator.range(datetime)
-      val coveringShards = Cassandra.sharder.shards(shunkStart, shunkEnd)
+      val datetime = timeAggregator.shunk(au.datetime)
+      val (start, end) = timeAggregator.range(datetime)
+      val coveringShards = Cassandra.sharder.shards(start, end)
 
       val statements = coveringShards.map(shard => DAO.getAggShunkValues(
-         update.ts,
+         au.ts,
          shard,
          timeAggregator.previousName,
-         update.aggregation,
-         update.`type`,
-         shunkStart,
-         shunkEnd
+         au.aggregation,
+         au.`type`,
+         start,
+         end
       ))
-      // logger.info(s"QUERIES: ${queries.mkString(" ; ")}")
 
-      val results = statements.par
-         .map(statement => Cassandra.session.execute(statement).all().asScala)
-         .reduce((l1, l2) => l1 ++ l2)
-         .map(row => (row.getTimestamp("datetime"), fromUDTValue(row.getUDTValue(colname)))).toIterable
+      val futures = statements
+         .map(statement => resultSetFutureToFutureResultSet(Cassandra.session.executeAsync(statement)))
 
-      val value = dataAggregation.aggAggregation(results)
-      new AggUpdate(update.ts, timeAggregator.name, datetime, update.`type`, value.asJson(), update.aggregation)
+      Future
+         .foldLeft(futures)(List[Row]())( (l1, l2) => l1 ++ l2.all().asScala)
+         .map(result => result.map(row => (DataTypeSupport.date2ldt(row.getTimestamp("datetime")), asJson(fromUDTValue(row.getUDTValue(colname))))))
    }
 
    final def asRawUdtValue(value: JsValue): UDTValue = asRawUdtValue(fromJson(value))
@@ -153,8 +119,12 @@ object DataTypeSupport
 
    def inferSupport(`type`: String) = availableSupports(`type`)
 
-   def inferSupport(update: RawUpdate): DataTypeSupport[_] = inferSupport(update.`type`)
    def inferSupport(update: TimeAggregatorRawUpdate): DataTypeSupport[_] = inferSupport(update.`type`)
 
    def inferSupport(update: AggUpdate): DataTypeSupport[_] = inferSupport(update.`type`)
+
+   def date2ldt(date: Date): LocalDateTime = Instant
+      .ofEpochMilli(date.getTime())
+      .atZone(ZoneId.of("GMT"))
+      .toLocalDateTime()
 }
