@@ -3,7 +3,7 @@ package be.cetic.tsorage.processor.flow
 import java.time.LocalDateTime
 
 import akka.NotUsed
-import akka.stream.{FlowShape, Inlet, Outlet, Shape, SinkShape}
+import akka.stream.{FlowShape, Inlet, Outlet, OverflowStrategy, Shape, SinkShape}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, MergePreferred, Sink, Source}
 import be.cetic.tsorage.common.messaging.{AggUpdate, Observation}
 import com.typesafe.scalalogging.LazyLogging
@@ -44,13 +44,13 @@ private case class FollowUpAggregationTrigger(au: AggUpdate, ta: TimeAggregator,
   *             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   *             |                                                   |
   *             |  + - +    + -------- +    + - +    + --------- +  |
-  *             |~>|   | ~> | Write AU | ~> |   | ~> | Derive AU | ~|
-  *                |   |    + -------- +    |   |    + --------- +
+  *         (p) |~>|   | ~> | Write AU | ~> |   | ~> | Derive AU | ~|
+  *                |   |    + -------- +    | 2 |    + --------- +
  *                 |   |                    |   |
  *                 |   |                    |   | ----------> O (processedAU)
  *                 |   |                    + - +
  *                 |   |
-  * AggUpdate ~~~~>|   |    + -------- +
+  * AggUpdate ~~~~>| 1 |    + -------- +
   *                |   | ~> | Kakfa AU | ~~~~~~~~~~~~~~~~~~~> O (Kafka)
  *                 |   |    + -------- +
  *                 |   |    + ---------------------- +
@@ -76,6 +76,7 @@ object AggregationBlock extends LazyLogging with AggUpdateJsonSupport
             }).mapConcat(element => derivators.map(derivator => FollowUpAggregationTrigger(element._1, element._2, derivator)))
               .mapAsyncUnordered(4)(trigger => trigger.aggregations)
               .mapConcat(x => x)
+            .buffer(5000, OverflowStrategy.fail)
       )
    }
 
@@ -97,7 +98,7 @@ object AggregationBlock extends LazyLogging with AggUpdateJsonSupport
                      aggObsDerivators: List[Flow[AggUpdate, Observation, _]]
                   )(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
 
-      val merge = builder.add(MergePreferred[AggUpdate](1))
+      val merge = builder.add(MergePreferred[AggUpdate](1).async)
       val broadcast = builder.add(Broadcast[AggUpdate](3).async)
 
       val writeAgg = builder.add(CassandraWriter.createWriteAggFlow(context))
@@ -112,7 +113,7 @@ object AggregationBlock extends LazyLogging with AggUpdateJsonSupport
 
       val tu = aggToTU
 
-      merge ~>  WireTape.tape[AggUpdate]("Aggregations") ~> broadcast
+      merge ~> broadcast
 
       broadcast ~> writeAgg ~> bc2
       bc2.out(0) ~> aggregations ~> merge.preferred

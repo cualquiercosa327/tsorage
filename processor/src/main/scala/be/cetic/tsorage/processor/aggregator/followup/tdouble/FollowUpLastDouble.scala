@@ -6,12 +6,13 @@ import be.cetic.tsorage.common.messaging.AggUpdate
 import be.cetic.tsorage.processor.aggregator.followup.SimpleFollowUpDerivator
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.datatype.{DateDoubleSupport, DoubleSupport}
+import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsValue
 
 /**
  * Followup aggregation for the last double.
  */
-object FollowUpLastDouble extends SimpleFollowUpDerivator
+object FollowUpLastDouble extends SimpleFollowUpDerivator with LazyLogging
 {
    override def matches(au: AggUpdate): Boolean = au.aggregation == "last" && au.`type` == DateDoubleSupport.`type`
 
@@ -30,10 +31,12 @@ object FollowUpLastDouble extends SimpleFollowUpDerivator
     * @return New aggregated values
     */
    override def aggregate(au: AggUpdate, ta: TimeAggregator, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] = {
-      val last = history.maxBy(_._1.toInstant(ZoneOffset.UTC).toEpochMilli)
-
+      logger.info(s"> ${history}")
+      logger.info(s">> ${history.map(h => DateDoubleSupport.fromJson(h._2))}")
+      val last = history.maxBy(h => DateDoubleSupport.fromJson(h._2)._1.toInstant(ZoneOffset.UTC).toEpochMilli)._2
+      logger.info(s">>> ${last}")
       List(
-        AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DateDoubleSupport.`type`, last._2, "last")
+            AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DateDoubleSupport.`type`, last, "last")
       )
    }
 }

@@ -6,7 +6,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.kafka.ProducerSettings
 import akka.stream.{ActorMaterializer, ClosedShape, FlowShape, SinkShape}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Sink}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, MergePreferred, Sink}
 import be.cetic.tsorage.common.json.{AggUpdateJsonSupport, ObservationJsonSupport}
 import be.cetic.tsorage.common.{TimeSeries, messaging}
 import be.cetic.tsorage.common.messaging.{AggUpdate, InformationVector, Message, Observation}
@@ -43,14 +43,14 @@ object GlobalProcessingGraphFactory extends LazyLogging
       val messageBlock = builder.add(MessageBlock.createGraph(timeAggregators.headOption, msgAggDerivators).async)
       val observationBlock = builder.add(ObservationBlock.createGraph(timeAggregators.headOption, List(), List()).async)
       val aggregationBlock = builder.add(AggregationBlock.createGraph(followUpAggregators, timeAggregators, List()).async)
-      val tagUpdateBlock = builder.add(tagUpdate.createGraph)
+      val tagUpdateBlock = builder.add(tagUpdate.createGraph.async)
 
       val tuCollector = builder.add(Merge[ShardedTagsetUpdate](3).async)
       val kafkaCollector = builder.add(Merge[ProducerRecord[String, String]](2).async)
-      val auCollector = builder.add(Merge[AggUpdate](2).async)
+      val auCollector = builder.add(MergePreferred[AggUpdate](1).async)
 
       messageBlock.tu ~> tuCollector
-      messageBlock.au ~> auCollector
+      messageBlock.au ~> auCollector.in(0)
       messageBlock.processedMessage ~> observationBlock.messageIn
 
       aggregationBlock.kafka ~> kafkaCollector
@@ -58,7 +58,7 @@ object GlobalProcessingGraphFactory extends LazyLogging
       aggregationBlock.processedAU ~> observationBlock.auIn
 
       observationBlock.tu ~> tuCollector
-      observationBlock.au ~> auCollector
+      observationBlock.au ~> auCollector.preferred
       observationBlock.kafka ~> kafkaCollector
 
       tuCollector ~> tagUpdateBlock
