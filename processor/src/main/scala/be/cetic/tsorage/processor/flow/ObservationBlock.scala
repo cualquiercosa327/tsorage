@@ -49,7 +49,7 @@ import scala.concurrent.ExecutionContextExecutor
  *                                                        |   | -> | to S Tag Update | ---------------------> O (S Tag Update)
  *                                                        |   |    + --------------- +
  *                                                        |   |
- *                                                        |   |    + ---------- +
+ *                                                    (p) |   |    + ---------- +
  *                                                   + -> |   | -> | Derive Obs | - +
  *                                                   |    + - +    + ---------- +   |
  *                                                   + ---------------------------- +

@@ -17,7 +17,7 @@ object LastDouble extends SimpleRawAggregator
       val last = history.maxBy(_._1.toInstant(ZoneOffset.UTC).toEpochMilli)
 
       List(
-         AggUpdate(ru.ts, ru.ta.name, ru.shunk, DateDoubleSupport.`type`, DateDoubleSupport.asJson(last._1, DoubleSupport.fromJson(last._2)), "last")
+            AggUpdate(ru.ts, ru.ta.name, ru.shunk, DateDoubleSupport.`type`, DateDoubleSupport.asJson(last._1, DoubleSupport.fromJson(last._2)), "last")
       )
    }
 }

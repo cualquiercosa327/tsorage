@@ -6,7 +6,7 @@ import be.cetic.tsorage.common.messaging.AggUpdate
 import be.cetic.tsorage.processor.aggregator.followup.SimpleFollowUpDerivator
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.datatype.{DateDoubleSupport, DoubleSupport}
-import spray.json.JsValue
+import spray.json.{JsObject, JsValue}
 
 /**
  * Followup aggregation for the first double.
@@ -30,10 +30,10 @@ object FollowUpFirstDouble extends SimpleFollowUpDerivator
     * @return New aggregated values
     */
    override def aggregate(au: AggUpdate, ta: TimeAggregator, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] = {
-      val first = history.minBy(_._1.toInstant(ZoneOffset.UTC).toEpochMilli)
+      val first = history.minBy(h => DateDoubleSupport.fromJson(h._2)._1.toInstant(ZoneOffset.UTC).toEpochMilli)._2
 
       List(
-         AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DateDoubleSupport.`type`, first._2, "first")
+         AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DateDoubleSupport.`type`, first, "first")
       )
    }
 }
