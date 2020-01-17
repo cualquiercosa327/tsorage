@@ -31,10 +31,7 @@ object FollowUpLastDouble extends SimpleFollowUpDerivator with LazyLogging
     * @return New aggregated values
     */
    override def aggregate(au: AggUpdate, ta: TimeAggregator, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] = {
-      logger.info(s"> ${history}")
-      logger.info(s">> ${history.map(h => DateDoubleSupport.fromJson(h._2))}")
       val last = history.maxBy(h => DateDoubleSupport.fromJson(h._2)._1.toInstant(ZoneOffset.UTC).toEpochMilli)._2
-      logger.info(s">>> ${last}")
       List(
             AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DateDoubleSupport.`type`, last, "last")
       )

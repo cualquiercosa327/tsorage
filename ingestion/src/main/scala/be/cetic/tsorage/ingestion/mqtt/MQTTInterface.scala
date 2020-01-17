@@ -30,7 +30,13 @@ import scala.util.Try
  *
  * Example of message submission from localhost:
  *
- * mqtt pub -h localhost -p 1883 --topic "timeseries" --message "{\"metric\": \"my-sensor\", \"tagset\": {\"source\": \"mqtt\", \"quality\": \"good\", \"owner\": \"nsa\"}, \"type\": \"tdouble\", \"values\": [[\"2019-12-09T12:43:12\", 123.456],[\"2019-12-09T12:44:27\", 789.123]]}" -V 3
+ * mqtt pub -h localhost -p 1883 --topic "timeseries" --message "{\"metric\": \"my-sensor\", \"tagset\": {\"source\": \"mqtt\", \"quality\": \"good\", \"owner\": \"nsa\"}, \"type\": \"tdouble\", \"values\": [[\"$(date +%Y-%m-%dT%H:%M:%S)\", 123.456],[\"$(date -v +5M "+%Y-%m-%dT%H:%M:%S")\", 789.123]]}" -V 3
+ *
+  for run in {1..10}
+  do
+     mqtt pub -h localhost -p 1883 --topic "timeseries" --message "{\"metric\": \"my-sensor\", \"tagset\": {\"source\": \"mqtt\", \"quality\": \"good\", \"owner\": \"nsa\"}, \"type\": \"tdouble\", \"values\": [[\"$(date +%Y-%m-%dT%H:%M:%S)\", 123.456],[\"$(date -v +5M "+%Y-%m-%dT%H:%M:%S")\", 789.123]]}" -V 3;
+     sleep 5;
+  done
  */
 object MQTTInterface extends LazyLogging with MessageJsonSupport
 {
