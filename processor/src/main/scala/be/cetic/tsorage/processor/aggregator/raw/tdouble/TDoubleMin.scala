@@ -13,6 +13,8 @@ import spray.json.JsValue
  */
 object TDoubleMin extends SimpleRawAggregator
 {
+   override def matches(ru: TimeAggregatorRawUpdate): Boolean = ru.`type` == DoubleSupport.`type`
+
    override def aggregate(ru: TimeAggregatorRawUpdate, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] = {
       val min = history.map(datapoint => DoubleSupport.fromJson(datapoint._2)).min
 

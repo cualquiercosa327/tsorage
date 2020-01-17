@@ -5,7 +5,7 @@ package be.cetic.tsorage.processor.aggregator.raw
  */
 package object tdouble
 {
-   val rawDerivators: List[SimpleRawAggregator] = List(
+   val simpleRawDerivators: List[SimpleRawAggregator] = List(
       TDoubleMax,
       TDoubleMin,
       TDoubleSum,

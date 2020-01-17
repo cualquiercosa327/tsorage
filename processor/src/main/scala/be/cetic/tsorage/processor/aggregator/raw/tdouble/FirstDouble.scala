@@ -13,6 +13,8 @@ import spray.json.JsValue
  */
 object FirstDouble extends SimpleRawAggregator
 {
+   override def matches(ru: TimeAggregatorRawUpdate): Boolean = ru.`type` == DoubleSupport.`type`
+
    override def aggregate(ru: TimeAggregatorRawUpdate, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] = {
       val first = history.maxBy(_._1.toInstant(ZoneOffset.UTC).toEpochMilli)
 

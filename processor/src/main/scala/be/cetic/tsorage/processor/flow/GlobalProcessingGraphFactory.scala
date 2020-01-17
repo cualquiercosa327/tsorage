@@ -34,15 +34,15 @@ object GlobalProcessingGraphFactory extends LazyLogging
                      timeAggregators: List[TimeAggregator],
                      obsObsDerivators: List[Observation => Seq[Observation]],
                      obsAggDerivators: List[Observation => Seq[AggUpdate]],
-                     followUpAggregators: List[AggAggregator],
+                     followUpDerivators: List[AggAggregator],
                      aggObsDerivators: List[AggUpdate => Seq[Observation]],
-                     msgAggDerivators: List[SimpleRawAggregator],
+                     rawDerivators: List[RawAggregator],
                      kafkaSink: Sink[ProducerRecord[String, String], _]
                   )(implicit context: ExecutionContextExecutor) = GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
 
-      val messageBlock = builder.add(MessageBlock.createGraph(timeAggregators.headOption, msgAggDerivators).async)
+      val messageBlock = builder.add(MessageBlock.createGraph(timeAggregators.headOption, rawDerivators).async)
       val observationBlock = builder.add(ObservationBlock.createGraph(timeAggregators.headOption, List(), List()).async)
-      val aggregationBlock = builder.add(AggregationBlock.createGraph(followUpAggregators, timeAggregators, List()).async)
+      val aggregationBlock = builder.add(AggregationBlock.createGraph(followUpDerivators, timeAggregators, List()).async)
       val tagUpdateBlock = builder.add(tagUpdate.createGraph.async)
 
       val tuCollector = builder.add(Merge[ShardedTagsetUpdate](3).async)

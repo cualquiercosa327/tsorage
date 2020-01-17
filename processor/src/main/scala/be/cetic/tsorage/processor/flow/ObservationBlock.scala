@@ -11,7 +11,7 @@ import spray.json.JsValue
 import GraphDSL.Implicits._
 import akka.stream.{FlowShape, Inlet, Outlet, Shape}
 import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.processor.aggregator.raw.SimpleRawAggregator
+import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawAggregator}
 import be.cetic.tsorage.processor.database.Cassandra
 import org.apache.kafka.clients.producer.ProducerRecord
 
@@ -81,7 +81,7 @@ object ObservationBlock
 
    def createGraph(
                      firstAggregator: Option[TimeAggregator],
-                     derivators: List[SimpleRawAggregator],
+                     derivators: List[RawAggregator],
                      autoObs: List[AggUpdate => List[Observation]]
                   )
                   (implicit context: ExecutionContextExecutor) = GraphDSL.create()
@@ -94,7 +94,7 @@ object ObservationBlock
 
       val writeObs: FlowShape[Observation, Observation] = builder.add(CassandraWriter.createWriteObsFlow(context))
 
-      val ruToAU = builder.add(Utils.ruToFirstAgg(firstAggregator, derivators))
+      val ruToAU = Utils.ru2Agg(derivators, firstAggregator)
 
       val obsToTU = builder.add(
          Flow[Observation].map(obs => ShardedTagsetUpdate(obs.metric, obs.tagset, Cassandra.sharder.shard(obs.datetime)))

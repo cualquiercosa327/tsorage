@@ -1,6 +1,7 @@
 package be.cetic.tsorage.processor.aggregator.raw
 
 import be.cetic.tsorage.common.messaging.AggUpdate
+import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.update.TimeAggregatorRawUpdate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -10,5 +11,5 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
  */
 trait RawAggregator
 {
-   def aggregate(ru: TimeAggregatorRawUpdate)(implicit ec: ExecutionContextExecutor): Future[List[AggUpdate]]
+   def aggregate(ru: TimeAggregatorRawUpdate, ta: TimeAggregator)(implicit ec: ExecutionContextExecutor): Future[List[AggUpdate]]
 }

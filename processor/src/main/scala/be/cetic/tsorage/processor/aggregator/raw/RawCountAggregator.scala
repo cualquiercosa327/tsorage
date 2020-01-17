@@ -12,6 +12,8 @@ import spray.json.{JsNumber, JsValue}
  */
 object RawCountAggregator extends SimpleRawAggregator
 {
+   override def matches(ru: TimeAggregatorRawUpdate): Boolean = true
+
    override def aggregate(ru: TimeAggregatorRawUpdate, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] =
    {
       List(

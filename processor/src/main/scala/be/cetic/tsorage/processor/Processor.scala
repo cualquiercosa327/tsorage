@@ -18,7 +18,7 @@ import be.cetic.tsorage.processor.source.RandomMessageIterator
 import GraphDSL.Implicits._
 import be.cetic.tsorage.common.TimeSeries
 import be.cetic.tsorage.processor.aggregator.followup.{AggCountDerivator, HistoricalFollowUpAggregator}
-import be.cetic.tsorage.processor.aggregator.raw.{HistoricalRawAggregator, RawCountAggregator}
+import be.cetic.tsorage.processor.aggregator.raw.{HistoricalRawAggregator, RawAggregator, RawCountAggregator}
 import be.cetic.tsorage.processor.aggregator.time.{MinuteAggregator, TimeAggregator}
 import be.cetic.tsorage.processor.datatype.{DataTypeSupport, LongSupport}
 import be.cetic.tsorage.processor.update.TimeAggregatorRawUpdate
@@ -27,7 +27,6 @@ import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializ
 import org.slf4j.{Logger, LoggerFactory}
 import be.cetic.tsorage.processor.aggregator.raw
 import be.cetic.tsorage.processor.aggregator.followup
-
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
@@ -71,9 +70,9 @@ object Processor extends LazyLogging with MessageJsonSupport
 
     val aggregators = ProcessorConfig.aggregators()
 
-    val rawDerivators = List(
-      RawCountAggregator,
-    ) ++ raw.tdouble.rawDerivators
+    val rawDerivators: List[RawAggregator] = List(
+      HistoricalRawAggregator(List(RawCountAggregator) ++ raw.tdouble.simpleRawDerivators)
+    )
 
     val followUpDerivators = List(
       HistoricalFollowUpAggregator(List(AggCountDerivator) ++ followup.tdouble.simpleFollowUpDerivators)
