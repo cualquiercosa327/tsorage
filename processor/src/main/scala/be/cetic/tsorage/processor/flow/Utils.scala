@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
 import GraphDSL.Implicits._
 import be.cetic.tsorage.common.json.{AggUpdateJsonSupport, ObservationJsonSupport}
 import be.cetic.tsorage.common.messaging.{AggUpdate, Observation}
-import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawAggregator}
+import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawDerivator}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import be.cetic.tsorage.processor.update.TimeAggregatorRawUpdate

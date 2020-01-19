@@ -49,6 +49,12 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
      * @return The UDTValue representing the value
      */
    def asRawUdtValue(value: T): UDTValue
+
+   /**
+    * Converts a value into a Cassandra UDT value.
+    * @param value   The value to convert
+    * @return        The UDTValue representing the value
+    */
    def asAggUdtValue(value: T): UDTValue
 
    def fromUDTValue(value: UDTValue): T
@@ -114,7 +120,6 @@ object DataTypeSupport
    val availableSupports: Map[String, DataTypeSupport[_]] = List(
       DoubleSupport,
       LongSupport,
-      DateDoubleSupport,
       Position2DSupport
    ).map(support => support.`type` -> support).toMap
 

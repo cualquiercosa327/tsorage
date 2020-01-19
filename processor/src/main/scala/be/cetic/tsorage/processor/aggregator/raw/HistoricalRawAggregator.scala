@@ -20,7 +20,7 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
  *
  * If no aggregators are embedded in the historical aggregator, the data extraction is not performed.
  */
-case class HistoricalRawAggregator(derivators: List[SimpleRawAggregator]) extends RawAggregator
+case class HistoricalRawAggregator(derivators: List[SimpleRawDerivator]) extends RawAggregator
 {
    override def aggregate(ru: TimeAggregatorRawUpdate, ta: TimeAggregator)(implicit ec: ExecutionContextExecutor): Future[List[AggUpdate]] =
    {

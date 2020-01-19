@@ -1,20 +1,16 @@
-package be.cetic.tsorage.processor.aggregator.followup.tdouble
+package be.cetic.tsorage.processor.aggregator.followup
 
 import java.time.{LocalDateTime, ZoneOffset}
 
 import be.cetic.tsorage.common.messaging.AggUpdate
-import be.cetic.tsorage.processor.aggregator.followup.SimpleFollowUpDerivator
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import be.cetic.tsorage.processor.datatype.{DateDoubleSupport, DoubleSupport}
+import be.cetic.tsorage.processor.datatype.{DataTypeSupport, DatedTypeSupport}
 import com.typesafe.scalalogging.LazyLogging
 import spray.json.JsValue
 
-/**
- * Followup aggregation for the last double.
- */
-object FollowUpLastDouble extends SimpleFollowUpDerivator with LazyLogging
+object LastAggDerivator extends SimpleFollowUpDerivator with LazyLogging
 {
-   override def matches(au: AggUpdate): Boolean = au.aggregation == "last" && au.`type` == DateDoubleSupport.`type`
+   override def matches(au: AggUpdate): Boolean = au.`type`.startsWith("date_") && au.aggregation == "last"
 
    /**
     * Performs the aggregation of an history, for providing extra aggregated updates.
@@ -30,10 +26,14 @@ object FollowUpLastDouble extends SimpleFollowUpDerivator with LazyLogging
     * @param history The historical aggregated values corresponding to the triggering aggregated update.
     * @return New aggregated values
     */
-   override def aggregate(au: AggUpdate, ta: TimeAggregator, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] = {
-      val last = history.maxBy(h => DateDoubleSupport.fromJson(h._2)._1.toInstant(ZoneOffset.UTC).toEpochMilli)._2
+   override def aggregate(au: AggUpdate, ta: TimeAggregator, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] =
+   {
+      val support = DatedTypeSupport.inferSupport(au.`type`)
+      val last = history.maxBy(h => support.fromJson(h._2).datetime.toInstant(ZoneOffset.UTC).toEpochMilli)._2
+
       List(
-            AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DateDoubleSupport.`type`, last, "last")
+         AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), support.`type`, last, "last")
       )
    }
 }
+

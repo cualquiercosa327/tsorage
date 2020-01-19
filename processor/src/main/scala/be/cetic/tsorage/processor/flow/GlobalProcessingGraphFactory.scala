@@ -15,7 +15,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.producer.ProducerRecord
 import GraphDSL.Implicits._
 import be.cetic.tsorage.processor.aggregator.followup.AggAggregator
-import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawAggregator}
+import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawDerivator}
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.update.{ShardedTagsetUpdate, TimeAggregatorRawUpdate}
 

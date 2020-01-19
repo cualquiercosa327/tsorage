@@ -11,7 +11,7 @@ import com.typesafe.scalalogging.LazyLogging
 import GraphDSL.Implicits._
 import be.cetic.tsorage.common.TimeSeries
 import be.cetic.tsorage.processor.aggregator.followup.AggAggregator
-import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawAggregator}
+import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawDerivator}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.update.{ShardedTagsetUpdate, TimeAggregatorRawUpdate}

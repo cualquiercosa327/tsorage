@@ -17,8 +17,8 @@ import be.cetic.tsorage.processor.flow.{GlobalProcessingGraphFactory, MessageBlo
 import be.cetic.tsorage.processor.source.RandomMessageIterator
 import GraphDSL.Implicits._
 import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.processor.aggregator.followup.{AggCountDerivator, HistoricalFollowUpAggregator}
-import be.cetic.tsorage.processor.aggregator.raw.{HistoricalRawAggregator, RawAggregator, RawCountAggregator}
+import be.cetic.tsorage.processor.aggregator.followup.{AggCountDerivator, FirstAggDerivator, HistoricalFollowUpAggregator, LastAggDerivator}
+import be.cetic.tsorage.processor.aggregator.raw.{FirstRawDerivator, HistoricalRawAggregator, LastRawDerivator, RawAggregator, RawCountAggregator, SimpleRawDerivator}
 import be.cetic.tsorage.processor.aggregator.time.{MinuteAggregator, TimeAggregator}
 import be.cetic.tsorage.processor.datatype.{DataTypeSupport, LongSupport}
 import be.cetic.tsorage.processor.update.TimeAggregatorRawUpdate
@@ -71,11 +71,11 @@ object Processor extends LazyLogging with MessageJsonSupport
     val aggregators = ProcessorConfig.aggregators()
 
     val rawDerivators: List[RawAggregator] = List(
-      HistoricalRawAggregator(List(RawCountAggregator) ++ raw.tdouble.simpleRawDerivators)
+      HistoricalRawAggregator(List(RawCountAggregator, FirstRawDerivator, LastRawDerivator) ++ raw.tdouble.simpleRawDerivators)
     )
 
     val followUpDerivators = List(
-      HistoricalFollowUpAggregator(List(AggCountDerivator) ++ followup.tdouble.simpleFollowUpDerivators)
+      HistoricalFollowUpAggregator(List(AggCountDerivator, FirstAggDerivator, LastAggDerivator) ++ followup.tdouble.simpleFollowUpDerivators)
     )
 
     val processorGraph = GlobalProcessingGraphFactory.createGraph(

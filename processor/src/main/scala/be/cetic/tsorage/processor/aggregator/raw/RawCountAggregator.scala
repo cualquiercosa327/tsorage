@@ -10,7 +10,7 @@ import spray.json.{JsNumber, JsValue}
 /**
  * An aggregator counting the number of raw observations.
  */
-object RawCountAggregator extends SimpleRawAggregator
+object RawCountAggregator extends SimpleRawDerivator
 {
    override def matches(ru: TimeAggregatorRawUpdate): Boolean = true
 

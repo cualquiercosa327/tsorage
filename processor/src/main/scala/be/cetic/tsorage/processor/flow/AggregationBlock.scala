@@ -115,7 +115,7 @@ object AggregationBlock extends LazyLogging with AggUpdateJsonSupport
 
       merge ~> broadcast
 
-      broadcast ~> writeAgg ~> bc2
+      broadcast  ~> writeAgg ~> bc2
       bc2.out(0) ~> aggregations ~> merge.preferred
       broadcast ~> kafka
       broadcast ~> tu

@@ -9,7 +9,7 @@ import spray.json.JsValue
 /**
  * A simple aggregator, converting a raw history into a list of aggregated values.
  */
-trait SimpleRawAggregator
+trait SimpleRawDerivator
 {
    def matches(ru: TimeAggregatorRawUpdate): Boolean
 

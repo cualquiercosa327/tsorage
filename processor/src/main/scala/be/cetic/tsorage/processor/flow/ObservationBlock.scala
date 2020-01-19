@@ -11,7 +11,7 @@ import spray.json.JsValue
 import GraphDSL.Implicits._
 import akka.stream.{FlowShape, Inlet, Outlet, Shape}
 import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawAggregator}
+import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawDerivator}
 import be.cetic.tsorage.processor.database.Cassandra
 import org.apache.kafka.clients.producer.ProducerRecord
 
