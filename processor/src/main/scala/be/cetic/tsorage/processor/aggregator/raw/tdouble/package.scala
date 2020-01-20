@@ -10,6 +10,7 @@ package object tdouble
    val simpleRawDerivators: List[SimpleRawDerivator] = List(
       TDoubleMax,
       TDoubleMin,
-      TDoubleSum
+      TDoubleSum,
+      TDoubleSSum
    )
 }

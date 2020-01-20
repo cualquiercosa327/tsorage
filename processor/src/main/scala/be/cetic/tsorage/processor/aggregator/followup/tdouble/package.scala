@@ -5,6 +5,7 @@ package object tdouble
    val simpleFollowUpDerivators: List[SimpleFollowUpDerivator] = List(
       FollowUpDoubleMax,
       FollowUpDoubleMin,
-      FollowUpDoubleSum
+      FollowUpDoubleSum,
+      FollowUpDoubleSSum
    )
 }
