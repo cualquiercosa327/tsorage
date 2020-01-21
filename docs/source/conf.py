@@ -20,7 +20,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'TSorage'
-copyright = '2019, CETIC asbl'
+copyright = '2020, CETIC asbl'
 author = 'CETIC asbl'
 
 # The short X.Y version
