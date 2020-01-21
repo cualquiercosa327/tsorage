@@ -45,7 +45,7 @@ a metric is generally considered as a good practice, the type associated with a 
 another.
 - A collection of timestamped data points having the specified type.
 
-More details about the message format are available in the `Ingesting Time Series`_.
+More details about the message format are available in the :ref:`IngestingTimeSeries` section.
 
 The following components are parts of the ingestion layer:
 

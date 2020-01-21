@@ -1,3 +1,5 @@
+.. _IngestingTimeSeries:
+
 *********************
 Ingesting Time Series
 *********************
