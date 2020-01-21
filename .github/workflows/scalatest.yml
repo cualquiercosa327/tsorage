@@ -10,9 +10,14 @@ jobs:
       - uses: olafurpg/setup-scala@v5
         with:
           java-version: openjdk@1.12
-      - name: Cassandra
-        run: docker run --name cassandra --publish 9042:9042 -d cassandra:3.11
-      - name: Compile
+      - name: Run Cassandra
+        run: |
+            mkdir -p share
+            wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra_prod.cql -O ./share/cassandra.cql
+            docker run --name cassandra --publish 9042:9042 -d -v $PWD/share:/share cassandra:3.11
+      - name: Compile project
         run: sbt compile
-      - name: Test
+      - name: Initialize Cassandra
+        run: docker exec cassandra cqlsh -f /share/cassandra.cql
+      - name: Run unit tests
         run: sbt test
