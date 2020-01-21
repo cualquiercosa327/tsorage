@@ -21,10 +21,10 @@ the collected data points to a component of the ingestion layer.
 
 Currently supported or developed collectors are:
 
-- `DataDog Agent`_ : an open source tool developped by DataDog_ for collecting infrastructure- and application-related
-metrics.
+- `DataDog Agent`_ : an open source tool developped by DataDog_ for collecting infrastructure- and application-related metrics.
 
 .. _`DataDog Agent`: https://docs.datadoghq.com/agent/
+
 .. _DataDog: https://www.datadoghq.com/
 
 Ingestion Layer
@@ -40,9 +40,7 @@ Components expects to receive *messages*. Currently, each message is represented
 
 - The metric id, for which new data points are provided.
 - The dynamic tagset associated with all the data points described in the message.
-- The type of all the data points described in the message. While using the same type of all data point relating to
-a metric is generally considered as a good practice, the type associated with a metric can change from a message to
-another.
+- The type of all the data points described in the message. While using the same type of all data point relating to a metric is generally considered as a good practice, the type associated with a metric can change from a message to another.
 - A collection of timestamped data points having the specified type.
 
 More details about the message format are available in the :ref:`IngestingTimeSeries` section.
@@ -80,6 +78,7 @@ production environment, we recommend to deploy at least 3 Kafka nodes, in order 
 a better workload distribution. The storage capacity of the Kafka cluster can be extended on demand by adding
 additional nodes to the cluster.
 
+.. _Archi_ProcessingLayer:
 
 Processing Layer
 ================

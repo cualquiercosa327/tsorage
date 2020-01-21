@@ -33,7 +33,7 @@ For instance, consider we have three time series for the metric ``my-temperature
 - ``{"unit": "celcius", "quality": "good"}``
 - ``{"unit": "celcius", "quality": "bad"}``
 
-When a :ref:`data query<DataQuerying>` is submitted to the system, asking for values belonging to ``my-temperature`` with
+When a :ref:`data query<Feature_DataQuerying>` is submitted to the system, asking for values belonging to ``my-temperature`` with
  an empty tagset, these three time series will be extracted and transparently merged in order to present all the relevant
  values. In other words, both values with a good quality, a bad quality, or no quality specified will be taken into account.
 
@@ -70,7 +70,7 @@ the manipulation of large time series while absolving the user from calculating 
 For instance, plotting ten years worth of history, for a time series having one data point per minute, means extracting
 and displaying more than 5 millions data points, which represents unreasonable processing costs and latencies.
 
-In its `Processing Layer`_, incoming data points are processed at real time for systematically calculating and storing
+In the :ref:`Archi_ProcessingLayer`, incoming data points are processed at real time for systematically calculating and storing
 aggregated values.
 
 Derivators
@@ -187,7 +187,8 @@ Time Series Querying
 --------------------
 
 
-.. _DataQuerying:
+.. _Feature_DataQuerying:
+
 Data Querying
 -------------
 

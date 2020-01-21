@@ -9,7 +9,9 @@
 ##########
 Principles
 ##########
-
+.. include:: principles/intro.rst
+.. include:: principles/features.rst
+.. include:: principles/architecture.rst
 
 ############
 Installation
