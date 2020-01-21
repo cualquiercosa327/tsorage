@@ -154,7 +154,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'TSorage', 'TSorage Documentation',
-     author, 'TSorage', 'One line description of project.',
+     author, 'TSorage', 'A platform for collecting, storing, and processing time series at scale',
      'Miscellaneous'),
 ]
 
