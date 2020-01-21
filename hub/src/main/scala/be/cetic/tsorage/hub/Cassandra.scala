@@ -134,7 +134,7 @@ class Cassandra(private val conf: Config) extends LazyLogging {
     // Query the database.
     val results = for (shard <- shards)
       yield {
-        val statement = QueryBuilder.select("datetime", "value_double", "value_long")
+        val statement = QueryBuilder.select("datetime", "value_tdouble", "value_tlong")
           .from(keyspaceRaw, "observations")
           .where(QueryBuilder.eq("metric", metric))
           .and(QueryBuilder.eq("shard", shard))
@@ -149,10 +149,10 @@ class Cassandra(private val conf: Config) extends LazyLogging {
       _.getUninterruptibly().all().asScala.flatMap { row =>
         val date = row.getTimestamp("datetime")
 
-        val udtDouble = Option(row.getUDTValue("value_double"))
-        val udtLong = Option(row.getUDTValue("value_long"))
+        val udtDouble = Option(row.getUDTValue("value_tdouble"))
+        val udtLong = Option(row.getUDTValue("value_tlong"))
 
-        // Take either "value_double_" or "value_long_" or neither (depending on whether they are None or not).
+        // Take either "value_tdouble" or "value_tlong" or neither (depending on whether they are None or not).
         var valueOpt: Option[AnyVal] = None
         if (udtDouble.isDefined) {
           valueOpt = Some(udtDouble.get.getDouble("value"))
@@ -169,7 +169,7 @@ class Cassandra(private val conf: Config) extends LazyLogging {
               BigDecimal(value.toString)
             ))
           case None =>
-            // This row is ignored because `value_double_` and `value_long_` are missing.
+            // This row is ignored because `value_tdouble` and `value_tlong` are missing.
             None
         }
       }.reverse // Data of a shard are ordered according to descending datetime. Therefore, we have to reverse them to
