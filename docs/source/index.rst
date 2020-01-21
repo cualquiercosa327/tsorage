@@ -34,5 +34,8 @@ User Guide
 ##########
 
 .. include:: userguide/ingesting_ts.rst
-
+.. include:: userguide/monitoring.rst
+.. include:: userguide/alerting.rst
+.. include:: userguide/tag_management.rst
+.. include:: userguide/archiving.rst
 
