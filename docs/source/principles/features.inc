@@ -19,7 +19,7 @@ With respect to the second approach, the metric refers to a property of interest
 to the item at the origin of the data points (server number 5, for instance).
 While mixing the approaches is technically possible, we recommend to choice one of them and stick with it.
 
-Similarly to `the Spotify's Heroic documentation`_, we recommend the use of tagsets for enforcing a semantic series policy.
+Similarly to `the Spotify's Heroic documentation <https://spotify.github.io/heroic/docs/data_model#series>`__, we recommend the use of tagsets for enforcing a semantic series policy.
 Instead of placing information in the metric's name, using some enterprise specific nomenclature that is tryingly respected
 and therefore suffers many exceptions, the metric's name should be almost meaningless, and the semantic should be
 specified as a set of tags.
@@ -34,14 +34,13 @@ For instance, consider we have three time series for the metric ``my-temperature
 - ``{"unit": "celcius", "quality": "bad"}``
 
 When a :ref:`data query<Feature_DataQuerying>` is submitted to the system, asking for values belonging to ``my-temperature`` with
- an empty tagset, these three time series will be extracted and transparently merged in order to present all the relevant
- values. In other words, both values with a good quality, a bad quality, or no quality specified will be taken into account.
+an empty tagset, these three time series will be extracted and transparently merged in order to present all the relevant
+values. In other words, both values with a good quality, a bad quality, or no quality specified will be taken into account.
 
 Despite the fact the technologies involved in TSorage are quite efficient and scale pretty well, be aware extracting and
 merging multiple time series may be resource consuming. Therefore, the number of time series that must be merged in order
 to satisfy a data query should remain *reasonable* in order to keep the pressure on the data provider at an acceptable level.
 
-_`the Spotify's Heroic documentation`: https://spotify.github.io/heroic/docs/data_model#series
 
 Static Tags
 -----------

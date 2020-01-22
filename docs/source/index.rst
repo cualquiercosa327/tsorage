@@ -9,32 +9,32 @@
 ##########
 Principles
 ##########
-.. include:: principles/intro.rst
-.. include:: principles/features.rst
-.. include:: principles/architecture.rst
+.. include:: principles/intro.inc
+.. include:: principles/features.inc
+.. include:: principles/architecture.inc
 
 ############
 Installation
 ############
 
-.. include:: installation/installation_schema.rst
-.. include:: installation/installation_requirements.rst
-.. include:: installation/installation_procedure.rst
+.. include:: installation/installation_schema.inc
+.. include:: installation/installation_requirements.inc
+.. include:: installation/installation_procedure.inc
 
 
 #########
 Operation
 #########
 
-.. include:: operation/backup_recovery.rst
+.. include:: operation/backup_recovery.inc
 
 ##########
 User Guide
 ##########
 
-.. include:: userguide/ingesting_ts.rst
-.. include:: userguide/monitoring.rst
-.. include:: userguide/alerting.rst
-.. include:: userguide/tag_management.rst
-.. include:: userguide/archiving.rst
+.. include:: userguide/ingesting_ts.inc
+.. include:: userguide/monitoring.inc
+.. include:: userguide/alerting.inc
+.. include:: userguide/tag_management.inc
+.. include:: userguide/archiving.inc
 
