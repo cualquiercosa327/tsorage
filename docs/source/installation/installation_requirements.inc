@@ -21,10 +21,10 @@ Choose a Sharding
 
 In TSorage, time series are stored using a Cassandra_ database. TSorage takes advantage of Cassandra's wide partitions for
 efficiently store data points. Basically, that means all the data points of a time series will be stored in the same partition
-(sometimes improperly named a row), in chronological order. Because a Cassandra can not grow indefinitely, each time series
-is partitioned into *shards*, each shard covering a time period of the time series history.
+(sometimes improperly named a row), in chronological order. Because a Cassandra partition can not grow indefinitely, time series
+are partitioned into *shards*, each shard covering a time period of the time series history.
 
-The duration of a shard must be set during the installation, and should never be modified afterwards. Each time series has
+The duration of a shard must be set during the installation, and should never be modified afterwards. All time series have
 the same shard duration. To ensure good performances when writing and reading time series, the number of data points
 covered by a shard should be limited to a few millions.
 
