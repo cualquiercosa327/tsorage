@@ -49,6 +49,8 @@ As previously stated, static tags are tags associated with a metric. All data po
 this metric automatically inherit from these properties. When the static tag of a metric is modified (see :ref:`TagManagement`),
 the change becomes effective immediately.
 
+.. _Feature_DynamicTag:
+
 Dynamic Tags
 ------------
 
@@ -71,6 +73,8 @@ and displaying more than 5 millions data points, which represents unreasonable p
 
 In the :ref:`Archi_ProcessingLayer`, incoming data points are processed at real time for systematically calculating and storing
 aggregated values.
+
+.. _Feature_Derivators:
 
 Derivators
 ----------
