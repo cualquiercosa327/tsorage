@@ -18,7 +18,9 @@ val commonSettings = Seq(
    dockerBaseImage := "openjdk:12-alpine",
    dockerUpdateLatest := true,
    //dockerAlias := DockerAlias(dockerRepository.value, dockerUsername.value, name.value),
-   dockerUsername := Some("ceticasbl"),
+   //dockerUsername := Some("ceticasbl"),
+   dockerRepository := Some("index.docker.io"),
+   dockerUsername := Some("nicosalamone"),
    dockerCommands ++= Seq(
      Cmd("USER", "root"),
      Cmd("ADD", "https://raw.githubusercontent.com/eficode/wait-for/master/wait-for", "."),
