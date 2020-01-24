@@ -6,7 +6,6 @@ package object tdouble
       FollowUpDoubleMax,
       FollowUpDoubleMin,
       FollowUpDoubleSum,
-      FollowUpFirstDouble,
-      FollowUpLastDouble
+      FollowUpDoubleSSum
    )
 }

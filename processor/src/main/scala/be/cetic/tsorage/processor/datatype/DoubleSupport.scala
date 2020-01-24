@@ -11,7 +11,7 @@ import spray.json.{JsNumber, JsValue}
   */
 object DoubleSupport extends DataTypeSupport[Double]
 {
-   override val colname = "value_double"
+   override val colname = "value_tdouble"
    override val `type` = "tdouble"
 
    override def asJson(value: Double): JsValue = JsNumber(value)
@@ -20,21 +20,13 @@ object DoubleSupport extends DataTypeSupport[Double]
       case _ => throw new IllegalArgumentException(s"Expected double; got ${value}")
    }
 
-   /**
-     * Converts a value into a Cassandra UDT Value
-     *
-     * @param value The value to convert
-     * @return The UDTValue representing the value
-     */
-   override def asRawUdtValue(value: Double): UDTValue =
-      rawUDTType
-         .newValue()
-         .setDouble("value", value)
-
-   override def asAggUdtValue(value: Double): UDTValue =
-      aggUDTType
-         .newValue()
-         .setDouble("value", value)
-
    override def fromUDTValue(value: UDTValue): Double = value.getDouble("value")
+
+   override def asRawUdtValue(value: Double): UDTValue = rawUDTType
+      .newValue()
+      .setDouble("value", value)
+
+   override def asAggUdtValue(value: Double): UDTValue = aggUDTType
+      .newValue()
+      .setDouble("value", value)
 }

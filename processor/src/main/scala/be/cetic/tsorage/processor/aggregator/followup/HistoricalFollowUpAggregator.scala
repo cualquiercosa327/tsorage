@@ -2,7 +2,7 @@ package be.cetic.tsorage.processor.aggregator.followup
 
 import be.cetic.tsorage.common.messaging.AggUpdate
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import be.cetic.tsorage.processor.datatype.DataTypeSupport
+import be.cetic.tsorage.processor.datatype.{DataTypeSupport, MetaSupportInfer}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -20,7 +20,7 @@ case class HistoricalFollowUpAggregator(derivators: List[SimpleFollowUpDerivator
       matchingDerivators match {
          case Nil => Future(Nil)
          case ms => {
-            val support = DataTypeSupport.inferSupport(au.`type`)
+            val support = MetaSupportInfer.inferSupport(au.`type`)
             val history = support.getHistoryValues(au, ta)
 
             history.map(h => {

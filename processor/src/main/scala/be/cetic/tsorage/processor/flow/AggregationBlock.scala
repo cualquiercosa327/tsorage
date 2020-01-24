@@ -76,7 +76,7 @@ object AggregationBlock extends LazyLogging with AggUpdateJsonSupport
             }).mapConcat(element => derivators.map(derivator => FollowUpAggregationTrigger(element._1, element._2, derivator)))
               .mapAsyncUnordered(4)(trigger => trigger.aggregations)
               .mapConcat(x => x)
-            .buffer(5000, OverflowStrategy.fail)
+              .buffer(500, OverflowStrategy.backpressure)
       )
    }
 
@@ -115,7 +115,7 @@ object AggregationBlock extends LazyLogging with AggUpdateJsonSupport
 
       merge ~> broadcast
 
-      broadcast ~> writeAgg ~> bc2
+      broadcast  ~> writeAgg ~> bc2
       bc2.out(0) ~> aggregations ~> merge.preferred
       broadcast ~> kafka
       broadcast ~> tu

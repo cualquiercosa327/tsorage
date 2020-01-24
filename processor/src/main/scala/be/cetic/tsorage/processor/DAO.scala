@@ -5,7 +5,7 @@ import java.time.{LocalDateTime, ZoneOffset}
 
 import be.cetic.tsorage.common.TimeSeries
 import be.cetic.tsorage.processor.database.Cassandra
-import be.cetic.tsorage.processor.datatype.DataTypeSupport
+import be.cetic.tsorage.processor.datatype.{DataTypeSupport, MetaSupportInfer}
 import com.datastax.driver.core.querybuilder.QueryBuilder
 import com.datastax.driver.core.{BoundStatement, ConsistencyLevel, PreparedStatement}
 import com.typesafe.scalalogging.LazyLogging
@@ -59,7 +59,8 @@ object DAO extends LazyLogging with TimeFormatHelper
       if(aggShunkStatementCache contains `type`) aggShunkStatementCache(`type`)
       else
       {
-         val support = DataTypeSupport.inferSupport(`type`)
+         val support = MetaSupportInfer.inferSupport(`type`)
+
          val statement = Cassandra.session.prepare(
             QueryBuilder.select("datetime", support.colname)
                .from(aggKeyspace, "observations")

@@ -3,21 +3,24 @@ package be.cetic.tsorage.processor.flow
 import java.time.{LocalDateTime, ZoneId}
 
 import akka.NotUsed
-import akka.stream.{FanOutShape, FanOutShape3, FlowShape, Inlet, Outlet, Shape, SinkShape, UniformFanOutShape}
+import akka.stream.{FanOutShape, FanOutShape3, FlowShape, Inlet, Outlet, OverflowStrategy, Shape, SinkShape, UniformFanOutShape}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, Sink, Source}
 import be.cetic.tsorage.common.messaging.{AggUpdate, Message, Observation}
 import be.cetic.tsorage.processor.datatype.DataTypeSupport
 import com.typesafe.scalalogging.LazyLogging
 import GraphDSL.Implicits._
 import be.cetic.tsorage.common.TimeSeries
-import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawAggregator}
+import be.cetic.tsorage.processor.aggregator.followup.AggAggregator
+import be.cetic.tsorage.processor.aggregator.raw.{RawAggregator, SimpleRawDerivator}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra
 import be.cetic.tsorage.processor.update.{ShardedTagsetUpdate, TimeAggregatorRawUpdate}
 import spray.json.JsValue
 
 import scala.collection.immutable
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
+
+
 
 /**
  * A data block for processing incoming messages.
@@ -75,7 +78,7 @@ object MessageBlock extends LazyLogging
     */
    def createGraph(
                      firstAggregator: Option[TimeAggregator],
-                     derivators: List[SimpleRawAggregator]
+                     derivators: List[RawAggregator]
                   )(implicit context: ExecutionContextExecutor) = GraphDSL.create()
    { implicit builder: GraphDSL.Builder[NotUsed] =>
 
@@ -94,9 +97,8 @@ object MessageBlock extends LazyLogging
             msg.values.map(value => sharder.shard(value._1).distinct).map(shard => ShardedTagsetUpdate(msg.metric, msg.tagset, shard)))
       )
 
-      val ruToAU = builder.add(
-         Utils.ruToFirstAgg(firstAggregator, derivators)
-      )
+
+      val ru2AU = Utils.ru2Agg(derivators, firstAggregator)
 
       val broadcast1 = builder.add(Broadcast[Message](2))
       val broadcast2 = builder.add(Broadcast[Message](2))
@@ -104,13 +106,13 @@ object MessageBlock extends LazyLogging
       val writeMsg: FlowShape[Message, Message] = builder.add(CassandraWriter.createWriteMsgFlow(context))
 
       messageValidation.matching ~> broadcast1 ~> toTU
-                                    broadcast1 ~> writeMsg ~> broadcast2 ~> msgToRU(firstAggregator) ~> ruToAU
+                                    broadcast1 ~> writeMsg ~> broadcast2 ~> msgToRU(firstAggregator) ~> ru2AU
       messageValidation.unmatching ~> invalidSink
 
       MessageBlock(
          messageValidation.in,
          toTU.out,
-         ruToAU.out,
+         ru2AU.out,
          broadcast2.out(1)
       )
    }.named("Message Processing")

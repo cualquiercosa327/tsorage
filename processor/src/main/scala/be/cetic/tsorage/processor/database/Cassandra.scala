@@ -5,7 +5,7 @@ import java.time.ZoneOffset
 
 import be.cetic.tsorage.common.messaging.{AggUpdate, Message, Observation}
 import be.cetic.tsorage.common.sharder.Sharder
-import be.cetic.tsorage.processor.datatype.DataTypeSupport
+import be.cetic.tsorage.processor.datatype.{DataTypeSupport, MetaSupportInfer}
 import be.cetic.tsorage.processor.ProcessorConfig
 import com.datastax.driver.core.{BatchStatement, Cluster, ConsistencyLevel, PreparedStatement, ResultSet, ResultSetFuture, Session}
 import com.datastax.driver.core.querybuilder.QueryBuilder
@@ -94,7 +94,7 @@ object Cassandra extends LazyLogging {
     }
     else
     {
-      val support = DataTypeSupport.inferSupport(update.`type`)
+      val support = MetaSupportInfer.inferSupport(update.`type`)
 
       val statement = QueryBuilder
          .insertInto(aggKS, "observations")
@@ -154,7 +154,7 @@ object Cassandra extends LazyLogging {
 
   def submitAggUpdateAsync(update: AggUpdate)(implicit context: ExecutionContextExecutor): Future[AggUpdate] =
   {
-    val support = DataTypeSupport.inferSupport(update)
+    val support = MetaSupportInfer.inferSupport(update.`type`)
 
     val bound = preparedStatementAggInsert(update).bind()
        .setString("metric", update.ts.metric)

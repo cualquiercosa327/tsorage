@@ -49,6 +49,12 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
      * @return The UDTValue representing the value
      */
    def asRawUdtValue(value: T): UDTValue
+
+   /**
+    * Converts a value into a Cassandra UDT value.
+    * @param value   The value to convert
+    * @return        The UDTValue representing the value
+    */
    def asAggUdtValue(value: T): UDTValue
 
    def fromUDTValue(value: UDTValue): T
@@ -59,7 +65,7 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
                       update: TimeAggregatorRawUpdate,
                       shunkStart: LocalDateTime,
                       shunkEnd: LocalDateTime)
-                   (implicit ec: ExecutionContextExecutor): Future[Iterable[(LocalDateTime, JsValue)]] = {
+                   (implicit ec: ExecutionContextExecutor): Future[List[(LocalDateTime, JsValue)]] = {
       val coveringShards = Cassandra.sharder.shards(shunkStart, shunkEnd)
 
       val queryStatements = coveringShards.map(shard =>
@@ -71,6 +77,7 @@ abstract class DataTypeSupport[T] extends LazyLogging with FutureManager
             .map(rs => rs.asScala.map(row => (date2ldt(row.getTimestamp("datetime")), udt2json(row.getUDTValue(colname))))
             ))
       )( (l1, l2) => l1 ++ l2)
+         .map(_.toList)
    }
 
    /**
@@ -113,7 +120,6 @@ object DataTypeSupport
    val availableSupports: Map[String, DataTypeSupport[_]] = List(
       DoubleSupport,
       LongSupport,
-      DateDoubleSupport,
       Position2DSupport
    ).map(support => support.`type` -> support).toMap
 

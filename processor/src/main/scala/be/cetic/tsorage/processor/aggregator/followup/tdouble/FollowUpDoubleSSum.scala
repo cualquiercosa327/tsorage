@@ -1,20 +1,25 @@
 package be.cetic.tsorage.processor.aggregator.followup.tdouble
 
-import java.time.{LocalDateTime, ZoneOffset}
+import java.time.LocalDateTime
 
 import be.cetic.tsorage.common.messaging.AggUpdate
 import be.cetic.tsorage.processor.aggregator.followup.SimpleFollowUpDerivator
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
-import be.cetic.tsorage.processor.datatype.{DateDoubleSupport, DoubleSupport}
-import com.typesafe.scalalogging.LazyLogging
+import be.cetic.tsorage.processor.datatype.DoubleSupport
 import spray.json.JsValue
 
 /**
- * Followup aggregation for the last double.
+ * A derivator calculating the sum of squared elements.
+ *
+ * It allows to compute the standard deviation or variance aggregate according to
+ *
+ * variance = sum(x**2)/N - mean**2
+ *
+ * (mean and N being straightforwardly obtained by other aggregates)
  */
-object FollowUpLastDouble extends SimpleFollowUpDerivator with LazyLogging
+object FollowUpDoubleSSum extends SimpleFollowUpDerivator
 {
-   override def matches(au: AggUpdate): Boolean = au.aggregation == "last" && au.`type` == DateDoubleSupport.`type`
+   override def matches(au: AggUpdate): Boolean = au.`type` == DoubleSupport.`type` && au.aggregation == "s_sum"
 
    /**
     * Performs the aggregation of an history, for providing extra aggregated updates.
@@ -30,13 +35,12 @@ object FollowUpLastDouble extends SimpleFollowUpDerivator with LazyLogging
     * @param history The historical aggregated values corresponding to the triggering aggregated update.
     * @return New aggregated values
     */
-   override def aggregate(au: AggUpdate, ta: TimeAggregator, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] = {
-      logger.info(s"> ${history}")
-      logger.info(s">> ${history.map(h => DateDoubleSupport.fromJson(h._2))}")
-      val last = history.maxBy(h => DateDoubleSupport.fromJson(h._2)._1.toInstant(ZoneOffset.UTC).toEpochMilli)._2
-      logger.info(s">>> ${last}")
+   override def aggregate(au: AggUpdate, ta: TimeAggregator, history: List[(LocalDateTime, JsValue)]): List[AggUpdate] =
+   {
+      val sum = history.map(datapoint => DoubleSupport.fromJson(datapoint._2)).sum
+
       List(
-            AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DateDoubleSupport.`type`, last, "last")
+         AggUpdate(au.ts, ta.name, ta.shunk(au.datetime), DoubleSupport.`type`, DoubleSupport.asJson(sum), "s_sum")
       )
    }
 }
