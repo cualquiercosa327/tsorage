@@ -12,6 +12,8 @@ Furthermore, (re)sizing a containerized architecture is easier, since a componen
 Under certain conditions, containers can be duplicated in order to increase the performances of the underlying modules.
 
 
+.. _Archi_CollectionLayer:
+
 Collection Layer
 ================
 
@@ -26,6 +28,9 @@ Currently supported or developed collectors are:
 .. _`DataDog Agent`: https://docs.datadoghq.com/agent/
 
 .. _DataDog: https://www.datadoghq.com/
+
+
+.. _Archi_IngestionLayer:
 
 Ingestion Layer
 ===============

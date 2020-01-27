@@ -26,12 +26,15 @@ Installation
 Operation
 #########
 
+.. include:: operation/user_management.inc
 .. include:: operation/backup_recovery.inc
+
 
 ##########
 User Guide
 ##########
 
+.. include:: userguide/collecting_ts.inc
 .. include:: userguide/ingesting_ts.inc
 .. include:: userguide/monitoring.inc
 .. include:: userguide/alerting.inc
