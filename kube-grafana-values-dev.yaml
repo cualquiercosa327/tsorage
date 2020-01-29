@@ -1,0 +1,15 @@
+persistence:
+  enabled: true
+service:
+  type: NodePort
+  nodePort: 32082
+plugins: grafana-simple-json-datasource
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: TSorage data
+        type: grafana-simple-json-datasource
+        url: http://tsorage-hub.cetic-tsorage-dev.svc.cluster.local:8081/api/v1/grafana
+        access: proxy
+        isDefault: true
