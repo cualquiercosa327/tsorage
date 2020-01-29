@@ -1,6 +1,6 @@
 import Dependencies.Version
 import sbt.Keys.libraryDependencies
-import com.typesafe.sbt.packager.docker.Cmd
+import com.typesafe.sbt.packager.docker.{Cmd, DockerChmodType}
 import NativePackagerHelper._
 
 name := "tsorage"
@@ -99,6 +99,8 @@ lazy val ingestion = (project in file("ingestion"))
       packageName := "tsorage-ingestion",
       commonSettings,
       mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
+      dockerAdditionalPermissions += (DockerChmodType.UserGroupPlusExecute, "/opt/docker/resources/ingest_main"),
+      dockerEntrypoint := Seq("/opt/docker/resources/ingest_main"),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
