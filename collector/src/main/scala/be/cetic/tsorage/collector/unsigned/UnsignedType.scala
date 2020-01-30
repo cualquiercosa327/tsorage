@@ -1,9 +1,10 @@
 package be.cetic.tsorage.collector.unsigned
 
 /**
- * Created by Mathieu Goeminne.
+ * Unsigned type
  */
-class UnsignedType
+class UnsignedType(val underlying: Array[Byte])
 {
-
+   def toBigEndianByteArray: Array[Byte] = underlying
+   def toLittleEndianByteArray: Array[Byte] = underlying.reverse
 }

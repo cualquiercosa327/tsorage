@@ -11,10 +11,10 @@ Collector Component
 The Collector component is part of the :ref:`collection layer <Archi_CollectionLayer>`.
 It essentially is an application that runs on a device (server, virtual machine, embedded hardware, …) near a data source.
 As its name suggests, the Collector component collects time series values either by querying the data source,
-or by observing its environment.
+observing its environment, or receiving informations from external data sources.
 
-The collector comes with **modules** that support the connection to various types of data source, including
-relational databases, Modbus networks, OPC servers, etc. Each module creates one or many proactive agents, that interact
+The collector comes with **modules** that support the connection *from* and *to* various types of data source, including
+relational databases, Modbus networks, OPC servers, etc. Each module creates one or many agents, that interact
 with their environment for actually collecting data points.
 Using the collector component therefore consists in choosing and configuring the modules that must be run in order to
 collect new observations.
@@ -24,8 +24,8 @@ for processing and storage purposes.
 The second task of the user of the collector component is therefore to specify how the collected data stream must be
 transmitted to the ingestion layer.
 
-Both module and transmitted configuration are performed by editing a configuration file that is communicated to the
-collector when its process is starting.
+Both collection and transmission configuration are performed by editing a configuration file that is communicated to the
+collector when its process is started.
 
 .. figure:: figures/collector-flows.png
    :align: center
@@ -34,19 +34,36 @@ collector when its process is starting.
 
    Example of Collector flow, involving three data sources and a connector to the HTTP REST service for ingesting time series.
 
+
+
+component somehow extract the current value of a data source
+
+.. _CollectingTimeSeriesConfiguration:
+
 Configuration
 -------------
 
-The configuration file of a collector module contains two elements.
+The configuration file of a collector module contains three elements.
 
-- The **sink** part describes how collected data points should be sent to the ingestion layer.
+- The **buffer** part details how collected data points are temporarily stored before being sent to the ingestion layer.
+  The configuration of the buffer should not be modified by the user.
 - The **sources** part describes the list of data sources from which data points must be collected. As mentioned above,
   each type of data source is covered by a specific collector component, and each component comes with its own configuration
   schema.
+- The **sink** part describes how collected data points should be sent to the ingestion layer. Again, each solution for
+  exporting data flows has its own configuration schema.
 
 An example of configuration document is listed below:
 
 .. code-block::
+
+    buffer = {
+        host = "localhost"
+        port = 5672
+        queue_name = "buffer"
+        user = "guest"
+        password = "guest"
+    }
 
     sources = [
         { configuration for a RDMS connexion },
@@ -62,8 +79,74 @@ An example of configuration document is listed below:
 
 
 
-Data Point Buffering
-********************
+Source Configuration
+====================
+
+Each source is identified with the ``type`` attribute. Each type has its own configuration schema.
+A source is either a *poll* source or a *drain* source.
+
+Poll sources periodically act (typically by interacting with its environment or an external source) in order to fetch
+new data points. These sources are characterized by the time interval separating two consecutive poll rounds.
+
+While the collector tries to respect the specified time interval, the actual inter-round duration between typically varies
+depending on unpredictable factors.
+If a round takes more time to complete than the specified time interval, the next round will actually start right
+after the current one comes to an end.
+
+At any time, at most one round is delayed.
+If the delay becomes so important that two rounds or more are awaiting to start, the oldest delayed rounds are cancelled.
+
+On the other hand, drain sources are continuously listening for incoming data points pushed by external data sources, and
+transmit new data points as soon as possible.
+
+
+Poll Sources
+------------
+
+All poll sources have a mandatory ``interval`` attribute, which textually represents the expected time interval between
+two successive poll rounds.
+Format is ``<length><unit>``, where whitespace is allowed before, between, and after the parts.
+``length`` must be either a positive integer, or a positive floatting number. ``unit`` must be one of the following:
+
+- ``d``, ``day`` or ``days``
+- ``h``, ``hour`` or ``hours``
+- ``min``, ``minute`` or ``minutes``
+- ``s``, ``second`` or ``seconds``
+- ``ms``, ``milli``, ``millisecond`` or ``milliseconds``
+
+Currently, the following source types are supported:
+
+Random Poll Source
+^^^^^^^^^^^^^^^^^^
+
+This component randomly generates double values, mostly for testing purpose.
+Each generated message contains a single data point associated with the current timestamp.
+
+Mandatory parameters are:
+
+- ``metric``, a list of texts representing the potential metric names to be associated with the message. Each time a
+  message is generated, on of the specified metrics will be randomly picked.
+- ``tagset``, a dictionary of `(key, value)` that will be added as the message tagset.
+  Both keys and values must be textual.
+
+Example of Random Poll configuration:
+
+.. code-block::
+
+    {
+        type = "random"
+        interval = "1 second"
+        metric = [
+            "sensor-1", "sensor-2", "sensor-3", "sensor-4", "sensor-5",
+            "sensor-6", "sensor-7", "sensor-8", "sensor-9", "sensor-10"
+        ]
+        tagset = {
+            "owner" = "myself",
+            "quality" = "good"
+        }
+    }
+
+
 
 Sink Configuration
 ==================
@@ -143,7 +226,7 @@ After a poll cycle finishes, the next one is planned so that the interval betwee
 is approximately `poll_frequency` milliseconds.
 The actual interval may vary according to network latencies, processing delays, and other hardly predictable perturbations.
 
-If a polling cycle takes longer than the specified time interval, the cycle is started right after the prolonged one finishes.
+If a polling cycle takes longer than the specified time interval, the next cycle is started right after the prolonged one finishes.
 
 Each item from in `output_coils` and `input_contacts` describes the properties of a coil as follows:
 

@@ -12,9 +12,8 @@ import akka.stream.{ActorMaterializer, SinkShape}
 import akka.stream.alpakka.cassandra.CassandraBatchSettings
 import akka.stream.scaladsl.{GraphDSL, Sink, Source}
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import be.cetic.tsorage.common.messaging.{AggUpdate, Message}
+import be.cetic.tsorage.common.messaging.{AggUpdate, Message, RandomMessageIterator}
 import be.cetic.tsorage.processor.flow.{GlobalProcessingGraphFactory, MessageBlock}
-import be.cetic.tsorage.processor.source.RandomMessageIterator
 import GraphDSL.Implicits._
 import be.cetic.tsorage.common.TimeSeries
 import be.cetic.tsorage.processor.aggregator.followup.{AggCountDerivator, FirstAggDerivator, HistoricalFollowUpAggregator, LastAggDerivator}
