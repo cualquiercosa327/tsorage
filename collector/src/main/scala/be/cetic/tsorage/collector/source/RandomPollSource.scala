@@ -26,7 +26,7 @@ class RandomPollSource(val config: Config) extends PollSource(
    val tagset = config
       .getObject("tagset")
       .keySet.toArray
-      .map(key => key.toString -> config.getObject("tagset").get(key).toString)
+      .map(key => key.toString -> config.getConfig("tagset").getString(key.toString) )
       .toMap
 
    override def buildPollFlow(): Flow[String, Message, NotUsed] = {
