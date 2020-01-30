@@ -5,7 +5,7 @@ import akka.http.scaladsl.server
 import akka.http.scaladsl.server.Directives.{as, complete, entity}
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.User
-import be.cetic.tsorage.ingestion.message.DatadogBody
+import be.cetic.tsorage.ingestion.message.{CheckRunMessageJsonSupport, DatadogBody, DatadogMessageJsonSupport}
 import org.apache.kafka.clients.producer.{KafkaProducer, Producer, ProducerRecord}
 import spray.json._
 
@@ -15,7 +15,7 @@ import spray.json._
  * It implements a part of the Datadog Metrics API : https://docs.datadoghq.com/api/?lang=python#post-timeseries-points
  */
 class DDHTTPInterface extends HTTPInterface
-   with MessageJsonSupport
+   with DatadogMessageJsonSupport
 {
    override protected def processSeriesEntity(user: User, kafkaProducer: Producer[String, String]): server.Route =
    {

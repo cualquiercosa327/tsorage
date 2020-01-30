@@ -11,7 +11,7 @@ import akka.stream.ActorMaterializer
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.{AuthenticationQuery, User}
 import be.cetic.tsorage.ingestion.IngestionConfig
-import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DatadogBody, DatadogMessageJsonSupport}
+import be.cetic.tsorage.ingestion.message.{CheckRunMessage, CheckRunMessageJsonSupport, DatadogBody, DatadogMessageJsonSupport}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.producer.{KafkaProducer, Producer, ProducerRecord}
@@ -25,9 +25,9 @@ import scala.util.Success
  * An AKKA system that runs an HTTP server waiting for Datadog compliant messages.
  * It implements a part of the Datadog Metrics API : https://docs.datadoghq.com/api/?lang=python#post-timeseries-points
  */
-abstract class HTTPInterface() extends DatadogMessageJsonSupport
-   with DefaultJsonProtocol
+abstract class HTTPInterface() extends DefaultJsonProtocol
    with MessageJsonSupport
+   with CheckRunMessageJsonSupport
    with LazyLogging
 {
    implicit val system = ActorSystem("http-interface")

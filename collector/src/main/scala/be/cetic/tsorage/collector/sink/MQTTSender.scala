@@ -1,6 +1,7 @@
 package be.cetic.tsorage.collector.sink
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.alpakka.amqp.scaladsl.CommittableReadResult
 import akka.stream.scaladsl.Flow
 import be.cetic.tsorage.collector.MessageSender
@@ -19,7 +20,7 @@ object MQTTSender extends MessageSender
     * @param config The message to send.
     * @return A flow of bufferized messages.
     */
-   override def buildSender(config: Config)(implicit ec: ExecutionContext)
+   override def buildSender(config: Config)(implicit ec: ExecutionContext, system: ActorSystem)
    : Flow[CommittableReadResult, CommittableReadResult, NotUsed] =
    {
       Flow[CommittableReadResult].map(crr => {

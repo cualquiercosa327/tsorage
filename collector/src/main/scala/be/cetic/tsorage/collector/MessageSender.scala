@@ -1,6 +1,7 @@
 package be.cetic.tsorage.collector
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.alpakka.amqp.scaladsl.CommittableReadResult
 import akka.stream.scaladsl.Flow
 import com.typesafe.config.Config
@@ -17,5 +18,5 @@ trait MessageSender
     * @param config The message to send.
     * @return A flow of bufferized messages.
     */
-   def buildSender(config: Config)(implicit ec: ExecutionContext): Flow[CommittableReadResult, CommittableReadResult, NotUsed]
+   def buildSender(config: Config)(implicit ec: ExecutionContext, system: ActorSystem): Flow[CommittableReadResult, CommittableReadResult, NotUsed]
 }
