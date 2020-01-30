@@ -151,18 +151,48 @@ Example of Random Poll configuration:
 Sink Configuration
 ==================
 
-In the Collector module, the sink is the component that submits extracted data points to the ingestion layer. Because this
-layer relies on different technologies, the user has to specify how to connect the sink to an operating ingestion component.
+In the Collector module, the sink is the component that submits extracted data points to the ingestion layer.
+Because this layer relies on different technologies, the user has to specify how to connect the sink to an
+operating ingestion component.
+
+.. warning::
+
+    Since authentication tokens may be used for altering the state of a TSorage solution, they must be considered
+    as secret items that should only be shared with trustworthy entities. Because such a token is stored in the collector
+    configuration file, the access to this file should be restricted to only allowed users.
+
+HTTP Sink
+---------
+
+The HTTP Sink can communicate with the :ref:`REST HTTP Ingestion service <Ingesting_TS_HTTP_REST>` of the ingestion layer.
+Each message is sent using a HTTP POST query, the payload of which is a JSON representation of the message.
 
 For a REST HTTP ingestion service, the following parameters must be specified:
 
 - ``type`` must be set to ``http``.
 - ``ip`` is the IP address of the HTTP service.
 - ``port`` is the port number the HTTP service is listening to. Default value: ``8080``.
-- ``token`` is the token used for authenticating the sender.
+- ``prefix`` the path for the HTTP service.
+- ``api_key`` is the token used for authenticating the sender.
   This token will be transmitted with each message submitted to the ingestion component.
   Any incoming message with no token, or a token that does not correspond to an authorized user, will be rejected by the
   ingestion layer. Authentication tokens are managed from the :ref:`User and Access Management <UserManagement>` interface.
+
+Example of HTTP Sink configuration:
+
+.. code-block::
+
+    {
+        type = "http"
+        ip = "127.0.0.1"
+        port = 8080
+        prefix= "api/v1/series"
+        api_key = "ed1e6666-10f8-4cf5-bed9-610102457aa9"
+    }
+
+
+MQTT Sink
+---------
 
 For a MQTT ingestion service, the following parameters must be specified:
 
@@ -170,11 +200,7 @@ For a MQTT ingestion service, the following parameters must be specified:
 - ``ip`` is the IP address of the MQTT broker.
 - ``port`` is the port the MQTT broker is listening to. Default value: ``1883``.
 
-.. warning::
 
-    Since authentication tokens may be used for altering the state of a TSorage solution, they must be considered
-    as secret items that should only be shared with trustworthy entities. Because such a token is stored in the collector
-    configuration file, the access to this file should be restricted to only allowed users.
 
 
 Modbus Module
