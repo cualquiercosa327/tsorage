@@ -1,7 +1,7 @@
 package be.cetic.tsorage.ingestion.http
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.http.scaladsl.{Http, server}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive1}
@@ -13,7 +13,8 @@ import be.cetic.tsorage.common.messaging.{AuthenticationQuery, User}
 import be.cetic.tsorage.ingestion.IngestionConfig
 import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DatadogBody, DatadogMessageJsonSupport}
 import com.typesafe.config.Config
-import org.apache.kafka.clients.producer.ProducerRecord
+import com.typesafe.scalalogging.LazyLogging
+import org.apache.kafka.clients.producer.{KafkaProducer, Producer, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer
 import spray.json._
 
@@ -24,15 +25,16 @@ import scala.util.Success
  * An AKKA system that runs an HTTP server waiting for Datadog compliant messages.
  * It implements a part of the Datadog Metrics API : https://docs.datadoghq.com/api/?lang=python#post-timeseries-points
  */
-object HTTPInterface extends DatadogMessageJsonSupport
+abstract class HTTPInterface() extends DatadogMessageJsonSupport
    with DefaultJsonProtocol
    with MessageJsonSupport
+   with LazyLogging
 {
    implicit val system = ActorSystem("http-interface")
    implicit val materializer = ActorMaterializer()
    implicit val executionContext = system.dispatcher
 
-   private val conf = IngestionConfig.conf
+   protected val conf = IngestionConfig.conf
 
    def verifyToken(conf: Config)(token: String): Future[Option[User]] = {
       val request = HttpRequest(
@@ -54,44 +56,33 @@ object HTTPInterface extends DatadogMessageJsonSupport
       }
    }
 
-   def main(args: Array[String]): Unit =
+   def run(): Unit =
    {
-
       val producerSettings = ProducerSettings(system, new StringSerializer, new StringSerializer)
          .withBootstrapServers(s"${conf.getString("kafka.host")}:${conf.getInt("kafka.port")}")
 
       val kafkaProducer = producerSettings.createKafkaProducer()
 
       val routeSeries =
-      decodeRequest
-      {
-         withoutSizeLimit
+         decodeRequest
          {
-            path("api" / "v1" / "series")
+            withoutSizeLimit
             {
-               post
+               path("api" / "v1" / "series")
                {
-                  parameter('api_key)
+                  post
                   {
-                     api_key =>
-                     authorize(conf, system, executionContext, materializer)(api_key){
-                        user =>
-
-                           entity(as[DatadogBody])
-                           { body =>
-                              val messages = body.series.map(ddMsg => ddMsg.prepare(user))
-
-                              messages.map(message => new ProducerRecord[String, String](conf.getString("kafka.topic"), message.toJson.compactPrint))
-                                 .foreach(pr => kafkaProducer.send(pr))
-
-                              complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK"))
+                     parameter('api_key)
+                     {
+                        api_key =>
+                           authorize(conf, system, executionContext, materializer)(api_key){
+                              user => processSeriesEntity(user, kafkaProducer)
                            }
                      }
                   }
                }
             }
          }
-      }
 
       val routeCheckRun = decodeRequest
       {
@@ -124,10 +115,12 @@ object HTTPInterface extends DatadogMessageJsonSupport
          println("Shutdown...")
 
          bindingFuture
-           .flatMap(_.unbind()) // trigger unbinding from the port
-           .onComplete(_ => {
-              system.terminate()
-           }) // and shutdown when done
+            .flatMap(_.unbind()) // trigger unbinding from the port
+            .onComplete(_ => {
+               system.terminate()
+            }) // and shutdown when done
       }
    }
+
+   protected def processSeriesEntity(user: User, kafkaProducer: Producer[String, String]): server.Route
 }
