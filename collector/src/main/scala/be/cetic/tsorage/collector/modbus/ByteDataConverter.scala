@@ -41,5 +41,4 @@ object ByteDataConverter extends DataConverter
       assert(bytes.size == 1)
       BigInt(bytes).toInt
    }
-
 }

@@ -5,44 +5,26 @@ package be.cetic.tsorage.collector.modbus
  */
 object IntDataConverter extends DataConverter
 {
-   def fromUnsignedInt(value: Long, littleEndian: Boolean = true): Array[Byte] =
+   /**
+    * @param bytes An array of 4 bytes to be converted to an unsigned int.
+    *              The bytes are a big endian representation of the integer.
+    *
+    */
+   def asUnsignedInt(bytes: Array[Byte]): Long =
    {
-      assert(value >= 0)
-
-      val bytes = padLeft(BigInt(value).toByteArray, 4)
-
-      if(littleEndian) bytes.reverse
-      else bytes
+      assert(bytes.size == 4)
+      bytesToUnsignedInt(bytes, false)
    }
 
    /**
-    * @param bytes An array of two bytes to be converted to an unsigned short.
+    * @param bytes   An array of 4 bytes to be converted to a signed int.
+    *                The bytes are a big endian representation of the integer.
+    * @return
     */
-   def asUnsignedInt(bytes: Array[Byte], littleEndian: Boolean = true): Long =
+
+   def asSignedInt(bytes: Array[Byte]) =
    {
       assert(bytes.size == 4)
-      bytesToUnsignedInt(bytes, littleEndian)
-   }
-
-   def fromSignedInt(value: Int, littleEndian: Boolean = true): Array[Byte] =
-   {
-      assert(value <= Int.MaxValue)
-      assert(value >= Int.MinValue)
-
-      val posBE = BigInt(Math.abs(value)).toByteArray
-
-      val bytes = if(value >= 0) posBE.reverse.padTo(4, 0x00.toByte)
-                  else ((~BigInt(posBE))+1).toByteArray.reverse.padTo(4, 0xff.toByte)
-
-      if(littleEndian) bytes
-      else bytes.reverse
-   }
-
-   def asSignedInt(bytes: Array[Byte], littleEndian: Boolean = true) =
-   {
-      assert(bytes.size == 4)
-
-      if(littleEndian) BigInt(bytes.reverse).toInt
-      else BigInt(bytes).toInt
+      BigInt(bytes).toInt
    }
 }
