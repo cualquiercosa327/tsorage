@@ -21,11 +21,7 @@ object DataConverter
 
    private def padLeft(bytes: Array[Byte], length: Int): Array[Byte] =
    {
-      if(bytes.size >= length) bytes
-      else ByteBuffer
-         .allocate(length)
-         .put(bytes,  length - bytes.length - 1, bytes.length)
-         .array()
+      bytes.reverse.padTo(length, 0x0.toByte).reverse
    }
 
    /**
@@ -69,10 +65,10 @@ object DataConverter
    {
       assert(value >= 0)
 
-      val bytes = padLeft(BigInt(value).toByteArray.takeRight(2).reverse, 2)
+      val bytes = padLeft(BigInt(value).toByteArray.takeRight(2), 2)
 
-      if(littleEndian) bytes
-      else bytes.reverse
+      if(littleEndian) bytes.reverse
+      else bytes
    }
 
    /**
@@ -89,13 +85,10 @@ object DataConverter
       assert(value <= Short.MaxValue)
       assert(value >= Short.MinValue)
 
-      val pos = BigInt(Math.abs(value)).toByteArray.reverse.padTo(2, 0x00.toByte)
+      val posBE = BigInt(Math.abs(value)).toByteArray
 
-      val bytes = if(value >= 0) pos
-                  else ((~BigInt(pos.reverse))+1).toByteArray
-
-      println(bytes.mkString(" "))
-
+      val bytes = if(value >= 0) posBE.reverse.padTo(2, 0x00.toByte)
+                  else ((~BigInt(posBE))+1).toByteArray.reverse.padTo(2, 0xff.toByte)
 
       if(littleEndian) bytes
       else bytes.reverse
@@ -104,6 +97,49 @@ object DataConverter
    def asSignedShort(bytes: Array[Byte], littleEndian: Boolean = true) =
    {
       assert(bytes.size == 2)
+
+      if(littleEndian) BigInt(bytes.reverse).toInt
+      else BigInt(bytes).toInt
+   }
+
+   // ===
+
+   def fromUnsignedInt(value: Long, littleEndian: Boolean = true): Array[Byte] =
+   {
+      assert(value >= 0)
+
+      val bytes = padLeft(BigInt(value).toByteArray, 4)
+
+      if(littleEndian) bytes.reverse
+      else bytes
+   }
+
+   /**
+    * @param bytes An array of two bytes to be converted to an unsigned short.
+    */
+   def asUnsignedInt(bytes: Array[Byte], littleEndian: Boolean = true): Long =
+   {
+      assert(bytes.size == 4)
+      bytesToUnsignedInt(bytes, littleEndian)
+   }
+
+   def fromSignedInt(value: Int, littleEndian: Boolean = true): Array[Byte] =
+   {
+      assert(value <= Int.MaxValue)
+      assert(value >= Int.MinValue)
+
+      val posBE = BigInt(Math.abs(value)).toByteArray
+
+      val bytes = if(value >= 0) posBE.reverse.padTo(4, 0x00.toByte)
+                  else ((~BigInt(posBE))+1).toByteArray.reverse.padTo(4, 0xff.toByte)
+
+      if(littleEndian) bytes
+      else bytes.reverse
+   }
+
+   def asSignedInt(bytes: Array[Byte], littleEndian: Boolean = true) =
+   {
+      assert(bytes.size == 4)
 
       if(littleEndian) BigInt(bytes.reverse).toInt
       else BigInt(bytes).toInt
