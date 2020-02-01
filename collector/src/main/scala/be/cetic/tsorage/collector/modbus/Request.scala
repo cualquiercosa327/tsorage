@@ -4,24 +4,36 @@ import java.nio.ByteBuffer
 
 /**
  * A request for a Modbus slave.
+ *
+ * http://www.ozeki.hu/index.php?owpn=5854
  */
 sealed class ModbusRequest(
-                             unitIdentifier: Byte,
-                             registerNumber: Short,
+                             unitIdentifier: Int,
+                             registerNumber: Int,
                              registerCount: Short,
-                             fc: Byte
+                             fc: Int
                           )
 {
+
+   assert(unitIdentifier >= 0)
+   assert(registerNumber >= 0)
+   assert(registerCount >= 0)
+
+   /**
+    * https://sitelec.org/cours/abati/modbus.htm
+    */
+   private def calculateCRC() = {
+      ByteBuffer.wrap(Array[Byte](0xff.toByte, 0xff.toByte))
+   }
+
    def createFrame: Array[Byte] = {
       val buffer = ByteBuffer
          .allocateDirect(5)
-         .putShort(0.toShort)    // transaction identifier
-         .putShort(0.toShort)    // protocol identifier
-         .putShort(6.toShort)    // Length field
-         .put(unitIdentifier)    // Unit identifier, not used for TCP requests
-         .put(fc)                // Modbus function code
-         .putShort(registerNumber) // address
-         .putShort(registerCount)   // Number of registers
+         .put(ByteDataConverter.fromUnsignedByte(unitIdentifier))
+         .put(ByteDataConverter.fromUnsignedByte(fc))
+         .put(ShortDataConverter.fromUnsignedShort(registerNumber, false))
+         .put(ShortDataConverter.fromUnsignedShort(registerCount, false))
+         //.put(ShortDataConverter.fromUnsignedShort(crc, false))
 
       buffer.array()
    }
