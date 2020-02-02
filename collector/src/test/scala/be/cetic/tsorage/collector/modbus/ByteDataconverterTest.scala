@@ -8,13 +8,13 @@ import org.scalatest.{FlatSpec, Matchers}
 class ByteDataconverterTest  extends FlatSpec with Matchers
 {
    "A small unsigned byte" should "be represented by the right byte array" in {
-      ByteDataConverter.fromUnsignedByte(42, true) shouldBe Array[Byte](0x2a.toByte)
-      ByteDataConverter.fromUnsignedByte(42, false) shouldBe Array[Byte](0x2a.toByte)
+      ByteDataConverter.fromUnsignedByte(42) shouldBe Array[Byte](0x2a.toByte)
+      ByteDataConverter.fromUnsignedByte(42) shouldBe Array[Byte](0x2a.toByte)
    }
 
    "A large unsigned byte" should "be represented by the right byte array" in {
-      ByteDataConverter.fromUnsignedByte(200, true) shouldBe Array[Byte](0xc8.toByte)
-      ByteDataConverter.fromUnsignedByte(200, false) shouldBe Array[Byte](0xc8.toByte)
+      ByteDataConverter.fromUnsignedByte(200) shouldBe Array[Byte](0xc8.toByte)
+      ByteDataConverter.fromUnsignedByte(200) shouldBe Array[Byte](0xc8.toByte)
    }
 
    "A byte array representing a small unsigned byte" should "be converted into the right value" in {

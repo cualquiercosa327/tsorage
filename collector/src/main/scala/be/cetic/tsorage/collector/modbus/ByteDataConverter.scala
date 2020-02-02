@@ -21,7 +21,7 @@ object ByteDataConverter extends DataConverter
     * @param value   The unsigned byte to convert.
     * @return  The byte array encoding the unsigned byte array.
     */
-   def fromUnsignedByte(value: Int, littleEndian: Boolean = true): Array[Byte] =
+   def fromUnsignedByte(value: Int): Array[Byte] =
    {
       assert(value >= 0)
 
