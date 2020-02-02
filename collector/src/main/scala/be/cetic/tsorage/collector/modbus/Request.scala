@@ -14,6 +14,8 @@ sealed class ModbusRequest(
                              fc: Int
                           )
 {
+   private val PROTOCOL_ID: Array[Byte] = ShortDataConverter.fromUnsignedShort(0, false)
+
    assert(registerNumber >= 0)
    assert(registerCount >= 0)
 
@@ -42,6 +44,52 @@ sealed class ModbusRequest(
          .put(crc.array)
 
       buffer.array()
+   }
+
+   /**
+    * Creates a 7-byte frame prefix for TCP requests.
+    * @return
+    */
+   private def createMBAP(transactionID: Int, length: Int, unitID: Int): Array[Byte] =
+   {
+      val buffer = ByteBuffer
+         .allocate(7)
+         .put(ShortDataConverter.fromUnsignedShort(transactionID, false))
+         .put(PROTOCOL_ID)
+         .put(ShortDataConverter.fromUnsignedShort(length+1, false))
+         .put(ByteDataConverter.fromUnsignedByte(unitID))
+         .array
+
+
+      assert(buffer.size == 7)
+
+      buffer
+   }
+
+   /**
+    * Creates a TCP version of the request.
+    *
+    * http://www.simplymodbus.ca/TCP.htm
+    *
+    * @return
+    */
+   def createTCPFrame(transactionID: Int, unitID: Int): Array[Byte] =
+   {
+      assert(transactionID >= 0)
+      assert(transactionID <= 2 * Short.MaxValue)
+
+      assert(unitID >= 0)
+      assert(unitID <= 2 * Short.MaxValue)
+
+      val payload = createPayloadBuffer().array
+      val mbap = createMBAP(transactionID, payload.size, unitID)
+
+      val buffer = ByteBuffer.allocate(7 + payload.size)
+         .put(mbap)
+         .put(payload)
+         .array
+
+      buffer
    }
 }
 
