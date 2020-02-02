@@ -6,34 +6,32 @@ import java.nio.ByteBuffer
  * A request for a Modbus slave.
  *
  * http://www.ozeki.hu/index.php?owpn=5854
+ * https://www.modbustools.com/modbus.html#function02
  */
 sealed class ModbusRequest(
                              unitIdentifier: Int,
                              registerNumber: Int,
-                             registerCount: Short,
+                             registerCount: Int,
                              fc: Int
                           )
 {
-
    assert(unitIdentifier >= 0)
    assert(registerNumber >= 0)
    assert(registerCount >= 0)
 
-   /**
-    * https://sitelec.org/cours/abati/modbus.htm
-    */
-   private def calculateCRC() = {
-      ByteBuffer.wrap(Array[Byte](0xff.toByte, 0xff.toByte))
-   }
-
    def createFrame: Array[Byte] = {
-      val buffer = ByteBuffer
-         .allocateDirect(5)
+      val payload = ByteBuffer
+         .allocate(6)
          .put(ByteDataConverter.fromUnsignedByte(unitIdentifier))
          .put(ByteDataConverter.fromUnsignedByte(fc))
          .put(ShortDataConverter.fromUnsignedShort(registerNumber, false))
          .put(ShortDataConverter.fromUnsignedShort(registerCount, false))
-         //.put(ShortDataConverter.fromUnsignedShort(crc, false))
+
+      val crc = CRC16.calculateCRC(payload.array())
+
+      val buffer = ByteBuffer.allocate(8)
+         .put(payload.array)
+         .put(crc.array)
 
       buffer.array()
    }
@@ -42,7 +40,7 @@ sealed class ModbusRequest(
 /**
  * Modbus function 1
  */
-class ReadCoils(unitIdentifier: Byte, registerNumber: Short, registerCount: Short) extends ModbusRequest(
+class ReadCoils(unitIdentifier: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
    unitIdentifier,
    registerNumber,
    registerCount,
@@ -54,7 +52,7 @@ class ReadCoils(unitIdentifier: Byte, registerNumber: Short, registerCount: Shor
  * @param registerNumber
  * @param registerCount
  */
-class ReadDiscreteInput(unitIdentifier: Byte, registerNumber: Short, registerCount: Short) extends ModbusRequest(
+class ReadDiscreteInput(unitIdentifier: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
    unitIdentifier,
    registerNumber,
    registerCount,
@@ -66,7 +64,7 @@ class ReadDiscreteInput(unitIdentifier: Byte, registerNumber: Short, registerCou
  * @param registerNumber
  * @param registerCount
  */
-class ReadHoldingRegister(unitIdentifier: Byte, registerNumber: Short, registerCount: Short) extends ModbusRequest(
+class ReadHoldingRegister(unitIdentifier: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
    unitIdentifier,
    registerNumber,
    registerCount,
