@@ -7,7 +7,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge, RestartFlow, RestartSink, Re
 import akka.stream.{ActorMaterializer, ClosedShape, FlowShape, SinkShape, SourceShape}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import be.cetic.tsorage.collector.sink.{HttpSender, MQTTSender}
+import be.cetic.tsorage.collector.sink.{HttpSender, MQTTSender, StdoutSender}
 import be.cetic.tsorage.common.messaging.{Message, RandomMessageIterator}
 import com.typesafe.config.{Config, ConfigFactory}
 import GraphDSL.Implicits._
@@ -15,7 +15,6 @@ import be.cetic.tsorage.collector.source.RandomPollSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
-
 import collection.JavaConverters._
 
 /**
@@ -46,6 +45,7 @@ object Collector
       val submitterGenerator = () => ingestion_conf.getString("type") match {
             case "http" => HttpSender.buildSender(ingestion_conf)
             case "mqtt" => MQTTSender.buildSender(ingestion_conf)
+            case "stdout/json" => StdoutSender.buildSender(ingestion_conf)
          }
 
       val bufferFlow = buildBufferGraph(Source.fromGraph(globalMessageSource), bufferSinkGenerator)

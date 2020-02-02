@@ -70,12 +70,7 @@ An example of configuration document is listed below:
         { configuration for a Modbus connexion }
     ]
 
-    sink = {
-        type = "http",
-        ip = "127.0.0.1",
-        port = 8081,
-        token = "ed1e6666-10f8-4cf5-bed9-610102457aa9"
-    }
+    sink = { sink configuration }
 
 
 
@@ -148,6 +143,7 @@ Example of Random Poll configuration:
 
 
 
+
 Sink Configuration
 ==================
 
@@ -161,10 +157,16 @@ operating ingestion component.
     as secret items that should only be shared with trustworthy entities. Because such a token is stored in the collector
     configuration file, the access to this file should be restricted to only allowed users.
 
+Stdout Sink
+-----------
+
+This simple sink prints every individual incoming message to the standard output of the running process.
+A message is printed as a single line JSON document. Printed messages are separated by a new line character.
+
 HTTP Sink
 ---------
 
-The HTTP Sink can communicate with the :ref:`REST HTTP Ingestion service <Ingesting_TS_HTTP_REST>` of the ingestion layer.
+The HTTP Sink can communicate with the :ref:`REST HTTP Ingestion module <Ingesting_TS_HTTP_REST>` of the ingestion layer.
 Each message is sent using a HTTP POST query, the payload of which is a JSON representation of the message.
 
 For a REST HTTP ingestion service, the following parameters must be specified:
@@ -194,11 +196,13 @@ Example of HTTP Sink configuration:
 MQTT Sink
 ---------
 
-For a MQTT ingestion service, the following parameters must be specified:
+The MQTT Sink can communicate with the :ref:`MQTT ingestion module <Ingesting_TS_MQTT>` of the ingestion layer.
+Messages are sent using a MQTT session. The following parameters must be specified:
 
 - ``type`` must be set to ``mqtt``.
 - ``ip`` is the IP address of the MQTT broker.
 - ``port`` is the port the MQTT broker is listening to. Default value: ``1883``.
+- ``channel`` must correspond to the channel used by the MQTT Ingestion module. Default value: ``timeseries``
 
 
 

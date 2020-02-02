@@ -2,7 +2,6 @@ package be.cetic.tsorage.collector.modbus
 
 import org.scalatest.{FlatSpec, Matchers}
 
-
 class RequestTest extends FlatSpec with Matchers
 {
    "A RTU request for reading of coils (function 1)" should "be correctly converted to Modbus Frame" in {
@@ -30,12 +29,8 @@ class RequestTest extends FlatSpec with Matchers
          Array[Byte](0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x11, 0x03, 0x00, 0x6b.toByte, 0x00, 0x03)
    }
 
-
-
    "A RTU request for reading of Input Registers (function 4)" should "be correctly converted to Modbus Frame" in {
       new ReadInputRegister(0, 2).createRTUFrame(1) shouldBe
       Array[Byte](0x01, 0x04, 0x00, 0x00, 0x00, 0x02, 0x71.toByte, 0xcb.toByte)
    }
-
-
 }
