@@ -5,7 +5,7 @@
 Create `cetic-tsorage-dev` Kubernetes namespace:
 
 ```sh
-kubectl create -f kubernetes-namespaces.yaml
+kubectl create -f kube-namespaces.yaml
 ```
 
 Install and run Cassandra:
