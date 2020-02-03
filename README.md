@@ -31,15 +31,15 @@ TSorage uses several environment variables to configure certain parts of the sof
 - `TSORAGE_CASSANDRA_HOST`: Host of Cassandra. Defaults to `localhost`.
 - `TSORAGE_KAFKA_HOST`: Host of Kafka. Defaults to `localhost`.
 - `TSORAGE_KAFKA_BROKER_ADDRESSES`: List of addresses of the Kafka brokers in a bootstrap Kafka cluster (more information [here](https://kafka.apache.org/documentation/) and [here](https://jaceklaskowski.gitbooks.io/apache-kafka/kafka-properties-bootstrap-servers.html)). Defaults to `[localhost:9092]`.
-- `TSORAGE_HUB_LISTEN_ADDRESS`: Listen address of hub module. This variable controls which IP address to listen for incoming connections on. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
-- `TSORAGE_HUB_HOST`: Host of hub module. Defaults to `localhost`.
+- `TSORAGE_HUB_LISTEN_ADDRESS`: Listen address of Hub module. This variable controls which IP address to listen for incoming connections on. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
+- `TSORAGE_HUB_HOST`: Host of Hub module. Defaults to `localhost`.
 - `TSORAGE_INGESTION_LISTEN_ADDRESS`: Listen address of ingestion module. This variable controls which IP address to listen for incoming connections on. Defaults to `localhost`. If you use Docker, set this variable to `0.0.0.0`.
 
 ### Deployment
 
 In this project, we use [Docker Compose](https://docs.docker.com/compose/) for deployment. To run TSorage, make sure you have [Docker Engine](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your computer. Then, create Docker image of each module as follows:
 
-```bash
+```sh
 sbt hub/docker:publishLocal
 sbt ingestion/docker:publishLocal
 sbt processor/docker:publishLocal
@@ -47,13 +47,13 @@ sbt processor/docker:publishLocal
 
 Finally, run TSorage using this command in a terminal:
 
-```bash
+```sh
 docker-compose up -d
 ```
 
 To stop TSorage, run this command:
 
-```bash
+```sh
 docker-compose down
 ```
 
@@ -69,13 +69,13 @@ http://hub:8081/api/v1/grafana
 
 To run the demonstration, use this command in a terminal:
 
-```bash
+```sh
 docker-compose -f docker-compose.yml -f docker-compose.demo.yml up -d
 ```
 
 To stop it, run this command:
 
-```bash
+```sh
 docker-compose -f docker-compose.yml -f docker-compose.demo.yml down
 ```
 

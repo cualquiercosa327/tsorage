@@ -32,7 +32,13 @@ helm install tsorage-grafana stable/grafana --namespace cetic-tsorage-dev \
 Install and run Grafana (with a preconfigured data source):
 
 ```sh
-helm install tsorage-grafana stable/grafana --namespace cetic-tsorage-dev -f kube-grafana-dev.yaml
+helm install tsorage-grafana stable/grafana --namespace cetic-tsorage-dev -f kube-grafana-values-dev.yaml
+```
+
+Run Hub module:
+
+```sh
+kubectl apply -f kube-hub-conf-dev.yaml -f kube-hub-dev.yaml
 ```
 
 Check pods:
@@ -95,6 +101,12 @@ Uninstall Grafana:
 
 ```sh
 helm uninstall tsorage-grafana --namespace=cetic-tsorage-dev
+```
+
+Uninstall Hub module:
+
+```sh
+kubectl delete -f kube-hub-conf-dev.yaml -f kube-hub-dev.yaml
 ```
 
 ### Tricks
