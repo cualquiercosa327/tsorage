@@ -47,11 +47,8 @@ spec:
       containers:
         - name: tsorage-hub
           image: nicosalamone/tsorage-hub # TODO: change nicosalamone to ceticasbl.
-          env:
-            - name: TSORAGE_HUB_LISTEN_ADDRESS
-              value: 0.0.0.0
-            - name: TSORAGE_CASSANDRA_HOST
-              value: cassandra.cetic-tsorage-dev.svc.cluster.local
-              #value: cassandra-0.cassandra.cetic-tsorage-dev.svc.cluster.local
+          envFrom:
+            - configMapRef:
+                name: tsorage-hub-conf
           ports:
             - containerPort: 8081
