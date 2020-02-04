@@ -5,4 +5,4 @@ metadata:
   name: tsorage-hub-conf
 data:
   TSORAGE_HUB_LISTEN_ADDRESS: 0.0.0.0
-  TSORAGE_CASSANDRA_HOST: cassandra.cetic-tsorage-dev.svc.cluster.local
+  TSORAGE_CASSANDRA_HOST: tsorage-cassandra.cetic-tsorage-dev.svc.cluster.local

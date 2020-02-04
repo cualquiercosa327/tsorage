@@ -11,13 +11,16 @@ kubectl create -f kube-namespaces.yaml
 Install and run Cassandra:
 
 ```sh
-helm install tsorage-cassandra incubator/cassandra --namespace cetic-tsorage-dev
+helm install tsorage-cassandra incubator/cassandra --namespace cetic-tsorage-dev \
+  --set config.cluster_size=1 # Set the number of Cassandra nodes.
 ```
 
 Install and run Kafka:
 
 ```sh
-helm install tsorage-kafka incubator/kafka --namespace cetic-tsorage-dev
+helm install tsorage-kafka incubator/kafka --namespace cetic-tsorage-dev \
+  --set replicas=1 # Set the number of Kafka brokers.
+  --set zookeeper.replicaCount=1 # Set the number of ZooKeeper nodes.
 ```
 
 Install and run Grafana (without any preconfigured data source):
