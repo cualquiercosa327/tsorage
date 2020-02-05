@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: cetic-tsorage-dev
+  name: tsorage-processor
+  labels:
+    organisation: cetic
+    environment: development
+    app: tsorage
+spec:
+  selector:
+    matchLabels:
+      environment: development
+      app: tsorage
+      module: processor
+  replicas: 1
+  template:
+    metadata:
+      namespace: cetic-tsorage-dev
+      name: tsorage-processor
+      labels:
+        organisation: cetic
+        environment: development
+        app: tsorage
+        module: processor
+    spec:
+      containers:
+        - name: tsorage-processor
+          image: nicosalamone/tsorage-processor # TODO: change nicosalamone to ceticasbl.
+          envFrom:
+            - configMapRef:
+                name: tsorage-processor-conf

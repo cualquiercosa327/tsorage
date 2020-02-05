@@ -50,6 +50,12 @@ Run Ingestion module:
 kubectl apply -f kube-ingestion-conf-dev.yaml -f kube-ingestion-dev.yaml
 ```
 
+Run Processor module:
+
+```sh
+kubectl apply -f kube-processor-conf-dev.yaml -f kube-processor-dev.yaml
+```
+
 Check pods:
 
 ```sh
@@ -132,6 +138,12 @@ Uninstall Ingestion module:
 
 ```sh
 kubectl delete -f kube-ingestion-conf-dev.yaml -f kube-ingestion-dev.yaml
+```
+
+Uninstall Processor module:
+
+```sh
+kubectl delete -f kube-processor-conf-dev.yaml -f kube-processor-dev.yaml
 ```
 
 ### Tricks
