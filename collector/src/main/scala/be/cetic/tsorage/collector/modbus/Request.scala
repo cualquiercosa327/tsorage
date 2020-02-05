@@ -9,15 +9,19 @@ import java.nio.ByteBuffer
  * https://www.modbustools.com/modbus.html#function02
  */
 sealed class ModbusRequest(
-                             registerNumber: Int,
-                             registerCount: Int,
-                             fc: Int
+                             val unitId: Int,
+                             val registerNumber: Int,
+                             val registerCount: Int,
+                             val fc: Int
                           )
 {
    private val PROTOCOL_ID: Array[Byte] = ShortDataConverter.fromUnsignedShort(0, false)
 
+   assert(unitId >= 0)
    assert(registerNumber >= 0)
    assert(registerCount >= 0)
+
+   private val unitIdentifier = ByteDataConverter.fromUnsignedByte(unitId)
 
    private def createPayloadBuffer(): ByteBuffer =
    {
@@ -27,13 +31,12 @@ sealed class ModbusRequest(
          .put(ShortDataConverter.fromUnsignedShort(registerCount, false))
    }
 
-   def createRTUFrame(unitIdentifier: Int): Array[Byte] = {
-      assert(unitIdentifier >= 0)
+   def createRTUFrame(): Array[Byte] = {
 
       val payload = createPayloadBuffer()
 
       val prefixBuffer = ByteBuffer.allocate(6)
-         .put(ByteDataConverter.fromUnsignedByte(unitIdentifier))
+         .put(unitIdentifier)
          .put(payload.array)
          .array
 
@@ -57,9 +60,8 @@ sealed class ModbusRequest(
          .put(ShortDataConverter.fromUnsignedShort(transactionID, false))
          .put(PROTOCOL_ID)
          .put(ShortDataConverter.fromUnsignedShort(length+1, false))
-         .put(ByteDataConverter.fromUnsignedByte(unitID))
+         .put(unitIdentifier)
          .array
-
 
       assert(buffer.size == 7)
 
@@ -73,16 +75,13 @@ sealed class ModbusRequest(
     *
     * @return
     */
-   def createTCPFrame(transactionID: Int, unitID: Int): Array[Byte] =
+   def createTCPFrame(transactionID: Int): Array[Byte] =
    {
       assert(transactionID >= 0)
       assert(transactionID <= 2 * Short.MaxValue)
 
-      assert(unitID >= 0)
-      assert(unitID <= 2 * Short.MaxValue)
-
       val payload = createPayloadBuffer().array
-      val mbap = createMBAP(transactionID, payload.size, unitID)
+      val mbap = createMBAP(transactionID, payload.size, unitId)
 
       val buffer = ByteBuffer.allocate(7 + payload.size)
          .put(mbap)
@@ -96,7 +95,8 @@ sealed class ModbusRequest(
 /**
  * Modbus function 1
  */
-class ReadCoils(registerNumber: Int, registerCount: Int) extends ModbusRequest(
+class ReadCoils(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+   unitId,
    registerNumber,
    registerCount,
    0x1
@@ -107,7 +107,8 @@ class ReadCoils(registerNumber: Int, registerCount: Int) extends ModbusRequest(
  * @param registerNumber
  * @param registerCount
  */
-class ReadDiscreteInput(registerNumber: Int, registerCount: Int) extends ModbusRequest(
+class ReadDiscreteInput(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+   unitId,
    registerNumber,
    registerCount,
    0x2
@@ -118,7 +119,8 @@ class ReadDiscreteInput(registerNumber: Int, registerCount: Int) extends ModbusR
  * @param registerNumber
  * @param registerCount
  */
-class ReadHoldingRegister(registerNumber: Int, registerCount: Int) extends ModbusRequest(
+class ReadHoldingRegister(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+   unitId,
    registerNumber,
    registerCount,
    0x3
@@ -129,7 +131,8 @@ class ReadHoldingRegister(registerNumber: Int, registerCount: Int) extends Modbu
  * @param registerNumber
  * @param registerCount
  */
-class ReadInputRegister(registerNumber: Short, registerCount: Short) extends ModbusRequest(
+class ReadInputRegister(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+   unitId,
    registerNumber,
    registerCount,
    0x4

@@ -3,11 +3,13 @@ package be.cetic.tsorage.collector.source
 import java.time.{LocalDateTime, ZoneId}
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.scaladsl.Flow
 import be.cetic.tsorage.common.messaging.Message
 import com.typesafe.config.Config
 import spray.json.JsNumber
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.util.Random
 
@@ -29,7 +31,8 @@ class RandomPollSource(val config: Config) extends PollSource(
       .map(key => key.toString -> config.getConfig("tagset").getString(key.toString) )
       .toMap
 
-   override def buildPollFlow(): Flow[String, Message, NotUsed] = {
+   override def buildPollFlow()
+   (implicit ec: ExecutionContextExecutor, system: ActorSystem): Flow[String, Message, NotUsed] = {
       Flow[String].map(tick => {
          Message(
             metrics.get(Random.nextInt(metrics size)),

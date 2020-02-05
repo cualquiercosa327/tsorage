@@ -145,19 +145,21 @@ Example of Random Poll configuration:
 Modbus TCP Poll Source
 ^^^^^^^^^^^^^^^^^^^^^^
 
-For polling a Modbus TCP slave (server), the following parameters must be specified:
+The Modbus TCP Poll component frequently polls a Modbus TCP slave (server) for extracting values from its registers.
+
+The following parameters must be specified:
 
 - ``type`` must be ``poll/modbus/tcp``
-- ``slaves`` must be a list of Modbus slaves to be polled. For each of them, the following properties must be specified:
-
-  - ``name``, a human friendly name of the slave.
-  - ``ip``, the ip address (or the domain name) of the slave.
-  - ``port``, the port on which the slave is waiting for queries. The standard value is `502`.
-  - ``interval``, the desired poll interval for this slave.
-  - ``output_coils``, the list of coils in the discrete output coils (coil numbers between 1 and 9999) to be collected.
-  - ``input_contacts``, the list of discrete input contacts (coils number between 10001 and 19999) to be collected.
-  - ``input_registers``, the list of analog input registers (registers number between 30001 and 39999) to be collected.
-  - ``holding_registers``, the list of analog output holding registers (registers number between 40001 and 49999) to be collected.
+- ``interval``, the desired polling interval.
+- ``name``, a human friendly name of the slave.
+- ``unit_id``, the unit id to transmit with the requests.
+- ``max_response_bytes``, the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device. 
+- ``host``, the ip address or host name of the slave.
+- ``port``, the port on which the slave is waiting for queries. The standard value is `502`.
+- ``output_coils``, the list of coils in the discrete output coils (coil numbers between 1 and 9999; Modbus function 1) to be collected.
+- ``input_contacts``, the list of discrete input contacts (coils number between 10001 and 19999; Modbus function 2) to be collected.
+- ``holding_registers``, the list of analog holding registers (registers number between 30001 and 39999; Modbus function 3) to be collected.
+- ``input_registers``, the list of analog output input registers (registers number between 40001 and 49999; Modbus function 4) to be collected.
 
 The coil and register tables (`output_coils`, `input_contacts`, `input_registers`, `holding_registers`) are polled
 in a cyclic fashion, it that order.
@@ -204,13 +206,9 @@ Each item in ``input_registers`` and ``holding_registers`` describes as the prop
   - ``uint16``, an unsigned integer value, stored as a single word.
   - ``uint32``, an unsigned integer value, stored as two words. The register that follows the addressed one will be used
     to read the value.
-  - ``uint64``, an unsigned integer value, stored as four words. The tree registers that follow the addressed one will
-    be used to read the value.
   - ``sint16``, a signed integer value, stored as a single word.
   - ``sint32``, a signed integer value, stored as two words. The register that follows the addressed one will be used
     to read the value.
-  - ``uint64``, a signed integer value, stored as four words. The tree registers that follow the addressed one will
-    be used to read the value.
   - ``sfloat32``, a signed floatting number, stored as two words.
     The register that follows the addressed one will be used to read the value.
   - ``enum16``, a categorial value, stored as a single word. The ``values`` property of the register can be used for

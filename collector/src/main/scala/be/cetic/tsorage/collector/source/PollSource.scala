@@ -5,6 +5,7 @@ import akka.stream.{OverflowStrategy, SourceShape}
 import akka.stream.scaladsl.{Flow, GraphDSL, RestartFlow, RestartSource, Source}
 import be.cetic.tsorage.common.messaging.Message
 import GraphDSL.Implicits._
+import akka.actor.ActorSystem
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -30,9 +31,11 @@ abstract class PollSource(val interval: FiniteDuration)
     * Generates a flow that reacts to incoming ticks by producing new messages.
     * @return  A flow that can produce new messages every time a tick is incoming.
     */
-   protected def buildPollFlow(): Flow[String, Message, NotUsed]
+   protected def buildPollFlow()
+   (implicit ec: ExecutionContextExecutor, system: ActorSystem): Flow[String, Message, NotUsed]
 
-   def buildPoller()(implicit context: ExecutionContextExecutor) = GraphDSL.create(){
+   def buildPoller()
+   (implicit context: ExecutionContextExecutor, system: ActorSystem) = GraphDSL.create(){
       implicit builder: GraphDSL.Builder[NotUsed] =>
 
       val tick = Source

@@ -40,7 +40,7 @@ object ShortDataConverter extends DataConverter
 
    def asSignedShort(bytes: Array[Byte], littleEndian: Boolean = true) =
    {
-      assert(bytes.size == 2)
+      assert(bytes.length == 2, s"2 bytes expected, got ${bytes.length} instead: ${bytes.map(b => b & 0xFF).mkString("[", ",", "]")}")
 
       if(littleEndian) BigInt(bytes.reverse).toInt
       else BigInt(bytes).toInt

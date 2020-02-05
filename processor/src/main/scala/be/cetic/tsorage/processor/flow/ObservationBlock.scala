@@ -7,7 +7,6 @@ import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, MergePreferred}
 import be.cetic.tsorage.common.messaging.{AggUpdate, Message, Observation}
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.update.{ShardedTagsetUpdate, TimeAggregatorRawUpdate}
-import spray.json.JsValue
 import GraphDSL.Implicits._
 import akka.stream.{FlowShape, Inlet, Outlet, Shape}
 import be.cetic.tsorage.common.TimeSeries
