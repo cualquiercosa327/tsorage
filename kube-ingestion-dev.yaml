@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: cetic-tsorage-dev
+  name: tsorage-ingestion
+  labels:
+    organisation: cetic
+    environment: development
+    app: tsorage
+spec:
+  selector:
+    environment: development
+    app: tsorage
+    module: ingestion
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 32080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: cetic-tsorage-dev
+  name: tsorage-ingestion
+  labels:
+    organisation: cetic
+    environment: development
+    app: tsorage
+spec:
+  selector:
+    matchLabels:
+      environment: development
+      app: tsorage
+      module: ingestion
+  replicas: 1
+  template:
+    metadata:
+      namespace: cetic-tsorage-dev
+      name: tsorage-ingestion
+      labels:
+        organisation: cetic
+        environment: development
+        app: tsorage
+        module: ingestion
+    spec:
+      containers:
+        - name: tsorage-ingestion
+          image: nicosalamone/tsorage-ingestion # TODO: change nicosalamone to ceticasbl.
+          envFrom:
+            - configMapRef:
+                name: tsorage-ingestion-conf
+          ports:
+            - containerPort: 8080

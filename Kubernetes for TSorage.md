@@ -44,6 +44,12 @@ Run Hub module:
 kubectl apply -f kube-hub-conf-dev.yaml -f kube-hub-dev.yaml
 ```
 
+Run Ingestion module:
+
+```sh
+kubectl apply -f kube-ingestion-conf-dev.yaml -f kube-ingestion-dev.yaml
+```
+
 Check pods:
 
 ```sh
@@ -62,7 +68,9 @@ Run a Kubernetes proxy server in another terminal window:
 kubectl proxy
 ```
 
-### Access to Hub module.
+### Access to services.
+
+#### Hub module.
 
 ```sh
 curl http://<CLUSTER-IP>:<PORT>/api/v1/grafana
@@ -70,7 +78,15 @@ curl http://<CLUSTER-IP>:<PORT>/api/v1/grafana
 
 where `CLUSTER-IP` is the IP address of the Kubernetes cluster and `PORT` is `nodePort` of `tsorage-hub` service (in our configuration `nodePort` is set to `32081`). If you your Kubernetes cluster run on Minikube, you can get its IP address with the following command: `minikube ip`.
 
-### Access to Grafana.
+#### Ingestion module.
+
+```sh
+curl http://<CLUSTER-IP>:<PORT>/
+```
+
+where `CLUSTER-IP` is the IP address of the Kubernetes cluster and `PORT` is `nodePort` of `tsorage-hub` service (in our configuration `nodePort` is set to `32080`). If you your Kubernetes cluster run on Minikube, you can get its IP address with the following command: `minikube ip`.
+
+#### Grafana.
 
 Access to this URL in your web browser: `http://<CLUSTER-IP>:<PORT>/`, where `CLUSTER-IP` is the IP address of the Kubernetes cluster and `PORT` is `nodePort` of `tsorage-grafana` service (in our configuration `nodePort` is set to `32082`). If you your Kubernetes cluster run on Minikube, you can get its IP address with the following command: `minikube ip`.
 
@@ -110,6 +126,12 @@ Uninstall Hub module:
 
 ```sh
 kubectl delete -f kube-hub-conf-dev.yaml -f kube-hub-dev.yaml
+```
+
+Uninstall Ingestion module:
+
+```sh
+kubectl delete -f kube-ingestion-conf-dev.yaml -f kube-ingestion-dev.yaml
 ```
 
 ### Tricks
