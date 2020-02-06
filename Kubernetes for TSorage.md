@@ -56,6 +56,15 @@ Run Processor module:
 kubectl apply -f kube-processor-conf-dev.yaml -f kube-processor-dev.yaml
 ```
 
+Install and run Datadog (for a demonstration):
+
+```sh
+helm install tsorage-datadog stable/datadog --namespace cetic-tsorage-dev \
+  --set datadog.apiKey=6bd66ef491424668aa0175e6ad1b2a99 \
+  --set datadog.site=datadoghq.eu \
+  --set datadog.dd_url=http://tsorage-ingestion.cetic-tsorage-dev.svc.cluster.local:8080
+```
+
 Check pods:
 
 ```sh
@@ -144,6 +153,12 @@ Uninstall Processor module:
 
 ```sh
 kubectl delete -f kube-processor-conf-dev.yaml -f kube-processor-dev.yaml
+```
+
+Uninstall Datadog:
+
+```sh
+helm uninstall tsorage-datadog --namespace=cetic-tsorage-dev
 ```
 
 ### Tricks
