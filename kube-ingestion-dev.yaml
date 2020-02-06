@@ -4,14 +4,14 @@ metadata:
   namespace: cetic-tsorage-dev
   name: tsorage-ingestion
   labels:
-    organisation: cetic
-    environment: development
-    app: tsorage
-spec:
-  selector:
-    environment: development
     app: tsorage
     module: ingestion
+    environment: development
+spec:
+  selector:
+    app: tsorage
+    module: ingestion
+    environment: development
   type: NodePort
   ports:
     - port: 8080
@@ -24,25 +24,24 @@ metadata:
   namespace: cetic-tsorage-dev
   name: tsorage-ingestion
   labels:
-    organisation: cetic
-    environment: development
     app: tsorage
+    module: ingestion
+    environment: development
 spec:
   selector:
     matchLabels:
-      environment: development
       app: tsorage
       module: ingestion
+      environment: development
   replicas: 1
   template:
     metadata:
       namespace: cetic-tsorage-dev
       name: tsorage-ingestion
       labels:
-        organisation: cetic
-        environment: development
         app: tsorage
         module: ingestion
+        environment: development
     spec:
       containers:
         - name: tsorage-ingestion

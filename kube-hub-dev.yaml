@@ -4,14 +4,14 @@ metadata:
   namespace: cetic-tsorage-dev
   name: tsorage-hub
   labels:
-    organisation: cetic
-    environment: development
-    app: tsorage
-spec:
-  selector:
-    environment: development
     app: tsorage
     module: hub
+    environment: development
+spec:
+  selector:
+    app: tsorage
+    module: hub
+    environment: development
   type: NodePort
   ports:
     - port: 8081
@@ -24,25 +24,24 @@ metadata:
   namespace: cetic-tsorage-dev
   name: tsorage-hub
   labels:
-    organisation: cetic
-    environment: development
     app: tsorage
+    module: hub
+    environment: development
 spec:
   selector:
     matchLabels:
-      environment: development
       app: tsorage
       module: hub
+      environment: development
   replicas: 1
   template:
     metadata:
       namespace: cetic-tsorage-dev
       name: tsorage-hub
       labels:
-        organisation: cetic
-        environment: development
         app: tsorage
         module: hub
+        environment: development
     spec:
       containers:
         - name: tsorage-hub

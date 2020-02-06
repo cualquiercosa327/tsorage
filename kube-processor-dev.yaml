@@ -4,25 +4,24 @@ metadata:
   namespace: cetic-tsorage-dev
   name: tsorage-processor
   labels:
-    organisation: cetic
-    environment: development
     app: tsorage
+    module: processor
+    environment: development
 spec:
   selector:
     matchLabels:
-      environment: development
       app: tsorage
       module: processor
+      environment: development
   replicas: 1
   template:
     metadata:
       namespace: cetic-tsorage-dev
       name: tsorage-processor
       labels:
-        organisation: cetic
-        environment: development
         app: tsorage
         module: processor
+        environment: development
     spec:
       containers:
         - name: tsorage-processor
