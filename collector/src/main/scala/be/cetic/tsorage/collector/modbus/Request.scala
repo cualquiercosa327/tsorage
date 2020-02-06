@@ -95,7 +95,7 @@ sealed class ModbusRequest(
 /**
  * Modbus function 1
  */
-class ReadCoils(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+class ReadCoilsRequest(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
    unitId,
    registerNumber,
    registerCount,
@@ -107,7 +107,7 @@ class ReadCoils(unitId: Int, registerNumber: Int, registerCount: Int) extends Mo
  * @param registerNumber
  * @param registerCount
  */
-class ReadDiscreteInput(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+class ReadDiscreteInputRequest(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
    unitId,
    registerNumber,
    registerCount,
@@ -119,7 +119,7 @@ class ReadDiscreteInput(unitId: Int, registerNumber: Int, registerCount: Int) ex
  * @param registerNumber
  * @param registerCount
  */
-class ReadHoldingRegister(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+class ReadHoldingRegisterRequest(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
    unitId,
    registerNumber,
    registerCount,
@@ -131,7 +131,7 @@ class ReadHoldingRegister(unitId: Int, registerNumber: Int, registerCount: Int) 
  * @param registerNumber
  * @param registerCount
  */
-class ReadInputRegister(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
+class ReadInputRegisterRequest(unitId: Int, registerNumber: Int, registerCount: Int) extends ModbusRequest(
    unitId,
    registerNumber,
    registerCount,

@@ -1,5 +1,7 @@
 package be.cetic.tsorage.collector.modbus
 
+import java.time.{LocalDateTime, ZoneId}
+
 import be.cetic.tsorage.common.messaging.Message
 import be.cetic.tsorage.collector.modbus._
 import com.typesafe.config.Config
@@ -11,17 +13,11 @@ import collection.JavaConverters._
  * An entity that converts Modbus responses to Messages,
  * according to the requests associated with the responses and the data cartography.
  *
- * @param indexedReadCoilsRequests The association of a (unitId, transactionId) to a Modbus request, for ReadCoils requests.
- * @param indexedReadDiscreteInputRequests  The association of a (unitId, transactionId) to a Modbus request, for ReadDiscreteInput requests.
- * @param indexedReadHoldingRegisterRequests  The association of a (unitId, transactionId) to a Modbus request, for ReadHoldingRegister requests.
- * @param indexedReadInputRegisterRequests  The association of a (unitId, transactionId) to a Modbus request, for InputRegister requests.
+ * @param indexedRequests The association of a (unitId, transactionId) to a Modbus request, for every supported type of requests.
 */
-case class MessageFactory(
-                            indexedReadCoilsRequests: Map[(Int, Int), ReadCoils],
-                            indexedReadDiscreteInputRequests: Map[(Int, Int), ReadDiscreteInput],
-                            indexedReadHoldingRegisterRequests: Map[(Int, Int), ReadHoldingRegister],
-                            indexedReadInputRegisterRequests: Map[(Int, Int), ReadInputRegister],
-                            deviceConfig: Config
+case class MessageFactory( indexedRequests: Map[String, Map[(Int, Int), ModbusRequest]],
+                           deviceConfig: Config,
+                           unitId: Int
                          ) extends LazyLogging
 {
    def responseToMessages(response: ModbusResponse): List[Message] = response match
@@ -32,22 +28,18 @@ case class MessageFactory(
       }
 
       case valid: ModbusValidResponse => {
-         val request = valid match {
-            case rc: ReadCoilsValidResponse =>              indexedReadCoilsRequests((rc.unitId, rc.transactionId))
-            case rdi: ReadDiscreteInputValidResponse =>     indexedReadDiscreteInputRequests((rdi.unitId, rdi.transactionId))
-            case rhr: ReadHoldingRegisterValidResponse =>   indexedReadHoldingRegisterRequests((rhr.unitId, rhr.transactionId))
-            case rir: ReadInputRegisterValidResponse =>     indexedReadInputRegisterRequests((rir.unitId, rir.transactionId))
-         }
-
-         val offset = request.registerNumber
-         val length = request.registerCount
 
          val extract_name = valid match {
-            case _: ReadCoilsValidResponse =>              "output_coils"
+            case _: ReadCoilsValidResponse =>             "output_coils"
             case _: ReadDiscreteInputValidResponse =>     "input_contacts"
             case _: ReadHoldingRegisterValidResponse =>   "holding_registers"
             case _: ReadInputRegisterValidResponse =>     "input_registers"
          }
+
+         val request = indexedRequests(extract_name)((valid.unitId, valid.transactionId))
+
+         val offset = request.registerNumber
+         val length = request.registerCount
 
          val extracts = if(deviceConfig.hasPath(extract_name)) deviceConfig.getConfigList(extract_name).asScala.toList
                         else List.empty
@@ -66,13 +58,14 @@ case class MessageFactory(
 
          relevant_extracts.map(extract => {
 
-            val `type` = extract.getString("type")
+            val preparedExtract = Extract(extract)
+
             val bytes = valid
                .data
                .drop(extract.getInt("address") - offset)
-               .take(2 * typeToRegisterNumber(`type`))      // 2 bytes per register
+               .take(2 * typeToRegisterNumber(preparedExtract.`type`))      // 2 bytes per register
 
-            bytesToMessage(bytes, extract)
+            preparedExtract.bytesToMessage(bytes, LocalDateTime.now(ZoneId.of("UTC")))
          })
       }
    }

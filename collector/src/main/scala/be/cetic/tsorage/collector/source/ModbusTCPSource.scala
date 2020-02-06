@@ -10,7 +10,7 @@ import java.nio.ByteOrder
 
 import akka.actor.ActorSystem
 import akka.util.ByteString
-import be.cetic.tsorage.collector.modbus.{MessageFactory, ModbusRequest, ModbusResponse, ModbusResponseFactory, ReadCoils, ReadDiscreteInput, ReadHoldingRegister, ReadInputRegister}
+import be.cetic.tsorage.collector.modbus.{MessageFactory, ModbusRequest, ModbusResponse, ModbusResponseFactory, ReadCoilsRequest, ReadDiscreteInputRequest, ReadHoldingRegisterRequest, ReadInputRegisterRequest}
 import GraphDSL.Implicits._
 import akka.stream.{FlowShape, OverflowStrategy}
 import be.cetic.tsorage.common.WireTape
@@ -52,7 +52,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
    private def prepareReadCoilsRequest(unitId: Int, registerConfig: List[Config]) =
    {
       registerConfig.map(regConf => {
-         new ReadCoils(
+         new ReadCoilsRequest(
             unitId,
             regConf.getInt("address"),
             typeToRegisterNumber(regConf.getString("type"))
@@ -63,7 +63,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
    private def prepareHoldingRegisterRequest(unitId: Int, registerConfig: List[Config]) =
    {
       registerConfig.map(regConf => {
-         new ReadHoldingRegister(
+         new ReadHoldingRegisterRequest(
             unitId,
             regConf.getInt("address"),
             typeToRegisterNumber(regConf.getString("type"))
@@ -74,7 +74,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
    private def prepareDiscreteInputRequests(unitId: Int, registerConfig: List[Config]) =
    {
       registerConfig.map(regConf => {
-         new ReadDiscreteInput(
+         new ReadDiscreteInputRequest(
             unitId,
             regConf.getInt("address"),
             typeToRegisterNumber(regConf.getString("type"))
@@ -85,7 +85,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
    private def prepareInputRegisterRequest(unitId: Int, registerConfig: List[Config]) =
    {
       registerConfig.map(regConf => {
-         new ReadInputRegister(
+         new ReadInputRegisterRequest(
             unitId,
             regConf.getInt("address"),
             typeToRegisterNumber(regConf.getString("type"))
@@ -124,13 +124,17 @@ class ModbusTCPSource(val config: Config) extends PollSource(
          else List.empty
       )
 
+      val requests = Map(
+         "output_coils" -> readCoilsRequests,
+         "input_register" -> readInputRegisterRequests,
+         "input_contacts" -> readDiscreteInputRequests,
+         "holding_registers" -> readHoldingRegisterRequests
+      )
+
       Flow.fromGraph(createGraph(
          host,
          port,
-         readCoilsRequests,
-         readDiscreteInputRequests,
-         readHoldingRegisterRequests,
-         readInputRegisterRequests,
+         requests,
          config
       ))
    }
@@ -138,10 +142,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
    private def createGraph(
                              host: String,
                              port: Int,
-                             readCoilsRequests: List[ReadCoils],
-                             readDiscreteInputRequests: List[ReadDiscreteInput],
-                             readHoldingRegisterRequests: List[ReadHoldingRegister],
-                             readInputRegisterRequests: List[ReadInputRegister],
+                             requests: Map[String, List[ModbusRequest]],
                              deviceConfig: Config
                           )
    (implicit context: ExecutionContextExecutor, system: ActorSystem) = GraphDSL.create()
@@ -156,41 +157,22 @@ class ModbusTCPSource(val config: Config) extends PollSource(
          {(offsetBytes: Array[Byte], computedSize: Int) => offsetBytes.length + 2 + computedSize}
       )
 
-      val indexedReadCoilsRequests = readCoilsRequests
-         .zipWithIndex
-         .map(entry => (entry._1.unitId,  entry._2) -> entry._1)
-         .toMap
-
-      val indexedReadDiscreteInputRequests = readDiscreteInputRequests
-         .zipWithIndex
-         .map(entry => (entry._1.unitId,  entry._2) -> entry._1)
-         .toMap
-
-      val indexedReadHoldingRegisterRequests = readHoldingRegisterRequests
-         .zipWithIndex
-         .map(entry => (entry._1.unitId,  entry._2) -> entry._1)
-         .toMap
-
-      val indexedReadInputRegisterRequests = readInputRegisterRequests
-         .zipWithIndex
-         .map(entry => (entry._1.unitId,  entry._2) -> entry._1)
-         .toMap
-
-      val requestFrames = List(
-         indexedReadCoilsRequests,
-         indexedReadDiscreteInputRequests,
-         indexedReadHoldingRegisterRequests,
-         indexedReadInputRegisterRequests
+      val indexedRequests = requests.mapValues(reqs =>
+         reqs
+            .zipWithIndex
+            .map(entry => (entry._1.unitId,  entry._2) -> entry._1)
+            .toMap
       )
-      .flatMap(requests => requests.toSeq)
-      .map{ case ((unitId: Int, index: Int), request: ModbusRequest) => request.createTCPFrame(index)}
+
+      val requestFrames = indexedRequests
+            .values
+            .flatMap(m => m.map{ case ((unitId: Int, index: Int), request: ModbusRequest) => request.createTCPFrame(index)} )
+            .toList
 
       val messageFactory = MessageFactory(
-         indexedReadCoilsRequests,
-         indexedReadDiscreteInputRequests,
-         indexedReadHoldingRegisterRequests,
-         indexedReadInputRegisterRequests,
-         deviceConfig
+         indexedRequests,
+         deviceConfig,
+         deviceConfig.getInt("unit_id")
       )
 
       val incoming: Flow[ByteString, ModbusResponse, _] = Flow[ByteString]
