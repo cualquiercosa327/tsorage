@@ -1,10 +1,5 @@
 package be.cetic.tsorage.collector
 
-import java.time.{LocalDateTime, ZoneId}
-
-import be.cetic.tsorage.common.messaging.Message
-
-
 package object modbus
 {
    private val charRegex = """char(\d+)""".r

@@ -47,52 +47,6 @@ class ModbusTCPSource(val config: Config) extends PollSource(
    }
 )
 {
-
-
-   private def prepareReadCoilsRequest(unitId: Int, registerConfig: List[Config]) =
-   {
-      registerConfig.map(regConf => {
-         new ReadCoilsRequest(
-            unitId,
-            regConf.getInt("address"),
-            typeToRegisterNumber(regConf.getString("type"))
-         )
-      })
-   }
-
-   private def prepareHoldingRegisterRequest(unitId: Int, registerConfig: List[Config]) =
-   {
-      registerConfig.map(regConf => {
-         new ReadHoldingRegisterRequest(
-            unitId,
-            regConf.getInt("address"),
-            typeToRegisterNumber(regConf.getString("type"))
-         )
-      })
-   }
-
-   private def prepareDiscreteInputRequests(unitId: Int, registerConfig: List[Config]) =
-   {
-      registerConfig.map(regConf => {
-         new ReadDiscreteInputRequest(
-            unitId,
-            regConf.getInt("address"),
-            typeToRegisterNumber(regConf.getString("type"))
-         )
-      })
-   }
-
-   private def prepareInputRegisterRequest(unitId: Int, registerConfig: List[Config]) =
-   {
-      registerConfig.map(regConf => {
-         new ReadInputRegisterRequest(
-            unitId,
-            regConf.getInt("address"),
-            typeToRegisterNumber(regConf.getString("type"))
-         )
-      })
-   }
-
    override protected def buildPollFlow()
    (implicit ec: ExecutionContextExecutor, system: ActorSystem): Flow[String, Message, NotUsed] =
    {
@@ -100,50 +54,30 @@ class ModbusTCPSource(val config: Config) extends PollSource(
       val port: Int = config.getInt("port")
       val unitId: Int = config.getInt("unit_id")
 
-      val readCoilsRequests = prepareReadCoilsRequest(
-         unitId,
-         if(config.hasPath("output_coils")) config.getConfigList("output_coils").asScala.toList
+      val extracts: Map[ModbusFunction, List[Extract]] = List(
+         ReadCoils,
+         ReadInputRegister,
+         ReadDiscreteInput,
+         ReadHoldingRegister
+      ).map(f => f-> {
+         val name = f.extractName
+         if(config.hasPath(name)) config.getConfigList(name).asScala.toList.map(Extract(_))
          else List.empty
-      )
+      }).toMap
 
-      val readInputRegisterRequests = prepareInputRegisterRequest(
-         unitId,
-         if(config.hasPath("input_register")) config.getConfigList("input_registers").asScala.toList
-         else List.empty
-      )
+      val requests: Map[ModbusFunction, List[ModbusRequest]] = extracts.map{
+         case (f: ModbusFunction, extracts: List[Extract]) => f -> f.prepareRequests(unitId, extracts)
+      }
 
-      val readDiscreteInputRequests = prepareDiscreteInputRequests(
-         unitId,
-         if(config.hasPath("input_contacts")) config.getConfigList("input_contacts").asScala.toList
-         else List.empty
-      )
-
-      val readHoldingRegisterRequests = prepareHoldingRegisterRequest(
-         unitId,
-         if(config.hasPath("holding_registers")) config.getConfigList("holding_registers").asScala.toList
-         else List.empty
-      )
-
-      val requests = Map(
-         "output_coils" -> readCoilsRequests,
-         "input_register" -> readInputRegisterRequests,
-         "input_contacts" -> readDiscreteInputRequests,
-         "holding_registers" -> readHoldingRegisterRequests
-      )
-
-      Flow.fromGraph(createGraph(
-         host,
-         port,
-         requests,
-         config
-      ))
+      Flow.fromGraph(createGraph(host, port, requests, extracts, unitId))
    }
 
    private def createGraph(
                              host: String,
                              port: Int,
-                             requests: Map[String, List[ModbusRequest]],
-                             deviceConfig: Config
+                             requests: Map[ModbusFunction, List[ModbusRequest]],
+                             extracts: Map[ModbusFunction, List[Extract]],
+                             unitId: Int
                           )
    (implicit context: ExecutionContextExecutor, system: ActorSystem) = GraphDSL.create()
    {
@@ -171,8 +105,8 @@ class ModbusTCPSource(val config: Config) extends PollSource(
 
       val messageFactory = MessageFactory(
          indexedRequests,
-         deviceConfig,
-         deviceConfig.getInt("unit_id")
+         extracts,
+         unitId
       )
 
       val incoming: Flow[ByteString, ModbusResponse, _] = Flow[ByteString]

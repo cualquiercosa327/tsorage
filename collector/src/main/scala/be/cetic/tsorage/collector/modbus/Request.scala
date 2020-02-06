@@ -12,7 +12,7 @@ sealed class ModbusRequest(
                              val unitId: Int,
                              val registerNumber: Int,
                              val registerCount: Int,
-                             val fc: Int
+                             val function: ModbusFunction
                           )
 {
    private val PROTOCOL_ID: Array[Byte] = ShortDataConverter.fromUnsignedShort(0, false)
@@ -26,7 +26,7 @@ sealed class ModbusRequest(
    private def createPayloadBuffer(): ByteBuffer =
    {
       ByteBuffer.allocate(5)
-         .put(ByteDataConverter.fromUnsignedByte(fc))
+         .put(ByteDataConverter.fromUnsignedByte(function.code))
          .put(ShortDataConverter.fromUnsignedShort(registerNumber, false))
          .put(ShortDataConverter.fromUnsignedShort(registerCount, false))
    }
@@ -99,7 +99,7 @@ class ReadCoilsRequest(unitId: Int, registerNumber: Int, registerCount: Int) ext
    unitId,
    registerNumber,
    registerCount,
-   0x1
+   ReadCoils
 )
 
 /**
@@ -111,7 +111,7 @@ class ReadDiscreteInputRequest(unitId: Int, registerNumber: Int, registerCount: 
    unitId,
    registerNumber,
    registerCount,
-   0x2
+   ReadDiscreteInput
 )
 
 /**
@@ -123,7 +123,7 @@ class ReadHoldingRegisterRequest(unitId: Int, registerNumber: Int, registerCount
    unitId,
    registerNumber,
    registerCount,
-   0x3
+   ReadHoldingRegister
 )
 
 /**
@@ -135,6 +135,6 @@ class ReadInputRegisterRequest(unitId: Int, registerNumber: Int, registerCount: 
    unitId,
    registerNumber,
    registerCount,
-   0x4
+   ReadInputRegister
 )
 

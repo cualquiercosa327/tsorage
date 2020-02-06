@@ -10,6 +10,7 @@ import spray.json.{JsBoolean, JsNumber, JsString}
  * A representation of the extraction of a value, from a Modbus device.
  */
 case class Extract(
+                     address: Int,
                      `type`: String,
                      metric: String,
                      tagset: Map[String, String],
@@ -19,6 +20,32 @@ case class Extract(
                      dictionary: Map[Int, String]
                   )
 {
+   /**
+    * Determines whether the provided response complies with this extract.
+    * Basically, register position and count are compared with those expected by the extract.
+    * @param response   A modbus response.
+    * @return           true if the response corresponds to this extract; false otherwise.
+    */
+   def matches(request: ModbusRequest, response: ModbusValidResponse): Boolean =
+   {
+      val matchingUnitId: Boolean = response.unitId == request.unitId
+      val matchingByteRange: Boolean = {
+         val requestOffset = request.registerNumber
+         val responseLength = response.data.length
+         val extractLength = 2 * typeToRegisterNumber(`type`)  // Two bytes per register
+
+         (requestOffset <= address) && (requestOffset + responseLength >= address + extractLength )
+      }
+
+      matchingUnitId && matchingByteRange
+   }
+
+   /**
+    * Converts a payload into a message
+    * @param bytes         The representation of a value.
+    * @param datetime      The datetime to associated with the message.
+    * @return              The message, containing the extracted value and the specified datetime.
+    */
    def bytesToMessage(bytes: Array[Byte], datetime: LocalDateTime): Message =
    {
       assert(bytes.length == 2 * typeToRegisterNumber(`type`))   // 2 bytes per register
@@ -107,6 +134,8 @@ object Extract
 {
    def apply(extractConfig: Config): Extract =
    {
+      val address = extractConfig.getInt("address")
+
       val tagset = if(extractConfig.hasPath("tagset")) extractConfig
          .getObject("tagset")
          .keySet.toArray
@@ -142,6 +171,7 @@ object Extract
 
 
       Extract(
+         address,
          extractConfig.getString("type"),
          extractConfig.getString("metric"),
          tagset,
