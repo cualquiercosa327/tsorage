@@ -238,9 +238,14 @@ class SFloat32(
 class Enum16(
                val dictionary: Map[Long, String],
                val mask: Option[Array[Byte]],
-               hbf: Boolean,
-               hwf: Boolean
-            ) extends ModbusDataType("enum16", "ttext", 1, hbf, hwf)
+               hbf: Boolean
+            ) extends ModbusDataType(
+   "enum16",
+   "ttext",
+   1,
+   hbf,
+   true
+)
 {
    override def bytesToJson(bytes: Array[Byte]): JsValue =
    {
@@ -257,8 +262,7 @@ class Enum16(
          }
       }
 
-      val ordered = DataConverter.orderNormalization(masked, !highByteFirst, !highWordFirst)
-      val numericValue = ShortDataConverter.asUnsignedShort(ordered, false)
+      val numericValue = ShortDataConverter.asUnsignedShort(masked, !highByteFirst)
 
       JsString(dictionary.getOrElse(numericValue, numericValue.toString))
    }
@@ -339,7 +343,7 @@ object ModbusDataType
          case "uint32" => new UInt32(rank, hbf, hwf)
          case "sint32" => new SInt32(rank, hbf, hwf)
          case "sfloat32" => new SFloat32(rank, hbf, hwf)
-         case "enum16" => new Enum16(dictionary, mask, hbf, hwf)
+         case "enum16" => new Enum16(dictionary, mask, hbf)
          case charRegex(length) => new Char(length.toInt, hbf, hwf)
       }
    }

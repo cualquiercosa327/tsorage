@@ -37,7 +37,7 @@ object DataConverter
     *
     * https://store.chipkin.com/articles/how-real-floating-point-and-32-bit-data-is-encoded-in-modbus-rtu-messages
     *
-    * @param bytes   A short arra.
+    * @param bytes   A short array.
     * @return  The byte array, with the bytes placed in a big endian order.
     */
    def orderNormalization(bytes: Array[Byte], byteSwap: Boolean, wordSwap: Boolean): Array[Byte] =
