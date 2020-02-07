@@ -268,7 +268,7 @@ class Enum16(
    }
 }
 
-class Char(
+class Chararacter(
              val n: Int,
              hbf: Boolean,
              hwf: Boolean) extends ModbusDataType(s"char${n}", "ttext", n, hbf, hwf)
@@ -281,8 +281,11 @@ class Char(
     */
    override def bytesToJson(bytes: Array[Byte]): JsValue =
    {
-      assert(bytes.length == n)
-      val text = (bytes.map(_.toChar)).mkString
+      assert(bytes.length == 2 * n)
+
+      val ordered = DataConverter.orderNormalization(bytes, !highByteFirst, !highWordFirst)
+
+      val text = (ordered.map(_.toChar)).mkString
       JsString(text)
    }
 }
@@ -344,7 +347,7 @@ object ModbusDataType
          case "sint32" => new SInt32(rank, hbf, hwf)
          case "sfloat32" => new SFloat32(rank, hbf, hwf)
          case "enum16" => new Enum16(dictionary, mask, hbf)
-         case charRegex(length) => new Char(length.toInt, hbf, hwf)
+         case charRegex(length) => new Chararacter(length.toInt, hbf, hwf)
       }
    }
 }
