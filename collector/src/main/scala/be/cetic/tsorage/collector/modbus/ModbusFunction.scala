@@ -31,7 +31,7 @@ object ReadCoils extends ModbusFunction(1, "output_coils")
          new ReadCoilsRequest(
             unitId,
             extract.address,
-            typeToRegisterNumber(extract.`type`)
+            extract.`type`.registerCount
          )
       )
    }
@@ -45,7 +45,7 @@ object ReadDiscreteInput extends ModbusFunction(2, "input_contacts")
          new ReadDiscreteInputRequest(
             unitId,
             extract.address,
-            typeToRegisterNumber(extract.`type`)
+            extract.`type`.registerCount
          )
       )
    }
@@ -59,7 +59,7 @@ object ReadHoldingRegister extends ModbusFunction(3, "holding_registers")
          new ReadHoldingRegisterRequest(
             unitId,
             extract.address,
-            typeToRegisterNumber(extract.`type`)
+            extract.`type`.registerCount
          )
       )
    }
@@ -73,7 +73,7 @@ object ReadInputRegister extends ModbusFunction(4, "input_registers")
          new ReadInputRegisterRequest(
             unitId,
             extract.address,
-            typeToRegisterNumber(extract.`type`)
+            extract.`type`.registerCount
          )
       )
    }

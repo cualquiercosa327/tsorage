@@ -38,7 +38,7 @@ case class MessageFactory(requestDict: Map[ModbusFunction, Map[(Int, Int), Modbu
             val bytes = valid
                .data
                .drop(extract.address - offset)
-               .take(2 * typeToRegisterNumber(extract.`type`))      // 2 bytes per register
+               .take(extract.`type`.byteCount)
 
             extract.bytesToMessage(bytes, LocalDateTime.now(ZoneId.of("UTC")))
          })
