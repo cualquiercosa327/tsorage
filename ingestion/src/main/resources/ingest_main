@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# Use this shell script to select the submodule of Ingestion module to run.
+# You can choose one of these:
+# - http (default): run be.cetic.tsorage.ingestion.http.HTTPInterface, an HTTP waiting serveur for Datadog compliant messages.
+#                   See the Datadog Metrics API: https://docs.datadoghq.com/api/?lang=python#post-timeseries-points.
+# - mqtt: run be.cetic.tsorage.ingestion.mqtt.MQTTInterface, a MQTT server ingesting observations using MQTT.
+
+DEFAULT_SUBMODULE='http'
+
+# Exit status codes.
+EXIT_SUCCESS=0
+EXIT_USAGE_ERROR_CODE=1
+EXIT_NO_SUCH_FILE_ERROR_CODE=2
+
+# Print usage of this script.
+usage() {
+  cat << USAGE
+Usage: ingest_main [-h] [--help] <submodule>.
+
+Help: Use this shell script to select the submodule of Ingestion module to run.
+You can choose one of these:
+  http (default)     Run be.cetic.tsorage.ingestion.http.HTTPInterface, an HTTP waiting serveur for Datadog compliant messages.
+                     See the Datadog Metrics API: https://docs.datadoghq.com/api/?lang=python#post-timeseries-points.
+  mqtt:              Run be.cetic.tsorage.ingestion.mqtt.MQTTInterface, a MQTT server ingesting observations using MQTT.
+
+Argument:
+  submodule          The submodule to run. Available submodules: http (default), mqtt. You can also run any executable by setting
+                     <submodule> to the path of this executable.
+
+Option:
+  -h, --help         Print this help text and exit.
+USAGE
+}
+
+# Run a submodule or any executable.
+# Available submodules:
+# - http;
+# - mqtt.
+run_submodule() {
+  if [ -z "$1" ]; then # If <submodule> is undefined.
+    submodule=$DEFAULT_SUBMODULE
+  else
+    submodule=$1
+  fi
+
+  case $submodule in
+    [hH][tT][tT][pP])
+      echo http
+      /opt/docker/bin/http-interface
+      ;;
+    [mM][qQ][tT][tT])
+      echo mqtt
+      /opt/docker/bin/mqtt-interface
+      ;;
+    *)
+      executable_file=$submodule
+      if [ -f $executable_file ]; then
+        # Run this file.
+        $executable_file
+      else
+        echo $executable_file does not exist and cannot be run. >&2
+        usage
+        exit $EXIT_NO_SUCH_FILE_ERROR_CODE
+      fi
+      ;;
+  esac
+}
+
+main() {
+  for arg in "$@"; do
+    shift
+    case "$arg" in
+      "--help") set -- "$@" "-h" ;;
+      *)        set -- "$@" "$arg"
+    esac
+  done
+
+  while getopts "h" option; do
+    case $option in
+      h)
+        usage
+        exit $EXIT_SUCCESS
+        ;;
+      *)
+        usage
+        exit $EXIT_USAGE_ERROR_CODE
+        ;;
+    esac
+  done
+
+  shift $(expr $OPTIND - 1)
+
+  run_submodule "$@"
+}
+
+main "$@"
