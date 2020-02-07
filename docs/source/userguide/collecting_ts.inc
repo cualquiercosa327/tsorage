@@ -221,12 +221,13 @@ The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``
 
 Additionnaly, some data types accept extra parameters:
 
-- Numeric types (ie, ``ubyte``, ``sbyte``, ``uint16``, ``uint32``, ``sint16``, ``sint32``, and ``sfloat32``) accept some threshold values for data sanity checking purpose. Please note that, if the ``min_threshold`` or the ``max_threshold`` parameters are specified, and if the collected
-value remains behind the thresholds, this value will automatically be associated with the tag ``quality=good``.
+
+- Numeric types (ie, ``ubyte``, ``sbyte``, ``uint16``, ``uint32``, ``sint16``, ``sint32``, and ``sfloat32``) accept some threshold values for data sanity checking purpose. Please note that, if the ``min_threshold`` or the ``max_threshold`` parameters are specified, and if the collected value remains behind the thresholds, this value will automatically be associated with the tag ``quality=good``.
 	
-	- ``min_threshold``: a numeric value, below which collected values will automatically be associated with the tag ``quality=bad``.
-	- ``max_threshold``: a numeric value, above which collected values will automatically be associated with the tag ``quality=bad``.
+  - ``min_threshold``: a numeric value, below which collected values will automatically be associated with the tag ``quality=bad``.
+  - ``max_threshold``: a numeric value, above which collected values will automatically be associated with the tag ``quality=bad``.
 - The enumeration type (ie, ``enum16``) can optionally have the following extra parameters:
+  
   - ``mask``, which can be applied for limiting the value extraction to the bits covered by this mask. The big endian binary representation of the specified value is used for converting this value to a mask. 
   - ``values``, a mapping between integers (represented as literal integers or hexadecimal strings) and arbitrary strings.
 	
@@ -262,18 +263,17 @@ When the ``mask``, ``rank``, and ``values`` attributes are jointly used, they ar
 The snippet below shows an example of register description:
 
 .. code-block::
-
+	
     holding_registers = [
-        {
-			address = 0x1f
-			metric = "pump-temperature"
-			type = sint16
-			rank = 2
-			mask = 0x0F
-			min_threshold = -100
-			max_threshold = 100
-        }
-    ]
+	{
+		address = 0x1f
+		metric = "pump-temperature"
+		type = sint16
+		rank = 2
+		mask = 0x0F
+		min_threshold = -100
+		max_threshold = 100
+    }]
 
 
 
