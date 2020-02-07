@@ -236,7 +236,7 @@ class SFloat32(
 }
 
 class Enum16(
-               val dictionary: Map[Int, String],
+               val dictionary: Map[Long, String],
                val mask: Option[Array[Byte]],
                hbf: Boolean,
                hwf: Boolean
@@ -307,10 +307,10 @@ object ModbusDataType
          case _ => false
       }).getOrElse(true)
 
-      val dictionary: Map[Int, String] = if(extractConfig.hasPath("values")) extractConfig
+      val dictionary: Map[Long, String] = if(extractConfig.hasPath("values")) extractConfig
          .getObject("values")
          .keySet.toArray
-         .map(key => key.toString.toInt -> extractConfig.getConfig("values").getString(key.toString) )
+         .map(key => key.toString.toLong -> extractConfig.getConfig("values").getString(key.toString) )
          .toMap
                                          else Map.empty
 

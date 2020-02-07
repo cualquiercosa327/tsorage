@@ -10,7 +10,7 @@ class SUInt16Test extends FlatSpec with Matchers
    private val negative_bytes = Array(0xca.toByte, 0xfe.toByte)
    private val positive_bytes = Array(0x04.toByte, 0xd2.toByte)
    private val positive_bytes_reverse = Array(0xd2.toByte, 0x04.toByte)
-   
+
    "A UInt16 with negative number" should "provide the correct message for rank=0, HBF" in {
       val dt = new SInt16(0, true)
       dt.bytesToJson(negative_bytes) shouldBe JsNumber(-13570)

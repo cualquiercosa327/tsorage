@@ -13,9 +13,9 @@ object ModbusResponseFactory
    def fromByteString(payload: ByteString): ModbusResponse = {
       val bytes = payload.toArray
 
-      val transactionId: Int = ShortDataConverter.asUnsignedShort(bytes.slice(0, 2), false)
-      val unitId: Int = ByteDataConverter.asUnsignedByte(bytes.slice(6, 7), false)
-      val fc: Int = ByteDataConverter.asUnsignedByte(bytes.slice(7, 8), false)
+      val transactionId: Int = ShortDataConverter.asUnsignedShort(bytes.slice(0, 2), false).toInt
+      val unitId: Int = ByteDataConverter.asUnsignedByte(bytes.slice(6, 7), false).toInt
+      val fc: Int = ByteDataConverter.asUnsignedByte(bytes.slice(7, 8), false).toInt
 
       lazy val fullData = bytes.drop(8)
       lazy val messageData = bytes.drop(9)

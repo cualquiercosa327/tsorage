@@ -30,4 +30,16 @@ class DataConverterTest extends FlatSpec with Matchers
          original, true, true
       ) shouldBe Array[Byte](0x03, 0x02, 0x01, 0x00)
    }
+
+   "Conversion from large byte to unsigned int" should "pass" in {
+      DataConverter.bytesToUnsignedInt(Array(
+         0xca.toByte,
+         0xfe.toByte,
+         0xba.toByte,
+         0xfe.toByte
+      ),
+         false
+      ) shouldBe 3405691646L
+
+   }
 }

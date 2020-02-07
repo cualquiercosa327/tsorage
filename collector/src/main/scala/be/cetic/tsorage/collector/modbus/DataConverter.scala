@@ -17,14 +17,14 @@ trait DataConverter
 
 object DataConverter
 {
-   def bytesToUnsignedInt(bytes: Array[Byte], littleEndian: Boolean): Int = {
+   def bytesToUnsignedInt(bytes: Array[Byte], littleEndian: Boolean): Long = {
 
-      val padded = if(littleEndian) bytes.padTo(4, (0x0).toByte)
-                   else bytes.reverse.padTo(4, 0x0.toByte).reverse
+      val padded = if(littleEndian) bytes.padTo(8, (0x0).toByte)
+                   else bytes.reverse.padTo(8, 0x0.toByte).reverse
 
-      val buffer = java.nio.ByteBuffer.wrap(padded, 0, 4)
-      if (littleEndian) buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt
-      else buffer.getInt
+      val buffer = java.nio.ByteBuffer.wrap(padded, 0, 8)
+      if (littleEndian) buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN).getLong
+      else buffer.getLong
    }
 
    def padLeft(bytes: Array[Byte], length: Int): Array[Byte] =
