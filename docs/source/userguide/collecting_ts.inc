@@ -202,7 +202,7 @@ The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``
 - ``type``, the type of data stored in the register. It helps the module to properly decode the register, and transmit
   a message in the right format. Must be one of the following value:
 
-  - ``bool16``, a boolean value stored in a single word. When this type is used, the ``position`` attribute must be set with an integer between 0 and 15, as the reference to the position of the word bit to be considered as a boolean.
+  - ``bool16``, a boolean value stored in a single word. When this type is used, the ``position`` attribute must be set with an integer between 0 (lowest bit) and 15 (highest bit), as the reference to the position of the word bit to be considered as a boolean.
   - ``ubyte``, an unsigned byte value. When this type is used, the ``byte`` attribute must be set to ``high`` or ``low``, as the reference to the position of the byte to be considered. 
   - ``uint16``, an unsigned integer value, stored as a single word.
   - ``uint32``, an unsigned integer value, stored as two words. The register that follows the addressed one will be used
@@ -221,7 +221,7 @@ The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``
 
 Additionnaly, some data types accept extra parameters:
 
-- Numeric types (ie, ``uint16``, ``uint32``, ``sint16``, ``sint32``, and ``sfloat32``) accept some threshold values for data sanity checking purpose. Please note that, if the ``min_threshold`` or the ``max_threshold`` parameters are specified, and if the collected
+- Numeric types (ie, ``ubyte``, ``sbyte``, ``uint16``, ``uint32``, ``sint16``, ``sint32``, and ``sfloat32``) accept some threshold values for data sanity checking purpose. Please note that, if the ``min_threshold`` or the ``max_threshold`` parameters are specified, and if the collected
 value remains behind the thresholds, this value will automatically be associated with the tag ``quality=good``.
 	
 	- ``min_threshold``: a numeric value, below which collected values will automatically be associated with the tag ``quality=bad``.

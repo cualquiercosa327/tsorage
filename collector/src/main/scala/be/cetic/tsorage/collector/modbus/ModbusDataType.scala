@@ -61,8 +61,7 @@ abstract class NumericType(
 class Bool16(
                val position: Int,
                hbf: Boolean,
-               hwf: Boolean
-            ) extends ModbusDataType("bool16", "tbool", 1, hbf, hwf)
+            ) extends ModbusDataType("bool16", "tbool", 1, hbf, true)
 {
    override def bytesToJson(bytes: Array[Byte]): JsValue =
    {
@@ -336,7 +335,7 @@ object ModbusDataType
       `type` match
       {
          case "ubyte" => new UByte(rank, highByte, hbf)
-         case "bool16" => new Bool16(position, hbf, hwf)
+         case "bool16" => new Bool16(position, hbf)
          case "uint16" => new UInt16(rank, hbf, hwf)
          case "sint16" => new SInt16(rank, hbf, hwf)
          case "uint32" => new UInt32(rank, hbf, hwf)
