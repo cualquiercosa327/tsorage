@@ -8,8 +8,8 @@ import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, MergePreferred, S
 import be.cetic.tsorage.common.messaging.{AggUpdate, Observation}
 import com.typesafe.scalalogging.LazyLogging
 import GraphDSL.Implicits._
+import be.cetic.tsorage.common.WireTape
 import be.cetic.tsorage.common.json.AggUpdateJsonSupport
-import be.cetic.tsorage.processor.WireTape
 import be.cetic.tsorage.processor.aggregator.followup.AggAggregator
 import be.cetic.tsorage.processor.aggregator.time.TimeAggregator
 import be.cetic.tsorage.processor.database.Cassandra

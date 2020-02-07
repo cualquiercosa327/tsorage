@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+
+package  com.google.protobuf.util;
+option java_package = "com.google.protobuf.util";
+
+import "google/protobuf/timestamp.proto";
+
+message MessagePB {
+
+    message Value
+    {
+         .google.protobuf.Timestamp datetime = 1;
+         bytes payload = 2;
+    }
+    
+    string metric = 1;
+    map<string,string> tagset = 2;
+    string type = 3;
+    repeated Value values = 4;
+}
+  

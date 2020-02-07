@@ -6,5 +6,4 @@ trait DatadogMessageJsonSupport extends MessageJsonSupport
 {
    implicit val datadogMessageFormat = jsonFormat6(DatadogMessage)
    implicit val datadogBodyFormat = jsonFormat1(DatadogBody)
-   implicit val checkRunMessageFormat = jsonFormat6(CheckRunMessage)
 }

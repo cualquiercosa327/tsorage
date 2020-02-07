@@ -1,10 +1,9 @@
-package be.cetic.tsorage.processor.source
+package be.cetic.tsorage.common.messaging
 
-import java.time.{Duration, LocalDateTime}
+import java.time.{Duration, LocalDateTime, ZoneId, ZoneOffset}
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import be.cetic.tsorage.common.messaging.Message
 import spray.json.JsNumber
 
 import scala.util.Random
@@ -19,6 +18,9 @@ object RandomMessageIterator extends Iterator[Message] {
   private val initTimeStamp = LocalDateTime.now()
   private val value = JsNumber(42)
 
+  private val localZoneId: ZoneId = ZoneId.of("Europe/Paris")
+  private val gmtZoneId: ZoneId = ZoneId.of("GMT")
+
   override def next(): Message = {
     count = count + 1
 
@@ -31,12 +33,12 @@ object RandomMessageIterator extends Iterator[Message] {
     Message(
       s"my sensor ${Random.nextInt(5000)}",
       Map(
-        "status" -> "ok",
-        "owner" -> "myself",
+  //      "status" -> "ok",
+  //      "owner" -> "myself",
         //    tagNames(Random.nextInt(tagNames.size)) -> tagValues(Random.nextInt(tagValues.size))
       ),
       "tdouble",
-      (1 to 500).map(iteration => (LocalDateTime.now.withNano(iteration*1000000), value)).toList
+      (1 to 500).map(iteration => (LocalDateTime.now.withNano(iteration*1000000).atZone(localZoneId).withZoneSameInstant(gmtZoneId).toLocalDateTime, JsNumber(Random.nextFloat()))).toList
     )
   }
 

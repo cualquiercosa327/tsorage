@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL}
 import akka.stream.{FlowShape, Inlet, Outlet, Shape, UniformFanOutShape}
 import GraphDSL.Implicits._
-import be.cetic.tsorage.processor.WireTape
+import be.cetic.tsorage.common.WireTape
 
 import scala.collection.immutable
 

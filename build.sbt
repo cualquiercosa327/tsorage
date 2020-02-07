@@ -26,14 +26,6 @@ val commonSettings = Seq(
    )
 )
 
-//PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
-/*
-PB.targets in Compile := Seq(
-  scalapb.gen() -> (sourceManaged in Compile).value/ "protos",
-)
-
-*/
-
 //scalapb.compiler.Version.scalapbVersion
 val akkaVersion = "10.1.10"
 
@@ -122,11 +114,25 @@ lazy val processor = (project in file("processor"))
       )
   ).dependsOn(common)
 
+lazy val collector = (project in file("collector"))
+   .enablePlugins(DockerPlugin, AshScriptPlugin)
+   .settings(
+      name := "tsorage-collector",
+      packageName := "tsorage-collector",
+      commonSettings,
+      mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
+      libraryDependencies := commonDependencies ++
+         cassandraDependencies ++
+         Seq(
+            "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.2"
+         )
+   ).dependsOn(common)
+
 
 lazy val root = (project in file("."))
    .settings(
       name := "tsorage"
-   ).aggregate(common, hub, ingestion, processor)
+   ).aggregate(common, hub, ingestion, processor, collector)
 
 
 

@@ -1,4 +1,4 @@
-package be.cetic.tsorage.processor
+package be.cetic.tsorage.common
 
 import akka.NotUsed
 import akka.stream.FlowShape

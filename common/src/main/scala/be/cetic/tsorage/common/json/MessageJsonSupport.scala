@@ -23,5 +23,5 @@ trait MessageJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
    implicit val authResponseMessageFormat = jsonFormat3(AuthenticationResponse)
    implicit val userMessageFormat = jsonFormat3(User)
 
-   implicit val messageFormat = jsonFormat4(Message)
+   implicit val messageFormat = jsonFormat4(Message.apply)
 }

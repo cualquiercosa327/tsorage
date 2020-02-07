@@ -47,6 +47,11 @@ object DateTimeConverter {
     timestampToLocalDateTime(new Timestamp(epoch))
   }
 
+  def epochMilliToUTCLocalDateTime(epoch: Long): LocalDateTime = {
+    val zoned = Instant.ofEpochMilli(epoch).atZone(ZoneOffset.UTC)
+    zoned.toLocalDateTime
+  }
+
   /**
    * Convert a string in ISO 8601 format to a number of milliseconds from the epoch of 1970-01-01T00:00:00Z (in UTC).
    *
