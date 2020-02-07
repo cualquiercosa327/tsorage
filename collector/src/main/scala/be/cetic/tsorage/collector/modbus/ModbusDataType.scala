@@ -127,8 +127,7 @@ class SByte(
 
 class UInt16(
                rank: Int,
-               hbf: Boolean,
-               hwf: Boolean
+               hbf: Boolean
             ) extends NumericType(
    rank,
    "uint16",
@@ -138,7 +137,7 @@ class UInt16(
    },
    1,
    hbf,
-   hwf
+   true
 )
 {
    override protected def rawValue(bytes: Array[Byte]): JsValue =
@@ -150,8 +149,7 @@ class UInt16(
 
 class SInt16(
                rank: Int,
-               hbf: Boolean,
-               hwf: Boolean
+               hbf: Boolean
             ) extends NumericType(
    rank,
    "sint16",
@@ -161,7 +159,7 @@ class SInt16(
    },
    1,
    hbf,
-   hwf
+   true
 )
 {
    override protected def rawValue(bytes: Array[Byte]): JsValue =
@@ -336,8 +334,8 @@ object ModbusDataType
       {
          case "ubyte" => new UByte(rank, highByte, hbf)
          case "bool16" => new Bool16(position, hbf)
-         case "uint16" => new UInt16(rank, hbf, hwf)
-         case "sint16" => new SInt16(rank, hbf, hwf)
+         case "uint16" => new UInt16(rank, hbf)
+         case "sint16" => new SInt16(rank, hbf)
          case "uint32" => new UInt32(rank, hbf, hwf)
          case "sint32" => new SInt32(rank, hbf, hwf)
          case "sfloat32" => new SFloat32(rank, hbf, hwf)
