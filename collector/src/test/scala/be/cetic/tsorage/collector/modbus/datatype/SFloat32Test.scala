@@ -42,6 +42,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(negative_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-1.34913335539403565877457313216E39.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -51,6 +52,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(negative_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-1.34913335539403565877457313216E37.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -80,6 +82,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(negative_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-1.2427967383240E38.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -89,6 +92,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(negative_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-1.2427967383240E39.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -98,6 +102,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(negative_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-1.2427967383240E37.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -128,6 +133,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (3.104974269866943359375.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -137,6 +143,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (31.04974269866943359375.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -146,6 +153,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (0.3104974269866943359375.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -156,6 +164,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-4.32744475068161585053696E23.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -165,6 +174,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-4.32744475068161585053696E24.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -174,6 +184,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-4.32744475068161585053696E22.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -183,6 +194,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-2.74480662483256310224533081055E-5.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -192,6 +204,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-2.74480662483256310224533081055E-4.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 
@@ -201,6 +214,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(positive_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-2.74480662483256310224533081055E-6.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 }
