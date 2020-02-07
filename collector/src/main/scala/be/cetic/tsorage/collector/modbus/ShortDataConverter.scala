@@ -13,7 +13,12 @@ object ShortDataConverter extends DataConverter
    {
       assert(value >= 0)
 
-      val bytes = DataConverter.padLeft(BigInt(value).toByteArray.takeRight(2), 2)
+      val bytes = BigInt(value)
+         .toByteArray
+         .takeRight(2)
+         .reverse
+         .padTo(2, 0x00.toByte)
+         .reverse
 
       if(littleEndian) bytes.reverse
       else bytes
