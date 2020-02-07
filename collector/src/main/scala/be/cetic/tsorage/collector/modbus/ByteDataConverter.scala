@@ -13,7 +13,7 @@ object ByteDataConverter extends DataConverter
    def asUnsignedByte(bytes: Array[Byte], littleEndian: Boolean = true) =
    {
       assert(bytes.size == 1)
-      bytesToUnsignedInt(bytes, littleEndian)
+      DataConverter.bytesToUnsignedInt(bytes, littleEndian)
    }
 
    /**

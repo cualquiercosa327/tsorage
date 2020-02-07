@@ -184,7 +184,7 @@ The snippet below shows an example of coil description:
             }
         },
         {
-            address = "04D3",
+            address = 0x04D3,
             metric = "parked-head",
             tagset = {
                 asset_type = "drive head",
@@ -195,14 +195,15 @@ The snippet below shows an example of coil description:
 
 The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``input_registers`` are called `extracts` and describe the properties of Modbus registers as follows:
 
-- ``address``, the register address as an integer (ex: ``1234``) or an hexadecimal string (e.g.: ``0x04D2``, or ``"0x04D2"``). Should be a value
+- ``address``, the register address. Should be a value
   between `0000` and `0x270E`.
 - ``metric``, the id of the metric associated with the coil.
 - ``tagset``, a optional dictionary of the dynamic tagset to be reported with each collected value.
 - ``type``, the type of data stored in the register. It helps the module to properly decode the register, and transmit
   a message in the right format. Must be one of the following value:
 
-  - ``bool16``, a boolean value stored in a single word.
+  - ``bool16``, a boolean value stored in a single word. When this type is used, the ``position`` attribute must be set with an integer between 0 and 15, as the reference to the position of the word bit to be considered as a boolean.
+  - ``ubyte``, an unsigned byte value. When this type is used, the ``byte`` attribute must be set to ``high`` or ``low``, as the reference to the position of the byte to be considered. 
   - ``uint16``, an unsigned integer value, stored as a single word.
   - ``uint32``, an unsigned integer value, stored as two words. The register that follows the addressed one will be used
     to read the value.
@@ -218,30 +219,27 @@ The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``
 - ``byte_order``, a string representing the way bytes are ordered in the register. May be `LOW_BYTE_FIRST` or `HIGH_BYTE_FIRST`. Default is `HIGH_BYTE_FIRST`.
 - ``word_order``, a string representing the way words are ordered in multi-register values. May be `LOW_WORD_FIRST` or `HIGH_WORD_FIRST`. Default is `HIGH_WORD_FIRST`.
 
-Numeric types (ie, ``uint16``, ``uint32``, ``sint16``, ``sint32``, and ``sfloat32``) can optionally have the following extra parameters:
+Additionnaly, some data types accept extra parameters:
 
-- ``min_threshold``: a numeric value, below which collected values will automatically be associated with the tag
-  ``quality=bad``.
-- ``max_threshold``: a numeric value, above which collected values will automatically be associated with the tag
-  ``quality=bad``.
-
-Please note that, if the ``min_threshold`` or the ``max_threshold`` parameters are specified, and if the collected
+- Numeric types (ie, ``uint16``, ``uint32``, ``sint16``, ``sint32``, and ``sfloat32``) accept some threshold values for data sanity checking purpose. Please note that, if the ``min_threshold`` or the ``max_threshold`` parameters are specified, and if the collected
 value remains behind the thresholds, this value will automatically be associated with the tag ``quality=good``.
+	
+	- ``min_threshold``: a numeric value, below which collected values will automatically be associated with the tag ``quality=bad``.
+	- ``max_threshold``: a numeric value, above which collected values will automatically be associated with the tag ``quality=bad``.
+- The enumeration type (ie, ``enum16``) can optionally have the following extra parameters:
+  - ``mask``, which can be applied for limiting the value extraction to the bits covered by this mask. The big endian binary representation of the specified value is used for converting this value to a mask. 
+  - ``values``, a mapping between integers (represented as literal integers or hexadecimal strings) and arbitrary strings.
+	
+- Integer types (ie, ``ubyte``, ``sbyte``, ``uint16``, ``uint32``, ``sint16``, and ``sint32``) can optionnally have the ``rank`` parameter. This integer specifies the decimal rank of the integer unit. The integer value will be multiplied by `10^rank`. For instance, if a register supplies a temperature in tenths of a degree, the ``rank`` of the extract should be set to `1` in order to get the messages expressing the temperature in degrees. If the ``rank`` is specified (with a non-zero value), the type of the resulting messages will be ``tdouble`` instead of ``tlong``.
 
-Additionally, The unsigned integer and enumeration types (ie, ``uint16``, ``uint32``, and ``enum16``) can optionally have the following extra parameters:
-
-- ``mask``, the hexadecimal representation of a binary mask to be applied for limiting the value extraction to the bits
-  covered by this mask. It allows, for instance, to represent (and decode) two 8-bit integers in a 16-bit register.
-
-Integer types (ie, ``uint16``, ``uint32``, ``sint16``, and ``sint32``) can optionnally have the following extra parameters:
-
-- ``rank``, an integer specifying the decimal rank of the integer unit. The integer value will be multiplied by `10^rank`. For instance, if a register supplies a temperature in tenths of a degree, the ``rank`` of the extract should be set to `1` in order to get the messages expressing the temperature in degrees. If the ``rank`` is specified (with a non-zero value), the type of the resulting messages will be ``tdouble`` instead of ``tlong``.
-
-Furthermore, the ``enum16`` type can optionally have the following extra parameters:
-
-- ``values``, a mapping between integers (represented as literal integers or hexadecimal strings) and arbitrary strings.
 
 When the ``mask``, ``rank``, and ``values`` attributes are jointly used, they are applied on that order. For instance, the mask is applied on the raw register value, and then the resulting value is substituted by a text according to ``values``. 
+
+.. topic:: Address and Mask Literals
+	
+	Addresses and masks values can be specified as an decimal string (e.g.: ``1234``, or ``"1234"``), an hexadecimal string (e.g.: ``0x04D2``, or ``"0x04D2"``), or an octal string (e.g.: ``01234``, or ``"01234"``).
+	
+	Because the (mandatory) heading zero of the octal representation may be confused with the (pointless) heading zero of the decimal representation, the octal representation should be avoided.
 
 .. topic:: Register Extended Addresses
 
@@ -267,10 +265,11 @@ The snippet below shows an example of register description:
 
     holding_registers = [
         {
-			address = 1
+			address = 0x1f
 			metric = "pump-temperature"
-			type = "sint16"
+			type = sint16
 			rank = 2
+			mask = 0x0F
 			min_threshold = -100
 			max_threshold = 100
         }

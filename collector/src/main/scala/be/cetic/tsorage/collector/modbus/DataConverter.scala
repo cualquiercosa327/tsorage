@@ -12,7 +12,12 @@ import scala.collection.JavaConverters._
  */
 trait DataConverter
 {
-   protected def bytesToUnsignedInt(bytes: Array[Byte], littleEndian: Boolean): Int = {
+
+}
+
+object DataConverter
+{
+   def bytesToUnsignedInt(bytes: Array[Byte], littleEndian: Boolean): Int = {
 
       val padded = if(littleEndian) bytes.padTo(4, (0x0).toByte)
                    else bytes.reverse.padTo(4, 0x0.toByte).reverse
@@ -22,14 +27,11 @@ trait DataConverter
       else buffer.getInt
    }
 
-   protected def padLeft(bytes: Array[Byte], length: Int): Array[Byte] =
+   def padLeft(bytes: Array[Byte], length: Int): Array[Byte] =
    {
       bytes.reverse.padTo(length, 0x0.toByte).reverse
    }
-}
 
-object DataConverter
-{
    /**
     * Converts a byte array in order to uniformize it.
     *

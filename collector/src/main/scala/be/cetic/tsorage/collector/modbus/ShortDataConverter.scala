@@ -1,5 +1,9 @@
 package be.cetic.tsorage.collector.modbus
 
+import java.nio.ByteBuffer
+
+import scala.collection.mutable
+
 /**
  * Converter for short data type.
  */
@@ -9,7 +13,7 @@ object ShortDataConverter extends DataConverter
    {
       assert(value >= 0)
 
-      val bytes = padLeft(BigInt(value).toByteArray.takeRight(2), 2)
+      val bytes = DataConverter.padLeft(BigInt(value).toByteArray.takeRight(2), 2)
 
       if(littleEndian) bytes.reverse
       else bytes
@@ -21,7 +25,7 @@ object ShortDataConverter extends DataConverter
    def asUnsignedShort(bytes: Array[Byte], littleEndian: Boolean = true) =
    {
       assert(bytes.size == 2)
-      bytesToUnsignedInt(bytes, littleEndian)
+      DataConverter.bytesToUnsignedInt(bytes, littleEndian)
    }
 
    def fromSignedShort(value: Int, littleEndian: Boolean = true): Array[Byte] =

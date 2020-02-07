@@ -13,7 +13,7 @@ object IntDataConverter extends DataConverter
    def asUnsignedInt(bytes: Array[Byte]): Long =
    {
       assert(bytes.size == 4)
-      bytesToUnsignedInt(bytes, false)
+      DataConverter.bytesToUnsignedInt(bytes, false)
    }
 
    /**

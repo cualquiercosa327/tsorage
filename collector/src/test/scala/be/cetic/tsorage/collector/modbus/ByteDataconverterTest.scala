@@ -5,7 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 /**
  * https://www.binaryconvert.com
  */
-class ByteDataconverterTest  extends FlatSpec with Matchers
+class ByteDataconverterTest extends FlatSpec with Matchers
 {
    "A small unsigned byte" should "be represented by the right byte array" in {
       ByteDataConverter.fromUnsignedByte(42) shouldBe Array[Byte](0x2a.toByte)
