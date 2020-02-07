@@ -58,7 +58,7 @@ object Extract
 {
    def apply(extractConfig: Config): Extract =
    {
-      val address = extractConfig.getInt("address")
+      val address = Integer.decode(extractConfig.getString("address"))
 
       val tagset = if(extractConfig.hasPath("tagset")) extractConfig
          .getObject("tagset")
