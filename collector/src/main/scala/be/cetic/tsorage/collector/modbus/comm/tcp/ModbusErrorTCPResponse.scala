@@ -1,36 +1,36 @@
-package be.cetic.tsorage.collector.modbus
+package be.cetic.tsorage.collector.modbus.comm.tcp
 
-import be.cetic.tsorage.common.messaging.Message
+import be.cetic.tsorage.collector.modbus._
 
-sealed abstract class ModbusErrorResponse(
+sealed abstract class ModbusErrorTCPResponse(
                                             transactionId: Int,
                                             unitId: Int, fc: ModbusFunction,
                                             val exception: Option[ModbusException]
-                                         ) extends ModbusResponse(transactionId, unitId, fc)
+                                         ) extends ModbusTCPResponse(transactionId, unitId, fc)
 {
    override def toString = s"${this.getClass.getSimpleName}($transactionId, $unitId, $fc, ${exception})"
 }
 
-class ReadCoilsErrorResponse(
+class ReadCoilsErrorTCPResponse(
                                transactionId: Int,
                                unitId: Int,
                                exception: Option[ModbusException]
-                            ) extends ModbusErrorResponse(transactionId, unitId, ReadCoils, exception)
+                            ) extends ModbusErrorTCPResponse(transactionId, unitId, ReadCoils, exception)
 
-class ReadDiscreteInputErrorResponse(
+class ReadDiscreteInputErrorTCPResponse(
                                        transactionId: Int,
                                        unitId: Int,
                                        exception: Option[ModbusException]
-                                    ) extends ModbusErrorResponse(transactionId, unitId, ReadDiscreteInput, exception)
+                                    ) extends ModbusErrorTCPResponse(transactionId, unitId, ReadDiscreteInput, exception)
 
-class ReadHoldingRegisterErrorResponse(
+class ReadHoldingRegisterErrorTCPResponse(
                                          transactionId: Int,
                                          unitId: Int,
                                          exception: Option[ModbusException]
-                                      ) extends ModbusErrorResponse(transactionId, unitId, ReadHoldingRegister, exception)
+                                      ) extends ModbusErrorTCPResponse(transactionId, unitId, ReadHoldingRegister, exception)
 
-class ReadInputRegisterErrorResponse(
+class ReadInputRegisterErrorTCPResponse(
                                        transactionId: Int,
                                        unitId: Int,
                                        exception: Option[ModbusException]
-                                    ) extends ModbusErrorResponse(transactionId, unitId, ReadInputRegister, exception)
+                                    ) extends ModbusErrorTCPResponse(transactionId, unitId, ReadInputRegister, exception)

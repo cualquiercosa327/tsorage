@@ -1,5 +1,6 @@
 package be.cetic.tsorage.collector.modbus
 
+import be.cetic.tsorage.collector.modbus.comm.{ReadCoilsRequest, ReadDiscreteInputRequest, ReadHoldingRegisterRequest, ReadInputRegisterRequest}
 import org.scalatest.{FlatSpec, Matchers}
 
 class RequestTest extends FlatSpec with Matchers

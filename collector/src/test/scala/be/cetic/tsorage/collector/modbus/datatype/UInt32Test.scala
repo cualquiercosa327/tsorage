@@ -1,6 +1,6 @@
 package be.cetic.tsorage.collector.modbus.datatype
 
-import be.cetic.tsorage.collector.modbus.UInt32
+import be.cetic.tsorage.collector.modbus.data.UInt32
 import org.scalatest.{FlatSpec, Matchers}
 import spray.json.JsNumber
 

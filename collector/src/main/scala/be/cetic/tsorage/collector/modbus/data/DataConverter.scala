@@ -1,8 +1,5 @@
-package be.cetic.tsorage.collector.modbus
+package be.cetic.tsorage.collector.modbus.data
 
-import java.nio.{ByteBuffer, ByteOrder, ShortBuffer}
-
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 /**

@@ -1,4 +1,4 @@
-package be.cetic.tsorage.collector.modbus
+package be.cetic.tsorage.collector.modbus.data
 
 import java.nio.ByteBuffer
 

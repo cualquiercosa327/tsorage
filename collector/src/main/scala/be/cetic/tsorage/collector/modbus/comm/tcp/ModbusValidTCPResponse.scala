@@ -1,38 +1,41 @@
-package be.cetic.tsorage.collector.modbus
-import be.cetic.tsorage.common.messaging.Message
+package be.cetic.tsorage.collector.modbus.comm.tcp
+
+import be.cetic.tsorage.collector.modbus._
+import be.cetic.tsorage.collector.modbus.comm.ModbusValidResponse
 
 
-sealed abstract class ModbusValidResponse(
+sealed abstract class ModbusValidTCPResponse(
                                      transactionId: Int,
                                      unitId: Int,
                                      function: ModbusFunction,
                                      val data: Array[Byte]
-                                  ) extends ModbusResponse(transactionId, unitId, function)
+                                  )
+   extends ModbusTCPResponse(transactionId, unitId, function) with ModbusValidResponse
 {
   override def toString = s"${this.getClass.getSimpleName}($transactionId, $unitId, ${data.map(byte => (byte & 0xFF).toHexString).mkString("[", ",", "]")})"
 }
 
-class ReadCoilsValidResponse(
+class ReadCoilsValidTCPResponse(
                                transactionId: Int,
                                unitId: Int,
                                data: Array[Byte]
-                            ) extends ModbusValidResponse(transactionId, unitId, ReadCoils, data)
+                            ) extends ModbusValidTCPResponse(transactionId, unitId, ReadCoils, data)
 
-class ReadDiscreteInputValidResponse(
+class ReadDiscreteInputValidTCPResponse(
                                        transactionId: Int,
                                        unitId: Int,
                                        data: Array[Byte]
-                                    ) extends ModbusValidResponse(transactionId, unitId, ReadDiscreteInput, data)
+                                    ) extends ModbusValidTCPResponse(transactionId, unitId, ReadDiscreteInput, data)
 
-class ReadHoldingRegisterValidResponse(
+class ReadHoldingRegisterValidTCPResponse(
                                          transactionId: Int,
                                          unitId: Int,
                                          data: Array[Byte]
-                                      ) extends ModbusValidResponse(transactionId, unitId, ReadHoldingRegister, data)
+                                      ) extends ModbusValidTCPResponse(transactionId, unitId, ReadHoldingRegister, data)
 
 
-class ReadInputRegisterValidResponse(
+class ReadInputRegisterValidTCPResponse(
                                        transactionId: Int,
                                        unitId: Int,
                                        data: Array[Byte]
-                                    ) extends ModbusValidResponse(transactionId, unitId, ReadInputRegister, data)
+                                    ) extends ModbusValidTCPResponse(transactionId, unitId, ReadInputRegister, data)

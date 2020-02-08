@@ -10,9 +10,10 @@ import java.nio.ByteOrder
 
 import akka.actor.ActorSystem
 import akka.util.ByteString
-import be.cetic.tsorage.collector.modbus.{MessageFactory, ModbusRequest, ModbusResponse, ModbusResponseFactory, ReadCoilsRequest, ReadDiscreteInputRequest, ReadHoldingRegisterRequest, ReadInputRegisterRequest}
 import GraphDSL.Implicits._
 import akka.stream.{FlowShape, OverflowStrategy}
+import be.cetic.tsorage.collector.modbus.comm.tcp.{ModbusTCPResponse, TCPMessageFactory}
+import be.cetic.tsorage.collector.modbus.comm.{ModbusFraming, ModbusRequest, ModbusResponseFactory}
 import be.cetic.tsorage.common.WireTape
 
 import scala.concurrent.duration._
@@ -54,16 +55,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
       val port: Int = config.getInt("port")
       val unitId: Int = config.getInt("unit_id")
 
-      val extracts: Map[ModbusFunction, List[Extract]] = List(
-         ReadCoils,
-         ReadInputRegister,
-         ReadDiscreteInput,
-         ReadHoldingRegister
-      ).map(f => f-> {
-         val name = f.extractName
-         if(config.hasPath(name)) config.getConfigList(name).asScala.toList.map(Extract(_))
-         else List.empty
-      }).toMap
+      val extracts = Extract.fromSourceConfig(config)
 
       val requests: Map[ModbusFunction, List[ModbusRequest]] = extracts.map{
          case (f: ModbusFunction, extracts: List[Extract]) => f -> f.prepareRequests(unitId, extracts)
@@ -83,18 +75,12 @@ class ModbusTCPSource(val config: Config) extends PollSource(
    {
       implicit builder: GraphDSL.Builder[NotUsed] =>
 
-      val modbusFraming = Framing.lengthField(
-         2,
-         4,
-         260,
-         ByteOrder.BIG_ENDIAN,
-         {(offsetBytes: Array[Byte], computedSize: Int) => offsetBytes.length + 2 + computedSize}
-      )
+      val modbusFraming = ModbusFraming.tcpFraming
 
       val indexedRequests = requests.mapValues(reqs =>
          reqs
             .zipWithIndex
-            .map(entry => (entry._1.unitId,  entry._2) -> entry._1)
+            .map(entry => (unitId,  entry._2) -> entry._1)
             .toMap
       )
 
@@ -103,15 +89,15 @@ class ModbusTCPSource(val config: Config) extends PollSource(
             .flatMap(m => m.map{ case ((unitId: Int, index: Int), request: ModbusRequest) => request.createTCPFrame(index)} )
             .toList
 
-      val messageFactory = MessageFactory(
+      val messageFactory = TCPMessageFactory(
          indexedRequests,
          extracts,
          unitId
       )
 
-      val incoming: Flow[ByteString, ModbusResponse, _] = Flow[ByteString]
+      val incoming: Flow[ByteString, ModbusTCPResponse, _] = Flow[ByteString]
          .via(modbusFraming)
-         .via(Flow.fromFunction({response: ByteString => ModbusResponseFactory.fromByteString(response)}))
+         .via(Flow.fromFunction({response: ByteString => ModbusResponseFactory.fromTCPByteString(response)}))
 
       val outgoing:Flow[Array[Byte], ByteString, _] = Flow fromFunction {request: Array[Byte] => ByteString(request)}
 
@@ -129,7 +115,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
       )
 
       val messageFlow = builder.add(
-         Flow[ModbusResponse]
+         Flow[ModbusTCPResponse]
             .mapConcat(messageFactory.responseToMessages)
             .buffer(300, OverflowStrategy.backpressure)
       )

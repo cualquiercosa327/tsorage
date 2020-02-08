@@ -1,5 +1,6 @@
 package be.cetic.tsorage.collector.modbus
 
+import be.cetic.tsorage.collector.modbus.data.FloatDataConverter
 import org.scalatest.{FlatSpec, Matchers}
 
 class FloatDataConverterTest extends FlatSpec with Matchers

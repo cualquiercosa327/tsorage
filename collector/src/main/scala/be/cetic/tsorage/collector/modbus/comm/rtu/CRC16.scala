@@ -1,4 +1,4 @@
-package be.cetic.tsorage.collector.modbus
+package be.cetic.tsorage.collector.modbus.comm.rtu
 
 /**
  * An object for calculating CRC16.

@@ -1,6 +1,10 @@
-package be.cetic.tsorage.collector.modbus
+package be.cetic.tsorage.collector.modbus.comm
 
 import java.nio.ByteBuffer
+
+import be.cetic.tsorage.collector.modbus.data.{ByteDataConverter, ShortDataConverter}
+import be.cetic.tsorage.collector.modbus._
+import be.cetic.tsorage.collector.modbus.comm.rtu.CRC16
 
 /**
  * A request for a Modbus slave.

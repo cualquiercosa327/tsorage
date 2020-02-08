@@ -1,9 +1,10 @@
-package be.cetic.tsorage.collector.modbus
+package be.cetic.tsorage.collector.modbus.comm.tcp
 
 import java.time.{LocalDateTime, ZoneId}
 
+import be.cetic.tsorage.collector.modbus.comm.ModbusRequest
+import be.cetic.tsorage.collector.modbus.{Extract, ModbusFunction}
 import be.cetic.tsorage.common.messaging.Message
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 
 /**
@@ -12,19 +13,19 @@ import com.typesafe.scalalogging.LazyLogging
  *
  * @param requestDict The association of a (unitId, transactionId) to a Modbus request, for every supported type of requests.
 */
-case class MessageFactory(requestDict: Map[ModbusFunction, Map[(Int, Int), ModbusRequest]],
-                          extractDict: Map[ModbusFunction, List[Extract]],
-                          unitId: Int
+case class TCPMessageFactory(requestDict: Map[ModbusFunction, Map[(Int, Int), ModbusRequest]],
+                             extractDict: Map[ModbusFunction, List[Extract]],
+                             unitId: Int
                          ) extends LazyLogging
 {
-   def responseToMessages(response: ModbusResponse): List[Message] = response match
+   def responseToMessages(response: ModbusTCPResponse): List[Message] = response match
    {
-      case error: ModbusErrorResponse => {
+      case error: ModbusErrorTCPResponse => {
          logger.warn(s"Modbus Error Response: ${error}")
          List()
       }
 
-      case valid: ModbusValidResponse => {
+      case valid: ModbusValidTCPResponse => {
 
          val function = valid.function
 

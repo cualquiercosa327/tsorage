@@ -1,4 +1,4 @@
-package be.cetic.tsorage.collector.modbus
+package be.cetic.tsorage.collector.modbus.data
 
 /**
  * Converter for the integer data type.
