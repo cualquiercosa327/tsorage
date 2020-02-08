@@ -340,6 +340,7 @@ object ModbusDataType
       `type` match
       {
          case "ubyte" => new UByte(rank, highByte, hbf)
+         case "sbyte" => new SByte(rank, highByte, hbf)
          case "bool16" => new Bool16(position, hbf)
          case "uint16" => new UInt16(rank, hbf)
          case "sint16" => new SInt16(rank, hbf)
