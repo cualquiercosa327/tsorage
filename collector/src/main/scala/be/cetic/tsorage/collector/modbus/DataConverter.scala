@@ -34,30 +34,6 @@ object DataConverter
    }
 
    /**
-    * @deprecated
-    * @param bytes
-    * @param byteSwap
-    * @param wordSwap
-    * @return
-    */
-   def oldOrderNormalization(bytes: Array[Byte], byteSwap: Boolean, wordSwap: Boolean): Array[Byte] =
-   {
-      val wordFlipped = if(!wordSwap) Array(0, 1, 2, 3)
-                        else Array(2, 3, 0, 1)
-
-
-      val byteFlipped = if(!byteSwap) wordFlipped
-                        else Array(
-                           wordFlipped(1),
-                           wordFlipped(0),
-                           wordFlipped(3),
-                           wordFlipped(2)
-                        )
-
-      byteFlipped.map(index => bytes(index))
-   }
-
-   /**
     * Converts a byte array in order to uniformize it.
     *
     * https://store.chipkin.com/articles/how-real-floating-point-and-32-bit-data-is-encoded-in-modbus-rtu-messages

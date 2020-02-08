@@ -204,6 +204,7 @@ The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``
 
   - ``bool16``, a boolean value stored in a single word. When this type is used, the ``position`` attribute must be set with an integer between 0 (lowest bit) and 15 (highest bit), as the reference to the position of the word bit to be considered as a boolean.
   - ``ubyte``, an unsigned byte value. When this type is used, the ``byte`` attribute must be set to ``high`` or ``low``, as the reference to the position of the byte to be considered. 
+  - ``sbyte``, an signed byte value. When this type is used, the ``byte`` attribute must be set to ``high`` or ``low``, as the reference to the position of the byte to be considered. 
   - ``uint16``, an unsigned integer value, stored as a single word.
   - ``uint32``, an unsigned integer value, stored as two words. The register that follows the addressed one will be used
     to read the value.
@@ -257,7 +258,7 @@ When the ``mask``, ``rank``, and ``values`` attributes are jointly used, they ar
     Consequently, generic Modbus masters have to deal with any combination of high/low byte first, and high/low word
     first configurations.
 	
-	`HIGH_BYTE_FIRST` ordering is normally used in Modbus messages, and `HIGH_WORD_FIRST` is more frequently encountered. Using both `HIGH_BYTE_FIRST` and `HIGH_WORD_FIRST` corresponds to the `big endian` representation, while using both `LOW_BYTE_FIRST` and `LOW_WORD_FIRST` corresponds to the `little endian` representation.
+    `HIGH_BYTE_FIRST` ordering is normally used in Modbus messages, and `HIGH_WORD_FIRST` is more frequently encountered. Using both `HIGH_BYTE_FIRST` and `HIGH_WORD_FIRST` corresponds to the `big endian` representation, while using both `LOW_BYTE_FIRST` and `LOW_WORD_FIRST` corresponds to the `little endian` representation.
 	
 	
 The snippet below shows an example of register description:
