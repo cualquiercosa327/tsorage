@@ -17,6 +17,8 @@ object ModbusResponseFactory
       val bytes = payload.toArray
 
       val transactionId: Int = ShortDataConverter.asUnsignedShort(bytes.slice(0, 2), false).toInt
+      val protocol: Int = ShortDataConverter.asUnsignedShort(bytes.slice(2, 4), false).toInt
+      val lenght: Int = ShortDataConverter.asUnsignedShort(bytes.slice(4, 6), false).toInt
       val unitId: Int = ByteDataConverter.asUnsignedByte(bytes.slice(6, 7), false).toInt
       val fc: Int = ByteDataConverter.asUnsignedByte(bytes.slice(7, 8), false).toInt
 
@@ -25,7 +27,7 @@ object ModbusResponseFactory
 
       if(fc >= 0x80)
       {
-         val exception = data2Exception(bytes.drop(2).take(1))
+         val exception = data2Exception(fullData.take(1))
 
          ModbusFunction(fc - 0x80) match {
             case ReadCoils => new ReadCoilsErrorTCPResponse(transactionId, unitId, exception)

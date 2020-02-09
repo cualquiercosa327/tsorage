@@ -236,7 +236,7 @@ The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``
 Modbus Extracts
 ^^^^^^^^^^^^^^^
 
-The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``input_registers`` are called `extracts` and describe the properties of Modbus registers as follows:
+For the Modbus RTU, Modbus RTU over TCP and Modbus TCP modules, the items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``input_registers`` are called `extracts` and describe the properties of Modbus registers as follows:
 
 - ``unit_id``, the unit Id to which the Modbus requests will be addressed in order to perform the extract. For TCP connections, this parameter is generally not used by the slave and is set to ``0x00`` or ``0xFF`` by the master. 
 - ``address``, the register address. Should be a value between `0000` and `0x270E`.
