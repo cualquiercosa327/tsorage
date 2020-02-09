@@ -32,10 +32,16 @@ object ModbusFraming
       2,
       MAX_FIELD_LENGTH,
       ByteOrder.BIG_ENDIAN,
-      {(offsetBytes: Array[Byte], computedSize: Int) => offsetBytes.length +
-         RTU_MESSAGE_LENGTH_LENGTH +
-         CRC_LENGTH +
-         computedSize
+      {(offsetBytes: Array[Byte], computedSize: Int) => {
+         if(ByteDataConverter.asUnsignedByte(offsetBytes.slice(1, 2)) > 0x80) 5
+         else
+         {
+            offsetBytes.length +
+               RTU_MESSAGE_LENGTH_LENGTH +
+               CRC_LENGTH +
+               computedSize
+         }
+      }
       }
    )
 }
