@@ -142,6 +142,17 @@ Example of Random Poll configuration:
     }
 
 
+
+.. _CollectingTimeSeries_Modbus_RTU:
+
+Modbus RTU Poll Source
+^^^^^^^^^^^^^^^^^^^^^^
+
+
+
+
+.. _CollectingTimeSeries_Modbus_TCP:
+
 Modbus TCP Poll Source
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -152,7 +163,6 @@ The following parameters must be specified:
 - ``type`` must be ``poll/modbus/tcp``
 - ``interval``, the desired polling interval.
 - ``name``, a human friendly name of the slave.
-- ``unit_id``, the unit id to transmit with the requests.
 - ``max_response_bytes``, the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device. 
 - ``host``, the ip address or host name of the slave.
 - ``port``, the port on which the slave is waiting for queries. The standard value is `502`.
@@ -163,13 +173,6 @@ The following parameters must be specified:
 
 The coil and register tables (`output_coils`, `input_contacts`, `input_registers`, `holding_registers`) are polled
 in a cyclic fashion, it that order.
-
-Each item in `output_coils` and `input_contacts` describes the properties of a coil as follows:
-
-- ``address``, the coil address as an integer (ex: ``1234``) or an hexadecimal string (ex: ``"04D2"``). Must be a value
-  between `0000` and `270E`.
-- ``metric``, the id of the metric associated with the coil.
-- ``tagset``, a optional dictionary of the dynamic tagset to be reported with each collected value.
 
 The snippet below shows an example of coil description:
 
@@ -192,11 +195,51 @@ The snippet below shows an example of coil description:
             }
         }
     ]
+	
+The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``input_registers`` are called :ref:`extracts <CollectingTimeSeries_Modbus_Extracts>` and describe the properties of Modbus registers.
+
+Because the Modbus TCP requests contain a transaction Id that is echoed by the responding slave, multiple requests can be submitted simultaneously (ie, without waiting the response to a request before sending the next request). Also, because the target slave is identified by its IP address, simultaneous communications can be established with multiple slaves. The Modbus TCP module adopts such behaviour, by simultaneously sending multiple requests for each of the declared source.
+
+
+.. _CollectingTimeSeries_Modbus_RTU_Over_TCP:
+
+Modbus RTU over TCP Poll Source
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Since Modbus RTU over TCP essentially consists in wrapping RTU messages in a TCP frame, this source is a mix between :ref:`Modbus RTU<CollectingTimeSeries_Modbus_RTU>` and :ref:`Modbus TCP<CollectingTimeSeries_Modbus_TCP>` sources.
+
+The following parameters must be specified:
+
+- ``type`` must be ``poll/modbus/rtu-tcp``
+- ``interval``, the desired polling interval.
+- ``name``, a human friendly name of the slave.
+- ``max_response_bytes``, the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device. 
+- ``host``, the ip address or host name of the slave.
+- ``port``, the port on which the slave is waiting for queries. The standard value is `502`.
+- ``output_coils``, the list of coils in the discrete output coils (coil numbers between 1 and 9999; Modbus function 1) to be collected.
+- ``input_contacts``, the list of discrete input contacts (coils number between 10001 and 19999; Modbus function 2) to be collected.
+- ``holding_registers``, the list of analog holding registers (registers number between 30001 and 39999; Modbus function 3) to be collected.
+- ``input_registers``, the list of analog output input registers (registers number between 40001 and 49999; Modbus function 4) to be collected.
+- ``address``, the coil address as an integer (ex: ``1234``) or an hexadecimal string (ex: ``"04D2"``). Must be a value
+  between `0000` and `270E`.
+- ``metric``, the id of the metric associated with the coil.
+- ``tagset``, a optional dictionary of the dynamic tagset to be reported with each collected value.
+
+The coil and register tables (`output_coils`, `input_contacts`, `input_registers`, `holding_registers`) are polled in a cyclic fashion, it that order.
+
+The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``input_registers`` are called :ref:`extracts <CollectingTimeSeries_Modbus_Extracts>` and describe the properties of Modbus registers.
+
+
+
+.. _CollectingTimeSeries_Modbus_Extracts:
+
+Modbus Extracts
+^^^^^^^^^^^^^^^
 
 The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``input_registers`` are called `extracts` and describe the properties of Modbus registers as follows:
 
-- ``address``, the register address. Should be a value
-  between `0000` and `0x270E`.
+- ``unit_id``, the unit Id to which the Modbus requests will be addressed in order to perform the extract. For TCP connections, this parameter is generally not used by the slave and is set to ``0x00`` or ``0xFF`` by the master. 
+- ``address``, the register address. Should be a value between `0000` and `0x270E`.
 - ``metric``, the id of the metric associated with the coil.
 - ``tagset``, a optional dictionary of the dynamic tagset to be reported with each collected value.
 - ``type``, the type of data stored in the register. It helps the module to properly decode the register, and transmit
@@ -261,7 +304,7 @@ When the ``mask``, ``rank``, and ``values`` attributes are jointly used, they ar
     `HIGH_BYTE_FIRST` ordering is normally used in Modbus messages, and `HIGH_WORD_FIRST` is more frequently encountered. Using both `HIGH_BYTE_FIRST` and `HIGH_WORD_FIRST` corresponds to the `big endian` representation, while using both `LOW_BYTE_FIRST` and `LOW_WORD_FIRST` corresponds to the `little endian` representation.
 	
 	
-The snippet below shows an example of register description:
+The snippet below shows an example of extract description:
 
 .. code-block::
 	
@@ -275,7 +318,6 @@ The snippet below shows an example of register description:
 		min_threshold = -100
 		max_threshold = 100
     }]
-
 
 
 Sink Configuration

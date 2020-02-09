@@ -25,11 +25,13 @@ object ModbusResponseFactory
 
       if(fc >= 0x80)
       {
+         val exception = data2Exception(bytes.drop(2).take(1))
+
          ModbusFunction(fc - 0x80) match {
-            case ReadCoils => new ReadCoilsErrorTCPResponse(transactionId, unitId, None)
-            case ReadDiscreteInput => new ReadDiscreteInputErrorTCPResponse(transactionId, unitId, None)
-            case ReadHoldingRegister => new ReadHoldingRegisterErrorTCPResponse(transactionId, unitId, None)
-            case ReadInputRegister => new ReadInputRegisterErrorTCPResponse(transactionId, unitId, None)
+            case ReadCoils => new ReadCoilsErrorTCPResponse(transactionId, unitId, exception)
+            case ReadDiscreteInput => new ReadDiscreteInputErrorTCPResponse(transactionId, unitId, exception)
+            case ReadHoldingRegister => new ReadHoldingRegisterErrorTCPResponse(transactionId, unitId, exception)
+            case ReadInputRegister => new ReadInputRegisterErrorTCPResponse(transactionId, unitId, exception)
          }
       }
       else
@@ -53,11 +55,13 @@ object ModbusResponseFactory
 
       if(fc >= 0x80)
       {
+         val exception = data2Exception(bytes.drop(2).take(1))
+
          ModbusFunction(fc - 0x80) match {
-            case ReadCoils => new ReadCoilsErrorRTUResponse(unitId, None)
-            case ReadDiscreteInput => new ReadDiscreteInputErrorRTUResponse(unitId, None)
-            case ReadHoldingRegister => new ReadHoldingRegisterErrorRTUResponse(unitId, None)
-            case ReadInputRegister => new ReadInputRegisterErrorRTUResponse(unitId, None)
+            case ReadCoils => new ReadCoilsErrorRTUResponse(unitId, exception)
+            case ReadDiscreteInput => new ReadDiscreteInputErrorRTUResponse(unitId, exception)
+            case ReadHoldingRegister => new ReadHoldingRegisterErrorRTUResponse(unitId, exception)
+            case ReadInputRegister => new ReadInputRegisterErrorRTUResponse(unitId, exception)
          }
       }
       else

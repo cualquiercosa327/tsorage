@@ -14,9 +14,8 @@ import com.typesafe.scalalogging.LazyLogging
  * @param requestDict The association of a (unitId, transactionId) to a Modbus request, for every supported type of requests.
 */
 case class TCPMessageFactory(requestDict: Map[ModbusFunction, Map[(Int, Int), ModbusRequest]],
-                             extractDict: Map[ModbusFunction, List[Extract]],
-                             unitId: Int
-                         ) extends LazyLogging
+                             extractDict: Map[ModbusFunction, List[Extract]]
+                            ) extends LazyLogging
 {
    def responseToMessages(response: ModbusTCPResponse): List[Message] = response match
    {

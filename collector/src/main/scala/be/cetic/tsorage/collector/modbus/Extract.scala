@@ -3,8 +3,6 @@ package be.cetic.tsorage.collector.modbus
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.collector.modbus.comm.{ModbusRequest, ModbusValidResponse}
-import be.cetic.tsorage.collector.modbus.comm.rtu.ModbusValidRTUResponse
-import be.cetic.tsorage.collector.modbus.comm.tcp.ModbusValidTCPResponse
 import be.cetic.tsorage.collector.modbus.data.ModbusDataType
 import be.cetic.tsorage.common.messaging.Message
 import com.typesafe.config.Config
@@ -17,7 +15,7 @@ import collection.JavaConverters._
  */
 case class Extract(
                      address: Int,
-                     unitId: Option[Int],
+                     unitId: Int,
                      `type`: ModbusDataType,
                      metric: String,
                      tagset: Map[String, String]
@@ -78,10 +76,7 @@ object Extract
 
       val `type` = ModbusDataType(extractConfig)
 
-      val unitId: Option[Int] = if(extractConfig.hasPath("unit_id"))
-                                   Some(extractConfig.getInt("unit_id"))
-                                else
-                                   None
+      val unitId: Int = extractConfig.getInt("unit_id")
 
       Extract(
          address,
