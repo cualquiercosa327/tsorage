@@ -11,37 +11,43 @@ import com.typesafe.scalalogging.LazyLogging
  * An entity that converts Modbus responses to Messages,
  * according to the requests associated with the responses and the data cartography.
  *
- * @param requestDict The association of a (unitId, transactionId) to a Modbus request, for every supported type of requests.
+ * @param extractDict The list of extracts associated with a function.
  */
-case class RTUMessageFactory(requestDict: Map[ModbusFunction, Map[Int, ModbusRequest]],
-                             extractDict: Map[ModbusFunction, List[Extract]]
-                            ) extends LazyLogging
-                            {
-                               def responseToMessages(response: ModbusRTUResponse): List[Message] = response match
-                               {
-                                  case error: ModbusErrorRTUResponse => {
-                                     logger.warn(s"Modbus Error Response: ${error}")
-                                     List()
-                                  }
+case class RTUMessageFactory(extractDict: Map[ModbusFunction, List[Extract]]) extends LazyLogging
+{
+   def responseToMessages(currentRequest: ModbusRequest, response: ModbusRTUResponse): List[Message] = response match
+   {
+      case error: ModbusErrorRTUResponse =>
+      {
+         logger.warn(s"Modbus Error Response: ${error}")
+         List()
+      }
 
-                                  case valid: ModbusValidRTUResponse => {
+      case invalid: ModbusInvalidCRCResponse =>
+      {
+         logger.warn(s"Modbus CRC error: ${invalid}")
+         List()
+      }
 
-                                     val function = valid.function
+      case valid: ModbusValidRTUResponse =>
+      {
 
-                                     val request =  requestDict(function)(valid.unitId)
-                                     val extracts = extractDict(function)
-                                     val offset = request.registerNumber
+         val function = valid.function
 
-                                     val relevant_extracts = extracts.filter(extract => extract.matches(request, valid))
+         val extracts = extractDict(function)
+         val offset = currentRequest.registerNumber
 
-                                     relevant_extracts.map(extract => {
-                                        val bytes = valid
-                                           .data
-                                           .drop(extract.address - offset)
-                                           .take(extract.`type`.byteCount)
+         val relevant_extracts = extracts.filter(extract => extract.matches(currentRequest, valid))
 
-                                        extract.bytesToMessage(bytes, LocalDateTime.now(ZoneId.of("UTC")))
-                                     })
-                                  }
-                               }
-                            }
+         relevant_extracts.map(extract =>
+         {
+            val bytes = valid
+               .data
+               .drop(extract.address - offset)
+               .take(extract.`type`.byteCount)
+
+            extract.bytesToMessage(bytes, LocalDateTime.now(ZoneId.of("UTC")))
+         })
+      }
+   }
+}

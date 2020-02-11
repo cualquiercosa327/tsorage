@@ -3,7 +3,7 @@ package be.cetic.tsorage.collector.modbus.comm
 import akka.util.ByteString
 import be.cetic.tsorage.collector.modbus.data.{ByteDataConverter, ShortDataConverter}
 import be.cetic.tsorage.collector.modbus._
-import be.cetic.tsorage.collector.modbus.comm.rtu.{ModbusRTUResponse, ReadCoilsErrorRTUResponse, ReadCoilsValidRTUResponse, ReadDiscreteInputErrorRTUResponse, ReadDiscreteInputValidRTUResponse, ReadHoldingRegisterErrorRTUResponse, ReadHoldingRegisterValidRTUResponse, ReadInputRegisterErrorRTUResponse, ReadInputRegisterValidRTUResponse}
+import be.cetic.tsorage.collector.modbus.comm.rtu.{CRC16, ModbusInvalidCRCResponse, ModbusRTUResponse, ReadCoilsErrorRTUResponse, ReadCoilsValidRTUResponse, ReadDiscreteInputErrorRTUResponse, ReadDiscreteInputValidRTUResponse, ReadHoldingRegisterErrorRTUResponse, ReadHoldingRegisterValidRTUResponse, ReadInputRegisterErrorRTUResponse, ReadInputRegisterValidRTUResponse}
 import be.cetic.tsorage.collector.modbus.comm.tcp.{ModbusTCPResponse, ReadCoilsErrorTCPResponse, ReadCoilsValidTCPResponse, ReadDiscreteInputErrorTCPResponse, ReadDiscreteInputValidTCPResponse, ReadHoldingRegisterErrorTCPResponse, ReadHoldingRegisterValidTCPResponse, ReadInputRegisterErrorTCPResponse, ReadInputRegisterValidTCPResponse}
 
 /**
@@ -52,8 +52,13 @@ object ModbusResponseFactory
 
       val unitId: Int = ByteDataConverter.asUnsignedByte(bytes.slice(0, 1), false).toInt
       val fc: Int = ByteDataConverter.asUnsignedByte(bytes.slice(1, 2), false).toInt
+      val crc: Array[Byte] = bytes.takeRight(2)
 
       lazy val messageData = bytes.drop(3).dropRight(2)
+
+      val crcCheck = CRC16.calculateCRC(bytes.dropRight(2))
+
+      if(crc != crcCheck) new ModbusInvalidCRCResponse(unitId, ModbusFunction(fc % 0x80), messageData)
 
       if(fc >= 0x80)
       {

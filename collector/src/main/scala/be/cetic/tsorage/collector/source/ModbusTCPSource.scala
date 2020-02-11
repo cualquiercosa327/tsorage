@@ -5,11 +5,10 @@ import akka.stream.scaladsl.{BidiFlow, Flow, Framing, GraphDSL, Tcp}
 import be.cetic.tsorage.common.messaging.Message
 import be.cetic.tsorage.collector.modbus._
 import com.typesafe.config.Config
-
 import akka.actor.ActorSystem
 import akka.util.ByteString
 import GraphDSL.Implicits._
-import akka.stream.{FlowShape, OverflowStrategy}
+import akka.stream.{ActorMaterializer, FlowShape, OverflowStrategy}
 import be.cetic.tsorage.collector.modbus.comm.tcp.{ModbusTCPResponse, TCPMessageFactory}
 import be.cetic.tsorage.collector.modbus.comm.{ModbusFraming, ModbusRequest, ModbusResponseFactory}
 
@@ -44,7 +43,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
 )
 {
    override protected def buildPollFlow()
-   (implicit ec: ExecutionContextExecutor, system: ActorSystem): Flow[String, Message, NotUsed] =
+   (implicit ec: ExecutionContextExecutor, system: ActorSystem, am: ActorMaterializer): Flow[String, Message, NotUsed] =
    {
       val host: String = config.getString("host")
       val port: Int = config.getInt("port")
