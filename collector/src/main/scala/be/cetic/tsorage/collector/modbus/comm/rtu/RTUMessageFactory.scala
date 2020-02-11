@@ -31,23 +31,34 @@ case class RTUMessageFactory(extractDict: Map[ModbusFunction, List[Extract]]) ex
 
       case valid: ModbusValidRTUResponse =>
       {
-
          val function = valid.function
 
-         val extracts = extractDict(function)
-         val offset = currentRequest.registerNumber
+         val sameUnitId = currentRequest.unitId == valid.unitId
+         val sameFunction = currentRequest.function == function
+         val matching = sameUnitId && sameFunction
 
-         val relevant_extracts = extracts.filter(extract => extract.matches(currentRequest, valid))
-
-         relevant_extracts.map(extract =>
+         if(matching)
          {
-            val bytes = valid
-               .data
-               .drop(extract.address - offset)
-               .take(extract.`type`.byteCount)
+            val extracts = extractDict(function)
+            val offset = currentRequest.registerNumber
 
-            extract.bytesToMessage(bytes, LocalDateTime.now(ZoneId.of("UTC")))
-         })
+            val relevant_extracts = extracts.filter(extract => extract.matches(currentRequest, valid))
+
+            relevant_extracts.map(extract =>
+            {
+               val bytes = valid
+                  .data
+                  .drop(extract.address - offset)
+                  .take(extract.`type`.byteCount)
+
+               extract.bytesToMessage(bytes, LocalDateTime.now(ZoneId.of("UTC")))
+            })
+         }
+         else
+         {
+            logger.warn(s"Unmatching Modbus response: request was ${currentRequest}, response is ${valid}")
+            List()
+         }
       }
    }
 }

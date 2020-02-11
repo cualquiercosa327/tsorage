@@ -51,14 +51,20 @@ class ModbusRTUTCPSource(val config: Config) extends PollSource(
          case (f: ModbusFunction, fExtracts: List[Extract]) => f -> f.prepareRequests(fExtracts)
       }.values.flatten.toList
 
-      Flow.fromGraph(createGraph(host, port, requests, extracts))
+      val responseTimeout = Duration(config.getString("response_timeout")) match {
+         case fd: FiniteDuration => fd
+         case _ =>  1 second
+      }
+
+      Flow.fromGraph(createGraph(host, port, requests, extracts, responseTimeout))
    }
 
    private def createGraph(
                              host: String,
                              port: Int,
                              requests: List[ModbusRequest],
-                             extracts: Map[ModbusFunction, List[Extract]]
+                             extracts: Map[ModbusFunction, List[Extract]],
+                             responseTimeout: FiniteDuration
                           )
    (implicit
     context: ExecutionContextExecutor,
@@ -91,7 +97,7 @@ class ModbusRTUTCPSource(val config: Config) extends PollSource(
          )
 
          val responseFlow = Flow[ModbusRequest]
-            .mapAsync(1)(request => sendRequest(modbusFlow, request).map(response => (request, response)))
+            .mapAsync(1)(request => sendRequest(modbusFlow, request, responseTimeout).map(response => (request, response)))
             .withAttributes(supervisionStrategy(resumingDecider))
 
          val messageFlow = builder.add(
@@ -105,14 +111,14 @@ class ModbusRTUTCPSource(val config: Config) extends PollSource(
          FlowShape(requestFlow.in, messageFlow.out)
    }
 
-   private def sendRequest(modbusFlow: Flow[ModbusRequest, ModbusRTUResponse, _], request: ModbusRequest)
+   private def sendRequest(modbusFlow: Flow[ModbusRequest, ModbusRTUResponse, _], request: ModbusRequest, responseTimeout: FiniteDuration)
                           (implicit
                            ec: ExecutionContextExecutor,
                            system: ActorSystem,
                            am: ActorMaterializer
                           ): Future[ModbusRTUResponse] =
    {
-      val breakOnTimeout: Future[Nothing] = after(2 seconds, system.scheduler)(Future failed new TimeoutException())
+      val breakOnTimeout: Future[Nothing] = after(responseTimeout, system.scheduler)(Future failed new TimeoutException())
 
       val response: Future[ModbusRTUResponse] =
       {

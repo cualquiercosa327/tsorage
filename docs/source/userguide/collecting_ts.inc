@@ -99,15 +99,7 @@ Poll Sources
 ------------
 
 All poll sources have a mandatory ``interval`` attribute, which textually represents the expected time interval between
-two successive poll rounds.
-Format is ``<length><unit>``, where whitespace is allowed before, between, and after the parts.
-``length`` must be either a positive integer, or a positive floatting number. ``unit`` must be one of the following:
-
-- ``d``, ``day`` or ``days``
-- ``h``, ``hour`` or ``hours``
-- ``min``, ``minute`` or ``minutes``
-- ``s``, ``second`` or ``seconds``
-- ``ms``, ``milli``, ``millisecond`` or ``milliseconds``
+two successive poll rounds. The value of this attribute must be a :ref:`duration literal <UG_Duration_Literals>`.
 
 Currently, the following source types are supported:
 
@@ -220,10 +212,10 @@ The following parameters must be specified:
 - ``input_contacts``, the list of discrete input contacts (coils number between 10001 and 19999; Modbus function 2) to be collected.
 - ``holding_registers``, the list of analog holding registers (registers number between 30001 and 39999; Modbus function 3) to be collected.
 - ``input_registers``, the list of analog output input registers (registers number between 40001 and 49999; Modbus function 4) to be collected.
-- ``address``, the coil address as an integer (ex: ``1234``) or an hexadecimal string (ex: ``"04D2"``). Must be a value
-  between `0000` and `270E`.
-- ``metric``, the id of the metric associated with the coil.
-- ``tagset``, a optional dictionary of the dynamic tagset to be reported with each collected value.
+
+Optionally, the following parameters can be specified:
+
+- response_timeout, the period of time allowed to a slave for answering a request. Once this deadline has expired, the module no longer expect for an answer and termines the current message session. The timeout must be expressed as a :ref:`duration literal <UG_Duration_Literals>`. The default value is ``1 second``
 
 The coil and register tables (`output_coils`, `input_contacts`, `input_registers`, `holding_registers`) are polled in a cyclic fashion, it that order.
 
@@ -263,8 +255,7 @@ For the Modbus RTU, Modbus RTU over TCP and Modbus TCP modules, the items in ``o
 - ``byte_order``, a string representing the way bytes are ordered in the register. May be `LOW_BYTE_FIRST` or `HIGH_BYTE_FIRST`. Default is `HIGH_BYTE_FIRST`.
 - ``word_order``, a string representing the way words are ordered in multi-register values. May be `LOW_WORD_FIRST` or `HIGH_WORD_FIRST`. Default is `HIGH_WORD_FIRST`.
 
-Additionnaly, some data types accept extra parameters:
-
+Additionally, some data types accept extra parameters:
 
 - Numeric types (ie, ``ubyte``, ``sbyte``, ``uint16``, ``uint32``, ``sint16``, ``sint32``, and ``sfloat32``) accept some threshold values for data sanity checking purpose. Please note that, if the ``min_threshold`` or the ``max_threshold`` parameters are specified, and if the collected value remains behind the thresholds, this value will automatically be associated with the tag ``quality=good``.
 	

@@ -34,6 +34,7 @@ Operation
 User Guide
 ##########
 
+.. include:: userguide/overview.inc
 .. include:: userguide/collecting_ts.inc
 .. include:: userguide/ingesting_ts.inc
 .. include:: userguide/monitoring.inc
