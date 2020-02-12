@@ -23,6 +23,15 @@ spec:
         module: processor
         environment: development
     spec:
+      initContainers:
+        - name: tsorage-cassandra-init
+          image: nicosalamone/tsorage-cassandra-init # TODO: change nicosalamone to ceticasbl.
+          env:
+            - name: CASSANDRA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tsorage-processor-conf
+                  key: TSORAGE_CASSANDRA_HOST
       containers:
         - name: tsorage-processor
           image: nicosalamone/tsorage-processor # TODO: change nicosalamone to ceticasbl.
