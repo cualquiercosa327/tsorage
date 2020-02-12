@@ -124,7 +124,8 @@ lazy val collector = (project in file("collector"))
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
-            "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.2"
+            "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.2",
+            "com.fazecast" % "jSerialComm" % "2.5.3"
          )
    ).dependsOn(common)
 

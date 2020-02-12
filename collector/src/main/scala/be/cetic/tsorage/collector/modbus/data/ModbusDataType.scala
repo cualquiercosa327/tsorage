@@ -49,6 +49,7 @@ abstract class NumericType(
          case JsNumber(x) => {
             JsNumber(x*Math.pow(10, rank))
          }
+         case _ => rawValue
       }
    }
 

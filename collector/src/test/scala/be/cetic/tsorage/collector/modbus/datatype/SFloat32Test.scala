@@ -33,6 +33,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(negative_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-1.34913335539403565877457313216E38.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 

@@ -29,6 +29,8 @@ Standard
 Extended Installation
 =====================
 
+.. _INSTALLATION_CROSS_SITE:
+
 Cross-Site Installation
 =======================
 

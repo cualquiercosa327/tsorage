@@ -4,28 +4,18 @@
 Collecting Time Series
 **********************
 
+.. _CollectingTS_Collector_Component:
 
 Collector Component
 ===================
 
-The Collector component is part of the :ref:`collection layer <Archi_CollectionLayer>`.
-It essentially is an application that runs on a device (server, virtual machine, embedded hardware, …) near a data source.
-As its name suggests, the Collector component collects time series values either by querying the data source,
-observing its environment, or receiving informations from external data sources.
+The Collector component is part of the :ref:`collection layer <Archi_CollectionLayer>`. It essentially is an software product that can be deployed either as a containerized application on a server with access to its data sources, or in a small form factor device having the physical connectors required for performing the data collection. As its name suggests, the Collector component collects time series values either by querying the data source, observing its environment, or receiving informations from external data sources.
 
-The collector comes with **modules** that support the connection *from* and *to* various types of data source, including
-relational databases, Modbus networks, OPC servers, etc. Each module creates one or many agents, that interact
-with their environment for actually collecting data points.
-Using the collector component therefore consists in choosing and configuring the modules that must be run in order to
-collect new observations.
+The collector comes with **modules** that support the connection *from* and *to* various types of data source, including relational databases, Modbus networks, OPC servers, etc. Each module creates one or many agents, that interact with their environment for actually collecting data points. Using the collector component therefore consists in choosing and configuring the modules that must be run in order to collect new observations.
 
-Freshly collected data points are eventually submitted to a component of the :ref:`ingestion layer <Archi_IngestionLayer>`
-for processing and storage purposes.
-The second task of the user of the collector component is therefore to specify how the collected data stream must be
-transmitted to the ingestion layer.
+Freshly collected data points are eventually submitted to a component of the :ref:`ingestion layer <Archi_IngestionLayer>` for processing and storage purposes. The second task of the user of the collector component is therefore to specify how the collected data stream must be transmitted to the ingestion layer.
 
-Both collection and transmission configuration are performed by editing a configuration file that is communicated to the
-collector when its process is started.
+Both collection and transmission configuration are performed by editing a configuration file that is communicated to the collector when its process is started.
 
 .. figure:: figures/collector-flows.png
    :align: center
@@ -140,7 +130,28 @@ Example of Random Poll configuration:
 Modbus RTU Poll Source
 ^^^^^^^^^^^^^^^^^^^^^^
 
+The Modbus RTU Poll component frequently polls Modbus slaves over a RS232 network. Only once request is
+submitted to the network at a time.
 
+The following parameters must be specified:
+
+- ``type`` must be ``poll/modbus/rtu`` (should not be confused with :ref:`poll/modbus/rtu <CollectingTimeSeries_Modbus_RTU_Over_TCP>`).
+- ``interval``, the desired polling interval.
+- ``name``, a human friendly name of the network.
+- ``max_response_bytes``, the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device.
+- ``port``, the serial port on which the requests must be sent. Example: ``/dev/ttyS0``
+- ``output_coils``, the list of coils in the discrete output coils (coil numbers between 1 and 9999; Modbus function 1) to be collected.
+- ``input_contacts``, the list of discrete input contacts (coils number between 10001 and 19999; Modbus function 2) to be collected.
+- ``holding_registers``, the list of analog holding registers (registers number between 30001 and 39999; Modbus function 3) to be collected.
+- ``input_registers``, the list of analog output input registers (registers number between 40001 and 49999; Modbus function 4) to be collected.
+
+Optionally, the following parameters can be specified:
+
+- response_timeout, the period of time allowed to a slave for answering a request. Once this deadline has expired, the module no longer expect for an answer and termines the current message session. The timeout must be expressed as a :ref:`duration literal <UG_Duration_Literals>`. The default value is ``1 second``
+
+The coil and register tables (`output_coils`, `input_contacts`, `input_registers`, `holding_registers`) are polled in a cyclic fashion, it that order.
+
+The items in ``output_coils``, ``input_contacts``, ``holding_registers``, and ``input_registers`` are called :ref:`extracts <CollectingTimeSeries_Modbus_Extracts>` and describe the properties of Modbus registers.
 
 
 .. _CollectingTimeSeries_Modbus_TCP:
