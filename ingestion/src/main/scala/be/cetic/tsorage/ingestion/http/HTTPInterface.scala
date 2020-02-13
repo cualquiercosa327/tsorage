@@ -14,11 +14,12 @@ import be.cetic.tsorage.ingestion.IngestionConfig
 import be.cetic.tsorage.ingestion.message.{CheckRunMessage, DatadogBody, DatadogMessageJsonSupport}
 import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.KafkaException
 import org.apache.kafka.common.serialization.StringSerializer
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Success
+import scala.util.{Failure, Success, Try}
 
 /**
  * An AKKA system that runs an HTTP server waiting for Datadog compliant messages.
@@ -56,11 +57,24 @@ object HTTPInterface extends DatadogMessageJsonSupport
 
    def main(args: Array[String]): Unit =
    {
+      val kafkaHost = conf.getString("kafka.host")
+      val kafkaPort = conf.getInt("kafka.port")
+      val kafkaTopic = conf.getString("kafka.topic")
 
       val producerSettings = ProducerSettings(system, new StringSerializer, new StringSerializer)
-         .withBootstrapServers(s"${conf.getString("kafka.host")}:${conf.getInt("kafka.port")}")
+        .withBootstrapServers(s"$kafkaHost:$kafkaPort")
 
-      val kafkaProducer = producerSettings.createKafkaProducer()
+      val kafkaProducer = Try {
+         producerSettings.createKafkaProducer()
+      } match {
+         case Failure(_:KafkaException) =>
+            Console.err.println(s"Cannot connect to the Kafka host: $kafkaHost:$kafkaPort.")
+            sys.exit(1)
+         case Failure(e) =>
+            Console.err.println(s"Unexpected error has occurred when tried to connect to Kafka host:\n$e")
+            sys.exit(2)
+         case Success(value) => value
+      }
 
       val routeSeries =
       decodeRequest
@@ -81,7 +95,7 @@ object HTTPInterface extends DatadogMessageJsonSupport
                            { body =>
                               val messages = body.series.map(ddMsg => ddMsg.prepare(user))
 
-                              messages.map(message => new ProducerRecord[String, String](conf.getString("kafka.topic"), message.toJson.compactPrint))
+                              messages.map(message => new ProducerRecord[String, String](kafkaTopic, message.toJson.compactPrint))
                                  .foreach(pr => kafkaProducer.send(pr))
 
                               complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "OK"))

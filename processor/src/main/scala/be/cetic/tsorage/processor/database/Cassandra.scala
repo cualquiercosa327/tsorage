@@ -3,6 +3,7 @@ package be.cetic.tsorage.processor.database
 import java.sql.Timestamp
 import java.time.ZoneOffset
 
+import be.cetic.tsorage.common.CassandraFactory
 import be.cetic.tsorage.common.messaging.{AggUpdate, Message, Observation}
 import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.processor.datatype.{DataTypeSupport, MetaSupportInfer}
@@ -23,9 +24,6 @@ object Cassandra extends LazyLogging {
   val rawKS = conf.rawKS
   val aggKS = conf.aggKS
 
-  private val cassandraHost = conf.conf.getString("cassandra.host")
-  private val cassandraPort = conf.conf.getInt("cassandra.port")
-
   /**
    * Converts a `ResultSetFuture` into a Scala `Future[ResultSet]`
    * @param f ResultSetFuture to convert
@@ -45,12 +43,7 @@ object Cassandra extends LazyLogging {
   private var rawStatementcache: Map[String, PreparedStatement] = Map()
   private var aggStatementCache: Map[String, PreparedStatement] = Map()
 
-  val session: Session = Cluster.builder
-    .addContactPoint(cassandraHost)
-    .withPort(cassandraPort)
-    .withoutJMXReporting()
-    .build
-    .connect()
+  val session: Session = CassandraFactory.createCassandraSession(conf.conf)
 
   val sharder = Sharder(conf.conf.getString("sharder"))
 

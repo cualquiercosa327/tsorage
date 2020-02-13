@@ -27,11 +27,14 @@ import org.apache.kafka.common.serialization.{StringDeserializer, StringSerializ
 import org.slf4j.{Logger, LoggerFactory}
 import be.cetic.tsorage.processor.aggregator.raw
 import be.cetic.tsorage.processor.aggregator.followup
+import org.apache.kafka.common.KafkaException
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.FiniteDuration
 import spray.json._
+
+import scala.util.{Failure, Success, Try}
 
 object Processor extends LazyLogging with MessageJsonSupport
 {
@@ -46,19 +49,20 @@ object Processor extends LazyLogging with MessageJsonSupport
     val cassandraPort = conf.getInt("cassandra.port")
     val root: Logger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)
 
-    val kafkaServers = conf.getStringList("kafka.bootstrap").asScala.mkString(";")
+    val kafkaServers = conf.getStringList("kafka.bootstrap")
+    val kafkaServersStr = kafkaServers.asScala.mkString(";")
 
     val consumerSettings = ConsumerSettings(
       system,
       new StringDeserializer,
       new StringDeserializer
     )
-       .withBootstrapServers(kafkaServers)
+       .withBootstrapServers(kafkaServersStr)
        .withGroupId(conf.getString("kafka.group"))
     //  .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
     val producerSettings = ProducerSettings(system, new StringSerializer, new StringSerializer)
-       .withBootstrapServers(kafkaServers)
+       .withBootstrapServers(kafkaServersStr)
 
     val kafkaSink = Producer.plainSink(producerSettings)
 
@@ -87,6 +91,18 @@ object Processor extends LazyLogging with MessageJsonSupport
       rawDerivators,
       kafkaSink)
 
-    inboundMessagesConnector().to(processorGraph).run()
+    val graph = inboundMessagesConnector().to(processorGraph)
+
+    Try {
+      graph.run()
+    } match {
+      case Failure(_:KafkaException) =>
+        Console.err.println(s"Cannot connect to the Kafka host: $kafkaServers.")
+        sys.exit(1)
+      case Failure(e) =>
+        Console.err.println(s"Unexpected error has occurred when tried to connect to Kafka host:\n$e")
+        sys.exit(2)
+      case Success(_) =>
+    }
   }
 }

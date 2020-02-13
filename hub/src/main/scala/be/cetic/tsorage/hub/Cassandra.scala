@@ -2,7 +2,7 @@ package be.cetic.tsorage.hub
 
 import java.time.LocalDateTime
 
-import be.cetic.tsorage.common.{DateTimeConverter, SingleData, TimeSeries}
+import be.cetic.tsorage.common.{CassandraFactory, DateTimeConverter, SingleData, TimeSeries}
 import be.cetic.tsorage.common.sharder.Sharder
 import be.cetic.tsorage.hub.filter.Metric
 import com.datastax.driver.core.querybuilder.QueryBuilder
@@ -21,18 +21,10 @@ import scala.concurrent.duration.Duration
  * An access to the Cassandra cluster
  */
 class Cassandra(private val conf: Config) extends LazyLogging {
-  private val cassandraHost = conf.getString("cassandra.host")
-  private val cassandraPort = conf.getInt("cassandra.port")
-
   private val keyspaceAgg = conf.getString("cassandra.keyspaces.other") // Keyspace containing aggregated data.
   private val keyspaceRaw = conf.getString("cassandra.keyspaces.raw") // Keyspace containing raw data.
 
-  val session: Session = Cluster.builder
-      .addContactPoint(cassandraHost)
-      .withPort(cassandraPort)
-      .withoutJMXReporting()
-      .build
-      .connect()
+  val session: Session = CassandraFactory.createCassandraSession(conf)
 
   val sharder = Sharder(conf.getString("sharder"))
 

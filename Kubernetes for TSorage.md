@@ -13,9 +13,9 @@ Install and run Cassandra:
 ```sh
 helm install tsorage-cassandra incubator/cassandra --namespace cetic-tsorage-dev \
   --set config.cluster_size=1 \
-  --set resources.requests.memory=8Gi \
+  --set resources.requests.memory=4Gi \
   --set resources.limits.memory=8Gi \
-  --set resources.requests.cpu=6 \
+  --set resources.requests.cpu=2 \
   --set resources.limits.cpu=6 \
   --set config.max_heap_size=4096M \
   --set config.heap_new_size=1024M

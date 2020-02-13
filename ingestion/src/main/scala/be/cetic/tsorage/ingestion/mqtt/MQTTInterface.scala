@@ -16,12 +16,13 @@ import be.cetic.tsorage.ingestion.http.HTTPInterface.{conf, system}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.KafkaException
 import org.apache.kafka.common.serialization.StringSerializer
 
 import scala.concurrent.{Future, Promise}
 import spray.json._
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
  * An interface for ingesting observations using MQTT.
@@ -52,6 +53,10 @@ object MQTTInterface extends LazyLogging with MessageJsonSupport
       val settings = MqttSessionSettings()
       val session = ActorMqttServerSession(settings)
 
+     val kafkaHost = conf.getString("kafka.host")
+     val kafkaPort = conf.getInt("kafka.port")
+     val kafkaTopic = conf.getString("kafka.topic")
+
       val maxConnections = conf.getInt("mqtt.max_connections")
       val host = conf.getString("mqtt.host")
       val port = conf.getInt("mqtt.port")
@@ -59,9 +64,7 @@ object MQTTInterface extends LazyLogging with MessageJsonSupport
       val mqttChannel = conf.getString("mqtt.channel")
 
       val producerSettings = ProducerSettings(system, new StringSerializer, new StringSerializer)
-         .withBootstrapServers(s"${conf.getString("kafka.host")}:${conf.getInt("kafka.port")}")
-
-      val kafkaTopic = conf.getString("kafka.topic")
+         .withBootstrapServers(s"$kafkaHost:$kafkaPort")
 
       val bindSource: Source[Either[MqttCodec.DecodeError, Event[Nothing]], Future[Tcp.ServerBinding]] =
          Tcp()
@@ -97,7 +100,7 @@ object MQTTInterface extends LazyLogging with MessageJsonSupport
                }
             )
 
-      val (bound: Future[Tcp.ServerBinding], server: UniqueKillSwitch) = bindSource
+      val graph = bindSource
          .viaMat(KillSwitches.single)(Keep.both)
          .map(value => value match {
             case Right(Event(Publish(_, mqttChannel, _, payload: ByteString), _)) => Some(payload.utf8String.parseJson)
@@ -112,7 +115,18 @@ object MQTTInterface extends LazyLogging with MessageJsonSupport
          .filter(_.isDefined).map(_.get)
          .map(msg => new ProducerRecord[String, String](kafkaTopic, msg.metric, msg.toJson.compactPrint))
          .to(Producer.plainSink(producerSettings))
-         .run()
+
+      val (bound: Future[Tcp.ServerBinding], server: UniqueKillSwitch) = Try {
+        graph.run()
+      } match {
+        case Failure(_:KafkaException) =>
+          Console.err.println(s"Cannot connect to the Kafka host: $kafkaHost:$kafkaPort.")
+          sys.exit(1)
+        case Failure(e) =>
+          Console.err.println(s"Unexpected error has occurred when tried to connect to Kafka host:\n$e")
+          sys.exit(2)
+        case Success(value) => value
+      }
 
       scala.sys.addShutdownHook {
          println("Shutdown...")
