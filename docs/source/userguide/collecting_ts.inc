@@ -331,11 +331,17 @@ operating ingestion component.
     as secret items that should only be shared with trustworthy entities. Because such a token is stored in the collector
     configuration file, the access to this file should be restricted to only allowed users.
 
+
 Stdout Sink
 -----------
 
 This simple sink prints every individual incoming message to the standard output of the running process.
 A message is printed as a single line JSON document. Printed messages are separated by a new line character.
+
+The following parameters must be specified:
+
+- ``type`` must be set to ``stdout/json``
+
 
 HTTP Sink
 ---------
@@ -377,3 +383,6 @@ Messages are sent using a MQTT session. The following parameters must be specifi
 - ``ip`` is the IP address of the MQTT broker.
 - ``port`` is the port the MQTT broker is listening to. Default value: ``1883``.
 - ``channel`` must correspond to the channel used by the MQTT Ingestion module. Default value: ``timeseries``
+- ``security``, the security policy to apply. It must be set accordingly to the :ref:`configuration of the ingestion module <INSTALL_MQTT_INGESTION>`.
+
+

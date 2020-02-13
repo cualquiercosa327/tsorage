@@ -24,10 +24,10 @@ import akka.stream.ActorAttributes.supervisionStrategy
 import akka.stream.Supervision.resumingDecider
 
 /**
- * A Modbus RTU over TCP source.
+ * An abstract Modbus RTU over TCP source.
  *
  **/
-class ModbusRTUTCPSource(val config: Config) extends PollSource(
+abstract class ModbusRTUSource(val config: Config) extends PollSource(
    Duration(config.getString("interval")) match {
       case fd: FiniteDuration => fd
       case _ =>  1 minute
@@ -39,7 +39,7 @@ class ModbusRTUTCPSource(val config: Config) extends PollSource(
     *
     * @return A flow that can produce new messages every time a tick is incoming.
     */
-   override protected def buildPollFlow()
+   override final protected def buildPollFlow()
    (implicit ec: ExecutionContextExecutor, system: ActorSystem, am: ActorMaterializer): Flow[String, Message, NotUsed] =
    {
       val extracts = Extract.fromSourceConfig(config)
@@ -56,7 +56,7 @@ class ModbusRTUTCPSource(val config: Config) extends PollSource(
       Flow.fromGraph(createGraph(requests, extracts, responseTimeout))
    }
 
-   private def createGraph(
+   private final def createGraph(
                              requests: List[ModbusRequest],
                              extracts: Map[ModbusFunction, List[Extract]],
                              responseTimeout: FiniteDuration
@@ -102,7 +102,7 @@ class ModbusRTUTCPSource(val config: Config) extends PollSource(
          FlowShape(requestFlow.in, messageFlow.out)
    }
 
-   private def sendRequest(modbusFlow: Flow[ModbusRequest, ModbusRTUResponse, _], request: ModbusRequest, responseTimeout: FiniteDuration)
+   private final def sendRequest(modbusFlow: Flow[ModbusRequest, ModbusRTUResponse, _], request: ModbusRequest, responseTimeout: FiniteDuration)
                           (implicit
                            ec: ExecutionContextExecutor,
                            system: ActorSystem,
@@ -134,12 +134,13 @@ class ModbusRTUTCPSource(val config: Config) extends PollSource(
       )
    }
 
-   private def createConnectionFlow(config: Config)(implicit system: ActorSystem): Flow[ByteString, ByteString, _] =
-   {
-      val host: String = config.getString("host")
-      val port: Int = config.getInt("port")
-
-      Tcp()
-         .outgoingConnection(host, port)
-   }
+   /**
+    * Creates a flow representing the low level connection to the RTU slave.
+    * The entry of the flow will be sent to the slave (network), while its output will corresponds to the
+    * information retrieved from this slave (network).
+    * @param config
+    * @param system
+    * @return
+    */
+   protected def createConnectionFlow(config: Config)(implicit system: ActorSystem): Flow[ByteString, ByteString, _]
 }

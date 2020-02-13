@@ -36,10 +36,13 @@ abstract class HTTPInterface() extends DefaultJsonProtocol
 
    protected val conf = IngestionConfig.conf
 
+   protected val authURI = s"${conf.getString("authentication.host")}:${conf.getInt("authentication.port")}${conf.getString("authentication.path")}"
+   protected val listeningPort = conf.getInt("port")
+
    def verifyToken(conf: Config)(token: String): Future[Option[User]] = {
       val request = HttpRequest(
          method = HttpMethods.POST,
-         uri = s"${conf.getString("authentication.host")}:${conf.getInt("authentication.port")}${conf.getString("authentication.path")}",
+         uri = authURI,
          entity = HttpEntity(ContentTypes.`application/json`, AuthenticationQuery(token).toJson.compactPrint)
       )
 
@@ -109,7 +112,7 @@ abstract class HTTPInterface() extends DefaultJsonProtocol
       }
 
       val hubListenAddress = System.getenv().getOrDefault("TSORAGE_INGESTION_LISTEN_ADDRESS", "localhost")
-      val bindingFuture = Http().bindAndHandle(concat(routeSeries, routeCheckRun), hubListenAddress, 8080)
+      val bindingFuture = Http().bindAndHandle(concat(routeSeries, routeCheckRun), hubListenAddress, listeningPort)
 
       scala.sys.addShutdownHook {
          println("Shutdown...")
