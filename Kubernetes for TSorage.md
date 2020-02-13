@@ -27,9 +27,11 @@ Install and run Kafka:
 ```sh
 helm install tsorage-kafka incubator/kafka --namespace cetic-tsorage-dev \
   --set replicas=1 \
-  --set zookeeper.replicaCount=1
+  --set zookeeper.replicaCount=1 \
+	--set external.enabled=true --set external.type=ClusterIP
 # 'replicas' sets the number of Kafka brokers.
 # 'zookeeper.replicaCount' sets the number of ZooKeeper nodes.
+# 'external.enabled' and 'external.type' allow Kafka borkers to be reached via the service address instead of the IP address of Kafka pods.
 ```
 
 Install and run Grafana (without any preconfigured data source):
