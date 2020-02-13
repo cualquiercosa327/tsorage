@@ -133,21 +133,20 @@ Modbus RTU Poll Source
 The Modbus RTU Poll component frequently polls Modbus slaves over a RS232 network. Only once request is
 submitted to the network at a time.
 
-The following parameters must be specified:
+The configuration of this source supports the following parameters:
 
 - ``type`` must be ``poll/modbus/rtu`` (should not be confused with :ref:`poll/modbus/rtu <CollectingTimeSeries_Modbus_RTU_Over_TCP>`).
 - ``interval``, the desired polling interval.
 - ``name``, a human friendly name of the network.
-- ``max_response_bytes``, the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device.
+- ``max_response_bytes``, the maximum number of bytes a Modbus data response can contain. Requests will be sent in order to keep the responses length under this limit. Because Modbus response frames are limited to 256 bytes, the maximum value for this parameter is `252`.
 - ``port``, the serial port on which the requests must be sent. Example: ``/dev/ttyS0``
+- ``baud_rate`` [optional], an integer representing the baud rate. Depending on the master slaves, accepted values may include 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200. Default is `9600`.
+- ``parity`` [optional], the parity checking mode. Supported values are `no`, `odd`, and `even`. Please note the Modbus specification states the even parity is required. Default is `even`.
 - ``output_coils``, the list of coils in the discrete output coils (coil numbers between 1 and 9999; Modbus function 1) to be collected.
 - ``input_contacts``, the list of discrete input contacts (coils number between 10001 and 19999; Modbus function 2) to be collected.
 - ``holding_registers``, the list of analog holding registers (registers number between 30001 and 39999; Modbus function 3) to be collected.
 - ``input_registers``, the list of analog output input registers (registers number between 40001 and 49999; Modbus function 4) to be collected.
-
-Optionally, the following parameters can be specified:
-
-- response_timeout, the period of time allowed to a slave for answering a request. Once this deadline has expired, the module no longer expect for an answer and termines the current message session. The timeout must be expressed as a :ref:`duration literal <UG_Duration_Literals>`. The default value is ``1 second``
+- ``response_timeout`` [optional], the period of time allowed to a slave for answering a request. Once this deadline has expired, the module no longer expect for an answer and termines the current message session. The timeout must be expressed as a :ref:`duration literal <UG_Duration_Literals>`. The default value is ``1 second``
 
 The coil and register tables (`output_coils`, `input_contacts`, `input_registers`, `holding_registers`) are polled in a cyclic fashion, it that order.
 
@@ -161,12 +160,12 @@ Modbus TCP Poll Source
 
 The Modbus TCP Poll component frequently polls a Modbus TCP slave (server) for extracting values from its registers.
 
-The following parameters must be specified:
+The configuration of this source supports the following parameters:
 
 - ``type`` must be ``poll/modbus/tcp``
 - ``interval``, the desired polling interval.
 - ``name``, a human friendly name of the slave.
-- ``max_response_bytes``, the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device. 
+- ``max_response_bytes`` [optional], the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device.
 - ``host``, the ip address or host name of the slave.
 - ``port``, the port on which the slave is waiting for queries. The standard value is `502`.
 - ``output_coils``, the list of coils in the discrete output coils (coil numbers between 1 and 9999; Modbus function 1) to be collected.
@@ -211,22 +210,19 @@ Modbus RTU over TCP Poll Source
 
 Since Modbus RTU over TCP essentially consists in wrapping RTU messages in a TCP frame, this source is a mix between :ref:`Modbus RTU<CollectingTimeSeries_Modbus_RTU>` and :ref:`Modbus TCP<CollectingTimeSeries_Modbus_TCP>` sources.
 
-The following parameters must be specified:
+The configuration of this source supports the following parameters:
 
 - ``type`` must be ``poll/modbus/rtu-tcp``
 - ``interval``, the desired polling interval.
 - ``name``, a human friendly name of the slave.
-- ``max_response_bytes``, the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device. 
+- ``max_response_bytes`` [optional], the maximum number of bytes a Modbus response can contain. Requests will be sent in order to keep the responses length under this limit. The total response length will be `9 + 2 * registerNumber`. The supported response length depends on the slave device.
 - ``host``, the ip address or host name of the slave.
 - ``port``, the port on which the slave is waiting for queries. The standard value is `502`.
 - ``output_coils``, the list of coils in the discrete output coils (coil numbers between 1 and 9999; Modbus function 1) to be collected.
 - ``input_contacts``, the list of discrete input contacts (coils number between 10001 and 19999; Modbus function 2) to be collected.
 - ``holding_registers``, the list of analog holding registers (registers number between 30001 and 39999; Modbus function 3) to be collected.
 - ``input_registers``, the list of analog output input registers (registers number between 40001 and 49999; Modbus function 4) to be collected.
-
-Optionally, the following parameters can be specified:
-
-- response_timeout, the period of time allowed to a slave for answering a request. Once this deadline has expired, the module no longer expect for an answer and termines the current message session. The timeout must be expressed as a :ref:`duration literal <UG_Duration_Literals>`. The default value is ``1 second``
+- ``response_timeout`` [optional], the period of time allowed to a slave for answering a request. Once this deadline has expired, the module no longer expect for an answer and termines the current message session. The timeout must be expressed as a :ref:`duration literal <UG_Duration_Literals>`. The default value is ``1 second``
 
 The coil and register tables (`output_coils`, `input_contacts`, `input_registers`, `holding_registers`) are polled in a cyclic fashion, it that order.
 
