@@ -12,14 +12,25 @@ jobs:
           java-version: openjdk@1.12
       - name: Run Cassandra
         run: |
+            # Initialize some Cassandra variables.
+            CASSANDRA_CONT_NAME='cassandra'
+            CASSANDRA_PORT=9042
+            # Download useful scripts to initialize the Cassandra database.
+            wget https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh  -O ./wait-for-it.sh
+            chmod +x ./wait-for-it.sh
             mkdir -p share
-            wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra_prod.cql -O ./share/cassandra.cql
+            wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/cassandra_prod.cql -O ./share/cassandra_init.cql
             wget https://raw.githubusercontent.com/cetic/tsorage-storage/dev/test_data.cql -O ./share/test_data.cql
-            docker run --name cassandra --publish 9042:9042 -d -v $PWD/share:/share cassandra:3.11
+            # Run a Cassandra container.
+            docker run --name $CASSANDRA_CONT_NAME --publish $CASSANDRA_PORT:9042 -d -v $PWD/share:/share cassandra:3.11
+            # Get the Cassandra container's IP.
+            CASSANDRA_HOST=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CASSANDRA_CONT_NAME)
       - name: Initialize Cassandra
         run: |
+            # Wait until the Cassandra container is up.
+            ./wait-for-it.sh $CASSANDRA_HOST:9042 --strict --timeout=600
             # Create database schema.
-            docker exec cassandra cqlsh -f /share/cassandra.cql
+            docker exec cassandra cqlsh -f /share/cassandra_init.cql
             # Insert test data.
             docker exec cassandra cqlsh -f /share/test_data.cql
       - name: Run unit tests
