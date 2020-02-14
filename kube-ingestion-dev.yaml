@@ -45,7 +45,7 @@ spec:
     spec:
       containers:
         - name: tsorage-ingestion
-          image: nicosalamone/tsorage-ingestion # TODO: change nicosalamone to ceticasbl.
+          image: ceticasbl/tsorage-ingestion
           envFrom:
             - configMapRef:
                 name: tsorage-ingestion-conf

@@ -45,7 +45,7 @@ spec:
     spec:
       initContainers:
         - name: tsorage-cassandra-init
-          image: nicosalamone/tsorage-cassandra-init # TODO: change nicosalamone to ceticasbl.
+          image: ceticasbl/tsorage-cassandra-init
           env:
             - name: CASSANDRA_HOST
               valueFrom:
@@ -54,7 +54,7 @@ spec:
                   key: TSORAGE_CASSANDRA_HOST
       containers:
         - name: tsorage-hub
-          image: nicosalamone/tsorage-hub # TODO: change nicosalamone to ceticasbl.
+          image: ceticasbl/tsorage-hub
           envFrom:
             - configMapRef:
                 name: tsorage-hub-conf

@@ -14,13 +14,10 @@ val commonSettings = Seq(
    version := "1.0.0",
    scalaVersion := "2.12.10",
    // Docker information.
-   //dockerRepository := Some("ceticasbl/tsorage")
    dockerBaseImage := "openjdk:12-alpine",
    dockerUpdateLatest := true,
-   //dockerAlias := DockerAlias(dockerRepository.value, dockerUsername.value, name.value),
-   //dockerUsername := Some("ceticasbl"),
    dockerRepository := Some("index.docker.io"),
-   dockerUsername := Some("nicosalamone"),
+   dockerUsername := Some("ceticasbl"),
    dockerCommands ++= Seq(
      Cmd("USER", "root"),
      Cmd("ADD", "https://raw.githubusercontent.com/eficode/wait-for/master/wait-for", "."),
