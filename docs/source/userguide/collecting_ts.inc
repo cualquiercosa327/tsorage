@@ -40,8 +40,7 @@ The configuration file of a collector module contains three elements.
 - The **sources** part describes the list of data sources from which data points must be collected. As mentioned above,
   each type of data source is covered by a specific collector component, and each component comes with its own configuration
   schema.
-- The **sink** part describes how collected data points should be sent to the ingestion layer. Again, each solution for
-  exporting data flows has its own configuration schema.
+- The **sinks** part describes the list outputs for the collected data points. On a typical configuration, this list contains a sinle sink that connects the collector to the ingestion layer. Each sink has its own configuration schema.
 
 An example of configuration document is listed below:
 
@@ -60,7 +59,10 @@ An example of configuration document is listed below:
         { configuration for a Modbus connexion }
     ]
 
-    sink = { sink configuration }
+    sink = [
+        { first sink configuration },
+        { second sink configuration }
+    ]
 
 
 

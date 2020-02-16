@@ -3,6 +3,7 @@ import sbt.Keys.libraryDependencies
 import com.typesafe.sbt.packager.docker.{Cmd, DockerChmodType}
 import NativePackagerHelper._
 
+
 name := "tsorage"
 
 version := "0.1"
@@ -37,7 +38,7 @@ val commonDependencies = Seq(
    "com.typesafe.akka" %% "akka-stream-kafka" % "1.0.4",
    "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.23",
    "com.typesafe.akka" %% "akka-http-testkit" % Version.akka,
-   //"com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
+   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     "com.typesafe.play" %% "play-json" % "2.7.4",
    "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
    "com.thesamet.scalapb" %% "scalapb-runtime" % "0.9.5",
@@ -135,5 +136,9 @@ lazy val root = (project in file("."))
       name := "tsorage"
    ).aggregate(common, hub, ingestion, processor, collector)
 
+PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
 
+PB.targets in Compile := Seq(
+   scalapb.gen() -> (sourceManaged in Compile).value /// "protos",
+)
 
