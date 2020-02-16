@@ -7,11 +7,12 @@ import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RestartFlow, Rest
 import akka.stream.{ActorMaterializer, ClosedShape, FlowShape, SinkShape, SourceShape}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
+
 import be.cetic.tsorage.collector.sink.{HttpSender, MQTTSender, StdoutSender}
 import be.cetic.tsorage.common.messaging.{Message, RandomMessageIterator}
 import com.typesafe.config.{Config, ConfigFactory}
 import GraphDSL.Implicits._
-import be.cetic.tsorage.collector.source.{ModbusRTUSerialSource, ModbusRTUSource, ModbusRTUTCPSource, ModbusTCPSource, RandomPollSource}
+import be.cetic.tsorage.collector.source.{ModbusRTUSerialSource, ModbusRTUTCPSource, ModbusTCPSource, RandomPollSource}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -78,7 +79,8 @@ object Collector
             val flows = submissionConfigs.map(config => {
                config.getString("type") match {
                   case "stdout/json" => StdoutSender.buildSender(config)
-                  case "mqtt" => MQTTSender.buildSender(config)
+                  case "mqtt/pb" => MQTTSender.buildSender(config)
+                  case "mqtt/json" => MQTTSender.buildSender(config)
                   case "http" => HttpSender.buildSender(config)
                }
             })

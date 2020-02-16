@@ -97,7 +97,6 @@ lazy val ingestion = (project in file("ingestion"))
          Seq(
             "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
             "ch.qos.logback" % "logback-classic" % "1.2.3",
-            "com.lightbend.akka" %% "akka-stream-alpakka-mqtt-streaming" % "1.1.2"     // MQTT
          )
    ).dependsOn(common)
 
@@ -125,6 +124,7 @@ lazy val collector = (project in file("collector"))
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
+            "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "1.1.2",
             "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.2",
             "com.fazecast" % "jSerialComm" % "2.5.3"
          )

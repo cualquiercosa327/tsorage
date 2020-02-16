@@ -381,7 +381,7 @@ MQTT Sink
 The MQTT Sink can communicate with the :ref:`MQTT ingestion module <Ingesting_TS_MQTT>` of the ingestion layer.
 Messages are sent using a MQTT session. The following parameters must be specified:
 
-- ``type`` must be set to ``mqtt``.
+- ``type`` must be set to ``mqtt/pb`` or ``mqtt/json``, depending on whether the ingestion module is expecting Protobuf or JSON messages (respectively).
 - ``ip`` is the IP address of the MQTT broker.
 - ``port`` is the port the MQTT broker is listening to. Default value: ``1883``.
 - ``channel`` must correspond to the channel used by the MQTT Ingestion module. Default value: ``timeseries``
