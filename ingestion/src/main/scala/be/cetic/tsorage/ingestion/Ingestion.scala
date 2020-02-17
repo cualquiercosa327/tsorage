@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 import GraphDSL.Implicits._
 import akka.actor.ActorSystem
 import akka.util.ByteString
-import be.cetic.tsorage.ingestion.sink.StdoutSinkFactory
+import be.cetic.tsorage.ingestion.sink.{KafkaSinkFactory, StdoutSinkFactory}
 
 
 
@@ -113,6 +113,7 @@ object Ingestion
             val sinks = sinkConfigs.map(config => {
                val factory = config.getString("type") match {
                   case "stdout/json" => StdoutSinkFactory
+                  case "kafka" => KafkaSinkFactory
                }
 
                RestartSink.withBackoff(

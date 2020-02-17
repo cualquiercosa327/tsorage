@@ -92,8 +92,8 @@ lazy val ingestion = (project in file("ingestion"))
          commonDependencies ++
             Seq(
                "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "1.1.2",
-               "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.2",
-               "com.fazecast" % "jSerialComm" % "2.5.3"
+               "com.fazecast" % "jSerialComm" % "2.5.3",
+               "com.typesafe.akka" %% "akka-stream-kafka" % "2.0.1"
             )
    ).dependsOn(common)
 
