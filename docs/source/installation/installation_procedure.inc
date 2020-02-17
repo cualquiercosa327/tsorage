@@ -3,6 +3,11 @@ Installation Procedure
 **********************
 
 
+Installing Kafka
+================
+
+Installing Cassandra
+====================
 
 
 Installing a Collector Module
@@ -30,6 +35,7 @@ set appropriately.
 
 Installing an Ingestion Module
 ==============================
+
 
 .. _INSTALL_MQTT_BROKER:
 
@@ -87,6 +93,7 @@ Finally, you can run Mosquitto and refer to the configuration file:
 If you are using Docker, you can mount a local configuration file to ``/mosquitto/config/mosquitto.conf`` and use it from the running Docker image:
 
 .. code-block::
+
     mkdir mosquitto
     mkdir mosquitto/config
     mkdir mosquitto/data
@@ -101,26 +108,6 @@ If you are using Docker, you can mount a local configuration file to ``/mosquitt
 
 .. _INSTALL_KAFKA_TOPIC_CONFIG:
 
-Configuring the Kafka Topic
----------------------------
-
-All the ingestion modules eventually publish the messages they received to a Kafka topic. Consequently, this topic must be configured for each running ingestion module.
-
-This configuration must contain the following parameters:
-
-- ``host``, the host name or IP address of an entry point towards the Kafka cluster.
-- ``port``, the port number of the entry point. Default is `9092`.
-- ``topic``, the name of the topic on which the incoming messages will be published. Default is `raw`.
-
-Example of Kafka topic configuration:
-
-.. code-block::
-
-    {
-        host = localhost
-        port = 9092
-        topic = raw
-    }
 
 
 Installing Hub Services
