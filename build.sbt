@@ -81,6 +81,9 @@ lazy val hub = (project in file("hub"))
       packageName := "tsorage-hub",
       commonSettings,
       mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
+      dockerEnvVars := Map(
+        "TSORAGE_HUB_LISTEN_ADDRESS" -> "0.0.0.0"
+      ),
       libraryDependencies := commonDependencies ++
          cassandraDependencies ++
          Seq(
@@ -96,6 +99,9 @@ lazy val ingestion = (project in file("ingestion"))
       packageName := "tsorage-ingestion",
       commonSettings,
       mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
+      dockerEnvVars := Map(
+        "TSORAGE_INGESTION_LISTEN_ADDRESS" -> "0.0.0.0"
+      ),
       dockerAdditionalPermissions += (DockerChmodType.UserGroupPlusExecute, "/opt/docker/resources/ingest_main"),
       dockerEntrypoint := Seq("/opt/docker/resources/ingest_main"),
       libraryDependencies := commonDependencies ++
