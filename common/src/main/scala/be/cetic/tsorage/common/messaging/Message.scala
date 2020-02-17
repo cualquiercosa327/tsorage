@@ -10,7 +10,6 @@ import com.google.protobuf.util.message.MessagePB.Value
 import spray.json.JsValue
 import com.google.protobuf.ByteString
 import com.google.protobuf.timestamp.Timestamp
-import akka.http.scaladsl.common.{EntityStreamingSupport, JsonEntityStreamingSupport}
 import spray.json._
 
 /**

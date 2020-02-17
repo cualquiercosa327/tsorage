@@ -1,17 +1,15 @@
 package be.cetic.tsorage.collector
 
-import akka.actor.ActorSystem
-import akka.stream.alpakka.amqp.ReadResult
 import akka.stream.alpakka.amqp.scaladsl.CommittableReadResult
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RestartFlow, RestartSink, RestartSource, RunnableGraph, Sink, Source, Zip, ZipN}
 import akka.stream.{ActorMaterializer, ClosedShape, FlowShape, SinkShape, SourceShape}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-
 import be.cetic.tsorage.collector.sink.{HttpSender, MQTTSender, StdoutSender}
 import be.cetic.tsorage.common.messaging.{Message, RandomMessageIterator}
 import com.typesafe.config.{Config, ConfigFactory}
 import GraphDSL.Implicits._
+import akka.actor.ActorSystem
 import be.cetic.tsorage.collector.source.{ModbusRTUSerialSource, ModbusRTUTCPSource, ModbusTCPSource, RandomPollSource}
 
 import scala.concurrent.duration._
@@ -29,7 +27,7 @@ object Collector
 
    def main(args: Array[String]): Unit =
    {
-      val conf = ConfigFactory.load("modbus_tcp_poll.conf")
+      val conf = ConfigFactory.load("collector.conf")
       val sinks_conf = conf.getConfigList("sinks").asScala.toList
       val sources_conf = conf.getConfigList("sources").asScala.toList
 

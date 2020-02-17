@@ -3,7 +3,6 @@ package be.cetic.tsorage.ingestion.message
 import java.time.{LocalDateTime, ZoneOffset}
 
 import be.cetic.tsorage.common.messaging.{Message, User}
-import be.cetic.tsorage.ingestion.IngestionConfig
 import spray.json.JsNumber
 
 /**
@@ -42,7 +41,7 @@ case class DatadogMessage(
          case Some(h) => preparedTagsWithInterval + ("host" -> h)
       }
 
-      val preparedTagsWithUser = IngestionConfig.conf.getBoolean("append_user") match {
+      val preparedTagsWithUser = true match {
          case true => preparedTagsWithHost + ("user_id" -> user.id.toString)
          case false => preparedTagsWithHost
       }
