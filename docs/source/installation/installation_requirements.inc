@@ -16,6 +16,9 @@ Infrastructure
 Software Setting
 ================
 
+
+.. _INSTALLATION_CHOOSE_SHARDING:
+
 Choose a Sharding
 -----------------
 

@@ -5,11 +5,23 @@ Architecture
 Overview
 ========
 
-The TSorage project is based on a modular architecture, with all modules being designed to be executed in distinct Docker containers.
-This makes TSorage a portable solution, with simple and standardized deployment steps. It also offers the possibility
-to place the components on different physical and virtual machines, making it available on a wide range of platforms and services.
-Furthermore, (re)sizing a containerized architecture is easier, since a component can be moved to a platform offering more resources.
-Under certain conditions, containers can be duplicated in order to increase the performances of the underlying modules.
+The TSorage project is based on a modular architecture, with all modules being designed to be executed in distinct Docker containers. This makes TSorage a portable solution, with simple and standardized deployment steps. It also offers the possibility to place the components on different physical and virtual machines, making it available on a wide range of platforms and services.
+
+Furthermore, (re)sizing a containerized architecture is easier, since a component can be moved to a platform offering more resources. Under certain conditions, containers can be duplicated in order to increase the performances of the underlying modules.
+
+The figure below provides an overview of the TSorage architecture.
+
+.. figure:: figures/architecture-overview.png
+   :align: center
+   :width: 100 %
+   :alt: Architecture Overview
+
+   Architecture Overview
+
+Time Series processing starts with the :ref:`collection layer <Archi_CollectionLayer>`, that contains adhoc components for listening, collecting or extracting time series values from various data sources.
+
+The :ref:`ingestion layer <Archi_IngestionLayer>` is the entry point for time series values. From this point, the described entities are considered as internal TSorage components, which basically means they are managed by the TSorage cluster. The ingestion layer is made of different *interface modules*, each of them providing a specific way for a data source to submit new time series values.
+
 
 
 .. _Archi_CollectionLayer:
@@ -17,13 +29,11 @@ Under certain conditions, containers can be duplicated in order to increase the 
 Collection Layer
 ================
 
-Various collectors (a.k.a *collection agents*) can be deployed close to a data source for extracting data points from
-sensors, databases, spreadsheets, etc. An agent is an active component that periodically polls data sources, and submits
-the collected data points to a component of the ingestion layer.
+The collection layer is made of remote components (a.k.a *collection agents*) that are not managed by a TSorage cluster. These components can be the result of third-party developments, and can can be deployed close to a data source for extracting data points from sensors, databases, spreadsheets, etc. An agent typically focuses on specific data sources, and is deployed near them for avoiding security or accessibility issues. Besides collecting data points, the purpose of an agent is to submit them to a component of the :ref:`ingestion layer <Archi_IngestionLayer>`.
 
-Currently supported or developed collectors are:
+At the core of the collection layer is the :ref:`Collector component <CollectingTS_Collector_Component>`, a systematic, modular and extensible tool that manages data extraction, its short-term storage, and its submission to the ingestion layer. It is designed to be deployed as a containerized application on a server with access to its data sources, as well as a small form factor device having the physical connectors required for performing the data collection.
 
-- `DataDog Agent`_ : an open source tool developped by DataDog_ for collecting infrastructure- and application-related metrics.
+`DataDog Agent`_, an open source tool developed by DataDog_ for collecting infrastructure- and application-related metrics, can also be used as a collection agent with only a simple adaptation of its configuration file.
 
 .. _`DataDog Agent`: https://docs.datadoghq.com/agent/
 
@@ -35,20 +45,16 @@ Currently supported or developed collectors are:
 Ingestion Layer
 ===============
 
-Components of the ingestion layer are responsible of accepting incoming connexions for ingesting data points into TSorage.
-While basic checks (such as submitter authentication) are performed at this point, ingestion components are not supposed
-to perform data processing and try to forward the incoming data points as fast as possible. This ensures a highly effective
-ingestion, with important throughput rates. Ingestion components can easily be duplicated in order to face occasional or
-steady increasing needs for ingestion capacities.
+Components of the ingestion layer are responsible of accepting incoming connexions from collection agents for ingesting data points into TSorage. While basic checks (such as submitter authentication) are performed at this point, ingestion components are not supposed to perform data processing and try to forward the incoming data points as fast as possible. This ensures a highly effective ingestion, with important throughput rates. Ingestion components can easily be duplicated in order to face occasional or steady increasing needs for ingestion capacities.
 
-Components expects to receive *messages*. Currently, each message is represented by a JSON document. A message contains
+Ingestion Components expect to receive *messages*. Currently, each message is represented by a JSON document. A message contains
 
-- The metric id, for which new data points are provided.
-- The dynamic tagset associated with all the data points described in the message.
-- The type of all the data points described in the message. While using the same type of all data point relating to a metric is generally considered as a good practice, the type associated with a metric can change from a message to another.
-- A collection of timestamped data points having the specified type.
+- ``metric``, the metric id for which new data points are provided.
+- ``tagset``, a object representing the dynamic tagset associated with all the data points described in the message.
+- ``type``, the type of all the data points described in the message. While using the same type of all data point relating to a metric is generally considered as a good practice, the type associated with a metric can change from a message to another.
+- ``values``, a list of data points. Each data point is likewise a list of two elements. The first element is an `ISO 8601`_ representation of the timestamp associated with the data point, while the second element is the data point value.
 
-More details about the message format are available in the :ref:`IngestingTimeSeries` section.
+More details about the message format are available in the :ref:`Ingesting Time Series <Ingesting_Time_Series>` section.
 
 The following components are parts of the ingestion layer:
 
@@ -57,6 +63,7 @@ The following components are parts of the ingestion layer:
 
 All ingestion components push the incoming message to a message queuing system for further processing.
 
+.. _`ISO 8601`: https://en.wikipedia.org/wiki/ISO_8601
 
 Message Queuing
 ===============
@@ -203,6 +210,28 @@ observations.
 
 Storage
 =======
+
+The storage of time series values and other TSorage-related informations is ensured by `Cassandra`_. Cassandra is a fault tolerant, performant, decentralized and scalable NoSQL database.
+
+Cassandra stores raw data points and aggregated values in distinct tables having similar schemas. On these tables, each time series is sharded according to the timestamp, as describe in :ref:`Choose a Sharding <INSTALLATION_CHOOSE_SHARDING>`. On a typical installations, that means all the data points that relate to the same metric, the same dynamic tagset, and the same day or month (depending on the sharding preferencies) are stored as a single, time-ordered data block, so that requesting the data points corresponding to a time series for a continuous period of time is blazingly fast.
+
+On typical setups, Cassandra will be deployed as a cluster having multiple nodes for ensuring high availability and failure resiliency. For :ref:`cross-site deployments <INSTALLATION_CROSS_SITE>`, the Cassandra nodes will be spread over geographically distinct sites, so that
+
+1. Local data producers and consumers can use nearby Cassandra nodes, ensuring fast data submissions and retrievals.
+2. Submissions are automatically propagated to the other cluster nodes, so that local submissions can be retrieved from an other site.
+3. The database can survive the loss of an entire site.
+4. If a site is temporarily disconnected from the rest of the cluster (for instance, because of a cutting off Internet access), each site can still operate normally. Cassandra nodes will automatically resynchronize once the connection is restored.
+
+.. figure:: figures/overview-cross-site-cassandra.jpg
+   :align: center
+   :width: 70 %
+   :alt: Overview of a cross-site Cassandra cluster
+
+   Overview of a cross-site Cassandra Cluster. From `M. Ben Brahim`_.
+
+
+.. _`Cassandra`: http://cassandra.apache.org/
+.. _`M. Ben Brahim`: https://www.researchgate.net/publication/304624427_Spatial_data_extension_for_Cassandra_NoSQL_database
 
 Hub Services
 ============

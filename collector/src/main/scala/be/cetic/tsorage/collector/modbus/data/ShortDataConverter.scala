@@ -1,8 +1,4 @@
-package be.cetic.tsorage.collector.modbus
-
-import java.nio.ByteBuffer
-
-import scala.collection.mutable
+package be.cetic.tsorage.collector.modbus.data
 
 /**
  * Converter for short data type.

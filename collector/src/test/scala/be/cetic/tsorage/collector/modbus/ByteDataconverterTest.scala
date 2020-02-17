@@ -1,5 +1,6 @@
 package be.cetic.tsorage.collector.modbus
 
+import be.cetic.tsorage.collector.modbus.data.ByteDataConverter
 import org.scalatest.{FlatSpec, Matchers}
 
 /**

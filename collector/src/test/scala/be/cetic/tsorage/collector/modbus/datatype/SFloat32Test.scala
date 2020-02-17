@@ -1,6 +1,6 @@
 package be.cetic.tsorage.collector.modbus.datatype
 
-import be.cetic.tsorage.collector.modbus.SFloat32
+import be.cetic.tsorage.collector.modbus.data.SFloat32
 import org.scalatest.{FlatSpec, Matchers}
 import spray.json.JsNumber
 
@@ -33,6 +33,7 @@ class SFloat32Test extends FlatSpec with Matchers
          dt.bytesToJson(negative_bytes) match
          {
             case JsNumber(x) => x.toFloat shouldBe (-1.34913335539403565877457313216E38.toFloat +- 0.000001.toFloat)
+            case _ => fail()
          }
       }
 

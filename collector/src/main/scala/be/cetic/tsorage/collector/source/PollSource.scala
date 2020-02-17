@@ -1,7 +1,7 @@
 package be.cetic.tsorage.collector.source
 
 import akka.NotUsed
-import akka.stream.{OverflowStrategy, SourceShape}
+import akka.stream.{ActorMaterializer, OverflowStrategy, SourceShape}
 import akka.stream.scaladsl.{Flow, GraphDSL, RestartFlow, RestartSource, Source}
 import be.cetic.tsorage.common.messaging.Message
 import GraphDSL.Implicits._
@@ -32,10 +32,10 @@ abstract class PollSource(val interval: FiniteDuration)
     * @return  A flow that can produce new messages every time a tick is incoming.
     */
    protected def buildPollFlow()
-   (implicit ec: ExecutionContextExecutor, system: ActorSystem): Flow[String, Message, NotUsed]
+   (implicit ec: ExecutionContextExecutor, system: ActorSystem, am: ActorMaterializer): Flow[String, Message, NotUsed]
 
    def buildPoller()
-   (implicit context: ExecutionContextExecutor, system: ActorSystem) = GraphDSL.create(){
+   (implicit context: ExecutionContextExecutor, system: ActorSystem, am: ActorMaterializer) = GraphDSL.create(){
       implicit builder: GraphDSL.Builder[NotUsed] =>
 
       val tick = Source

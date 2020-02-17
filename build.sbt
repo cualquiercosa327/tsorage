@@ -32,12 +32,12 @@ val akkaVersion = "10.1.10"
 val commonDependencies = Seq(
    "org.scalatest" %% "scalatest" % "3.0.8" % "test",
    "com.typesafe.akka" %% "akka-http" % Version.akka,
-   "com.typesafe.akka" %% "akka-stream" % "2.5.23",
+   "com.typesafe.akka" %% "akka-stream" % "2.6.3",
    "com.typesafe.akka" %% "akka-http-spray-json" % Version.akka,
    "com.typesafe.akka" %% "akka-stream-kafka" % "1.0.4",
-   "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.23",
+   "com.typesafe.akka" %% "akka-stream-testkit" % "2.6.3",
    "com.typesafe.akka" %% "akka-http-testkit" % Version.akka,
-   //"com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
+   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
     "com.typesafe.play" %% "play-json" % "2.7.4",
    "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
    "com.thesamet.scalapb" %% "scalapb-runtime" % "0.9.5",
@@ -64,7 +64,6 @@ lazy val common = (project in file("common"))
          "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
          "ch.qos.logback" % "logback-classic" % "1.2.3"
       )
-
    )
 
 lazy val hub = (project in file("hub"))
@@ -89,15 +88,13 @@ lazy val ingestion = (project in file("ingestion"))
       packageName := "tsorage-ingestion",
       commonSettings,
       mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
-      dockerAdditionalPermissions += (DockerChmodType.UserGroupPlusExecute, "/opt/docker/resources/ingest_main"),
-      dockerEntrypoint := Seq("/opt/docker/resources/ingest_main"),
-      libraryDependencies := commonDependencies ++
-         cassandraDependencies ++
-         Seq(
-            "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
-            "ch.qos.logback" % "logback-classic" % "1.2.3",
-            "com.lightbend.akka" %% "akka-stream-alpakka-mqtt-streaming" % "1.1.2"     // MQTT
-         )
+      libraryDependencies :=
+         commonDependencies ++
+            Seq(
+               "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "1.1.2",
+               "com.fazecast" % "jSerialComm" % "2.5.3",
+               "com.typesafe.akka" %% "akka-stream-kafka" % "2.0.1"
+            )
    ).dependsOn(common)
 
 lazy val processor = (project in file("processor"))
@@ -121,10 +118,12 @@ lazy val collector = (project in file("collector"))
       packageName := "tsorage-collector",
       commonSettings,
       mappings in Universal ++= directory(baseDirectory.value / "src" / "main" / "resources"),
-      libraryDependencies := commonDependencies ++
-         cassandraDependencies ++
+      libraryDependencies :=
+         commonDependencies ++
          Seq(
-            "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.2"
+            "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "1.1.2",
+            "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "1.1.2",
+            "com.fazecast" % "jSerialComm" % "2.5.3"
          )
    ).dependsOn(common)
 
@@ -134,5 +133,9 @@ lazy val root = (project in file("."))
       name := "tsorage"
    ).aggregate(common, hub, ingestion, processor, collector)
 
+PB.protoSources in Compile := Seq((baseDirectory in ThisBuild).value /"common" /  "src"/ "main" / "protobuf")
 
+PB.targets in Compile := Seq(
+   scalapb.gen() -> (sourceManaged in Compile).value
+)
 

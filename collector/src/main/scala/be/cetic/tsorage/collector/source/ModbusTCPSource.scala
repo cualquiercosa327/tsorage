@@ -5,21 +5,16 @@ import akka.stream.scaladsl.{BidiFlow, Flow, Framing, GraphDSL, Tcp}
 import be.cetic.tsorage.common.messaging.Message
 import be.cetic.tsorage.collector.modbus._
 import com.typesafe.config.Config
-import java.net._
-import java.nio.ByteOrder
-
 import akka.actor.ActorSystem
 import akka.util.ByteString
-import be.cetic.tsorage.collector.modbus.{MessageFactory, ModbusRequest, ModbusResponse, ModbusResponseFactory, ReadCoilsRequest, ReadDiscreteInputRequest, ReadHoldingRegisterRequest, ReadInputRegisterRequest}
 import GraphDSL.Implicits._
-import akka.stream.{FlowShape, OverflowStrategy}
-import be.cetic.tsorage.common.WireTape
+import akka.stream.{ActorMaterializer, FlowShape, OverflowStrategy}
+import be.cetic.tsorage.collector.modbus.comm.tcp.{ModbusTCPResponse, TCPMessageFactory}
+import be.cetic.tsorage.collector.modbus.comm.{ModbusFraming, ModbusRequest, ModbusResponseFactory}
 
 import scala.concurrent.duration._
 import collection.JavaConverters._
 import scala.concurrent.ExecutionContextExecutor
-import scala.util.Random
-
 
 /**
  * Implements a Modbus TCP master (client),
@@ -48,28 +43,18 @@ class ModbusTCPSource(val config: Config) extends PollSource(
 )
 {
    override protected def buildPollFlow()
-   (implicit ec: ExecutionContextExecutor, system: ActorSystem): Flow[String, Message, NotUsed] =
+   (implicit ec: ExecutionContextExecutor, system: ActorSystem, am: ActorMaterializer): Flow[String, Message, NotUsed] =
    {
       val host: String = config.getString("host")
       val port: Int = config.getInt("port")
-      val unitId: Int = config.getInt("unit_id")
 
-      val extracts: Map[ModbusFunction, List[Extract]] = List(
-         ReadCoils,
-         ReadInputRegister,
-         ReadDiscreteInput,
-         ReadHoldingRegister
-      ).map(f => f-> {
-         val name = f.extractName
-         if(config.hasPath(name)) config.getConfigList(name).asScala.toList.map(Extract(_))
-         else List.empty
-      }).toMap
+      val extracts = Extract.fromSourceConfig(config)
 
       val requests: Map[ModbusFunction, List[ModbusRequest]] = extracts.map{
-         case (f: ModbusFunction, extracts: List[Extract]) => f -> f.prepareRequests(unitId, extracts)
+         case (f: ModbusFunction, extracts: List[Extract]) => f -> f.prepareRequests(extracts)
       }
 
-      Flow.fromGraph(createGraph(host, port, requests, extracts, unitId))
+      Flow.fromGraph(createGraph(host, port, requests, extracts))
    }
 
    private def createGraph(
@@ -77,19 +62,12 @@ class ModbusTCPSource(val config: Config) extends PollSource(
                              port: Int,
                              requests: Map[ModbusFunction, List[ModbusRequest]],
                              extracts: Map[ModbusFunction, List[Extract]],
-                             unitId: Int
                           )
    (implicit context: ExecutionContextExecutor, system: ActorSystem) = GraphDSL.create()
    {
       implicit builder: GraphDSL.Builder[NotUsed] =>
 
-      val modbusFraming = Framing.lengthField(
-         2,
-         4,
-         260,
-         ByteOrder.BIG_ENDIAN,
-         {(offsetBytes: Array[Byte], computedSize: Int) => offsetBytes.length + 2 + computedSize}
-      )
+      val modbusFraming = ModbusFraming.tcpFraming
 
       val indexedRequests = requests.mapValues(reqs =>
          reqs
@@ -103,15 +81,14 @@ class ModbusTCPSource(val config: Config) extends PollSource(
             .flatMap(m => m.map{ case ((unitId: Int, index: Int), request: ModbusRequest) => request.createTCPFrame(index)} )
             .toList
 
-      val messageFactory = MessageFactory(
+      val messageFactory = TCPMessageFactory(
          indexedRequests,
-         extracts,
-         unitId
+         extracts
       )
 
-      val incoming: Flow[ByteString, ModbusResponse, _] = Flow[ByteString]
+      val incoming: Flow[ByteString, ModbusTCPResponse, _] = Flow[ByteString]
          .via(modbusFraming)
-         .via(Flow.fromFunction({response: ByteString => ModbusResponseFactory.fromByteString(response)}))
+         .via(Flow.fromFunction({response: ByteString => ModbusResponseFactory.fromTCPByteString(response)}))
 
       val outgoing:Flow[Array[Byte], ByteString, _] = Flow fromFunction {request: Array[Byte] => ByteString(request)}
 
@@ -129,7 +106,7 @@ class ModbusTCPSource(val config: Config) extends PollSource(
       )
 
       val messageFlow = builder.add(
-         Flow[ModbusResponse]
+         Flow[ModbusTCPResponse]
             .mapConcat(messageFactory.responseToMessages)
             .buffer(300, OverflowStrategy.backpressure)
       )

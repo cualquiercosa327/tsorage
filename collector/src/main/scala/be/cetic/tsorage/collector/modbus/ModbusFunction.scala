@@ -1,6 +1,6 @@
 package be.cetic.tsorage.collector.modbus
 
-import com.typesafe.config.Config
+import be.cetic.tsorage.collector.modbus.comm.{ModbusRequest, ReadCoilsRequest, ReadDiscreteInputRequest, ReadHoldingRegisterRequest, ReadInputRegisterRequest}
 
 sealed abstract class ModbusFunction(val code: Int, val extractName: String)
 {
@@ -10,26 +10,24 @@ sealed abstract class ModbusFunction(val code: Int, val extractName: String)
     * The mapping one extract = one request is not warranted, since some requests can be
     * created for covering multiple extracts.
     *
-    * @param unitId     The id of the unit to which the requests will be submitted.
     * @param extracts   The requested extracts
     * @return           A list of requests, the responses to which cover the extracts.
     */
-   def prepareRequests(unitId: Int, extracts: List[Extract]): List[ModbusRequest]
+   def prepareRequests(extracts: List[Extract]): List[ModbusRequest]
 }
 
 object ReadCoils extends ModbusFunction(1, "output_coils")
 {
    /**
     *
-    * @param unitId   The id of the unit to which the requests will be submitted.
     * @param extracts The requested extracts
     * @return
     */
-   override def prepareRequests(unitId: Int, extracts: List[Extract]): List[ModbusRequest] =
+   override def prepareRequests(extracts: List[Extract]): List[ModbusRequest] =
    {
       extracts.map(extract =>
          new ReadCoilsRequest(
-            unitId,
+            extract.unitId,
             extract.address,
             extract.`type`.registerCount
          )
@@ -39,11 +37,11 @@ object ReadCoils extends ModbusFunction(1, "output_coils")
 
 object ReadDiscreteInput extends ModbusFunction(2, "input_contacts")
 {
-   override def prepareRequests(unitId: Int, extracts: List[Extract]): List[ModbusRequest] =
+   override def prepareRequests(extracts: List[Extract]): List[ModbusRequest] =
    {
       extracts.map(extract =>
          new ReadDiscreteInputRequest(
-            unitId,
+            extract.unitId,
             extract.address,
             extract.`type`.registerCount
          )
@@ -53,11 +51,11 @@ object ReadDiscreteInput extends ModbusFunction(2, "input_contacts")
 
 object ReadHoldingRegister extends ModbusFunction(3, "holding_registers")
 {
-   override def prepareRequests(unitId: Int, extracts: List[Extract]): List[ModbusRequest] =
+   override def prepareRequests(extracts: List[Extract]): List[ModbusRequest] =
    {
       extracts.map(extract =>
          new ReadHoldingRegisterRequest(
-            unitId,
+            extract.unitId,
             extract.address,
             extract.`type`.registerCount
          )
@@ -67,11 +65,11 @@ object ReadHoldingRegister extends ModbusFunction(3, "holding_registers")
 
 object ReadInputRegister extends ModbusFunction(4, "input_registers")
 {
-   override def prepareRequests(unitId: Int, extracts: List[Extract]): List[ModbusRequest] =
+   override def prepareRequests(extracts: List[Extract]): List[ModbusRequest] =
    {
       extracts.map(extract =>
          new ReadInputRegisterRequest(
-            unitId,
+            extract.unitId,
             extract.address,
             extract.`type`.registerCount
          )

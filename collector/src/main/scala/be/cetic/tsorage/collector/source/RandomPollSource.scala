@@ -4,6 +4,7 @@ import java.time.{LocalDateTime, ZoneId}
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Flow
 import be.cetic.tsorage.common.messaging.Message
 import com.typesafe.config.Config
@@ -32,7 +33,7 @@ class RandomPollSource(val config: Config) extends PollSource(
       .toMap
 
    override def buildPollFlow()
-   (implicit ec: ExecutionContextExecutor, system: ActorSystem): Flow[String, Message, NotUsed] = {
+   (implicit ec: ExecutionContextExecutor, system: ActorSystem, am: ActorMaterializer): Flow[String, Message, NotUsed] = {
       Flow[String].map(tick => {
          Message(
             metrics.get(Random.nextInt(metrics size)),

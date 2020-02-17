@@ -1,6 +1,6 @@
 package be.cetic.tsorage.collector.modbus.datatype
 
-import be.cetic.tsorage.collector.modbus.Bool16
+import be.cetic.tsorage.collector.modbus.data.Bool16
 import org.scalatest.{FlatSpec, Matchers}
 import spray.json.JsBoolean
 

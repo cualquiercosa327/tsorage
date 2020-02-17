@@ -2,15 +2,20 @@ package be.cetic.tsorage.collector.modbus
 
 import java.time.LocalDateTime
 
+import be.cetic.tsorage.collector.modbus.comm.{ModbusRequest, ModbusValidResponse}
+import be.cetic.tsorage.collector.modbus.data.ModbusDataType
 import be.cetic.tsorage.common.messaging.Message
 import com.typesafe.config.Config
-import spray.json.{JsBoolean, JsNumber, JsString}
+
+import collection.JavaConverters._
+
 
 /**
  * A representation of the extraction of a value, from a Modbus device.
  */
 case class Extract(
                      address: Int,
+                     unitId: Int,
                      `type`: ModbusDataType,
                      metric: String,
                      tagset: Map[String, String]
@@ -25,16 +30,18 @@ case class Extract(
    def matches(request: ModbusRequest, response: ModbusValidResponse): Boolean =
    {
       val matchingUnitId: Boolean = response.unitId == request.unitId
-      val matchingByteRange: Boolean = {
+      val matchingByteRange: Boolean =
+      {
          val requestOffset = request.registerNumber
          val responseLength = response.data.length
          val extractLength = `type`.byteCount
 
-         (requestOffset <= address) && (requestOffset + responseLength >= address + extractLength )
+         (requestOffset <= address) && (requestOffset + responseLength >= address + extractLength)
       }
 
       matchingUnitId && matchingByteRange
    }
+
 
    /**
     * Converts a payload into a message
@@ -69,11 +76,28 @@ object Extract
 
       val `type` = ModbusDataType(extractConfig)
 
+      val unitId: Int = extractConfig.getInt("unit_id")
+
       Extract(
          address,
+         unitId,
          `type`,
          extractConfig.getString("metric"),
          tagset
       )
+   }
+
+   def fromSourceConfig(sourceConfig: Config): Map[ModbusFunction, List[Extract]] =
+   {
+      List(
+         ReadCoils,
+         ReadInputRegister,
+         ReadDiscreteInput,
+         ReadHoldingRegister
+      ).map(f => f-> {
+         val name = f.extractName
+         if(sourceConfig.hasPath(name)) sourceConfig.getConfigList(name).asScala.toList.map(Extract(_))
+         else List.empty
+      }).toMap
    }
 }

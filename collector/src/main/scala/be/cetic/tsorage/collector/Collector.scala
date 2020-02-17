@@ -1,9 +1,7 @@
 package be.cetic.tsorage.collector
 
-import akka.actor.ActorSystem
-import akka.stream.alpakka.amqp.ReadResult
 import akka.stream.alpakka.amqp.scaladsl.CommittableReadResult
-import akka.stream.scaladsl.{Flow, GraphDSL, Merge, RestartFlow, RestartSink, RestartSource, RunnableGraph, Sink, Source}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RestartFlow, RestartSink, RestartSource, RunnableGraph, Sink, Source, Zip, ZipN}
 import akka.stream.{ActorMaterializer, ClosedShape, FlowShape, SinkShape, SourceShape}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
@@ -11,7 +9,8 @@ import be.cetic.tsorage.collector.sink.{HttpSender, MQTTSender, StdoutSender}
 import be.cetic.tsorage.common.messaging.{Message, RandomMessageIterator}
 import com.typesafe.config.{Config, ConfigFactory}
 import GraphDSL.Implicits._
-import be.cetic.tsorage.collector.source.{ModbusTCPSource, RandomPollSource}
+import akka.actor.ActorSystem
+import be.cetic.tsorage.collector.source.{ModbusRTUSerialSource, ModbusRTUTCPSource, ModbusTCPSource, RandomPollSource}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -28,41 +27,84 @@ object Collector
 
    def main(args: Array[String]): Unit =
    {
-      val conf = ConfigFactory.load("modbus_tcp_poll.conf")
-      val ingestion_conf = conf.getConfig("sink")
-      val source_conf = conf.getConfigList("sources").asScala.toList
+      val conf = ConfigFactory.load("collector.conf")
+      val sinks_conf = conf.getConfigList("sinks").asScala.toList
+      val sources_conf = conf.getConfigList("sources").asScala.toList
 
       val bufferConf = conf.getConfig("buffer")
 
-      val globalMessageSource = buildGlobalMessageGraph(source_conf)
+      val globalMessageSource = buildGlobalSourceGraph(sources_conf)
 
       val bufferSinkGenerator = () => AMQPFactory.buildAMQPSink(bufferConf)
-
-      // ===
-
-      val bufferSourceGenerator = () => AMQPFactory.buildAMQPSource(bufferConf)
-
-      val submitterGenerator = () => ingestion_conf.getString("type") match {
-            case "http" => HttpSender.buildSender(ingestion_conf)
-            case "mqtt" => MQTTSender.buildSender(ingestion_conf)
-            case "stdout/json" => StdoutSender.buildSender(ingestion_conf)
-         }
 
       val bufferFlow = buildBufferGraph(Source.fromGraph(globalMessageSource), bufferSinkGenerator)
       val bufferGraph = RunnableGraph.fromGraph(bufferFlow).named("Collector Buffer Flow")
       bufferGraph.run()
 
-      val submissionFlow = RestartSource.withBackoff(
-         minBackoff = 5 seconds,
+      // ===
+
+      val bufferSourceGenerator = () => AMQPFactory.buildAMQPSource(bufferConf)
+      val submitterGenerator = () => buildSubmissionFlow(sinks_conf)
+
+      val submissionSource: Source[CommittableReadResult, NotUsed] = RestartSource.withBackoff(
+         minBackoff = 1 seconds,
          maxBackoff = 1 minute,
          randomFactor = 0.1
-      ){ () => Source.fromGraph(buildSubmissionSource(bufferSourceGenerator, submitterGenerator)) }.to(Sink.ignore)
+      ){ () => buildSubmissionSource(bufferSourceGenerator, submitterGenerator)}
 
-      val submissionGraph = RunnableGraph.fromGraph(submissionFlow).named("Collector Submission Flow")
+      val submissionGraph = submissionSource.to(Sink.ignore)
       submissionGraph.run()
    }
 
-   private def buildGlobalMessageGraph(sourceConfigs: List[Config]) = GraphDSL.create()
+   private def buildSubmissionFlow(submissionConfigs: List[Config]) = Flow.fromGraph(buildSubmissionGraph(submissionConfigs))
+
+   private def buildSubmissionGraph(submissionConfigs: List[Config]) = GraphDSL.create()
+   {
+      implicit builder: GraphDSL.Builder[NotUsed] =>
+
+         if(submissionConfigs isEmpty)
+         {
+            val flow = builder.add(Flow[CommittableReadResult].map(x => x))
+            FlowShape(flow.in, flow.out)
+         }
+         else
+         {
+            val broadcast = builder.add(Broadcast[CommittableReadResult](submissionConfigs size))
+            val zip = builder.add(
+               ZipN[CommittableReadResult](submissionConfigs size)
+            )
+
+            val flows = submissionConfigs.map(config => {
+               config.getString("type") match {
+                  case "stdout/json" => StdoutSender.buildSender(config)
+                  case "mqtt/pb" => MQTTSender.buildSender(config)
+                  case "mqtt/json" => MQTTSender.buildSender(config)
+                  case "http" => HttpSender.buildSender(config)
+               }
+            })
+
+            flows.foreach(flow => {
+               broadcast ~> flow ~> zip
+            })
+
+            val simplify = builder.add(
+               Flow[Seq[CommittableReadResult]].map(seq => seq.head)
+            )
+
+            val ack = builder.add(
+                  Flow[CommittableReadResult].map(crr => {
+                  crr.ack()
+                  crr
+               })
+            )
+
+            zip ~> simplify ~> ack
+
+            FlowShape(broadcast.in, ack.out)
+         }
+   }
+
+   private def buildGlobalSourceGraph(sourceConfigs: List[Config]) = GraphDSL.create()
    {
       implicit builder: GraphDSL.Builder[NotUsed] =>
 
@@ -78,6 +120,8 @@ object Collector
             val source = config.getString("type") match {
                case "random" => builder.add(Source.fromGraph(new RandomPollSource(config).buildPoller()))
                case "poll/modbus/tcp" => builder.add(Source.fromGraph(new ModbusTCPSource(config).buildPoller()))
+               case "poll/modbus/rtu-tcp" => builder.add(Source.fromGraph(new ModbusRTUTCPSource(config).buildPoller()))
+               case "poll/modbus/rtu" => builder.add(Source.fromGraph(new ModbusRTUSerialSource(config).buildPoller()))
             }
 
             source ~> merge
@@ -112,19 +156,21 @@ object Collector
 
    private def buildSubmissionSource(
                                        bufferSourceGenerator: () => Source[CommittableReadResult, NotUsed],
+                                       submitterGenerator: () => Flow[CommittableReadResult, CommittableReadResult, NotUsed]
+                                    ) =
+      Source.fromGraph(buildSubmissionSourceGraph(bufferSourceGenerator, submitterGenerator))
+
+   private def buildSubmissionSourceGraph(
+                                       bufferSourceGenerator: () => Source[CommittableReadResult, NotUsed],
                                        submitterGenerator: () => Flow[CommittableReadResult, CommittableReadResult, _])
                                    (implicit context: ExecutionContextExecutor) = GraphDSL.create() {
       implicit builder: GraphDSL.Builder[NotUsed] =>
 
-         val ack = builder.add(
-               Flow[CommittableReadResult].map(crr => {
-                  crr.ack()
-                  crr.message
-            })
-         )
+         val source = builder.add(bufferSourceGenerator())
+         val submitter = builder.add(submitterGenerator())
 
-         bufferSourceGenerator() ~> submitterGenerator() ~> ack
+         source ~> submitter
 
-         SourceShape(ack.out)
+         SourceShape(submitter.out)
    }
 }

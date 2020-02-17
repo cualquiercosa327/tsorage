@@ -1,6 +1,4 @@
-package be.cetic.tsorage.collector.modbus
-
-import java.nio.ByteBuffer
+package be.cetic.tsorage.collector.modbus.data
 
 import com.typesafe.config.Config
 import spray.json.{JsBoolean, JsNumber, JsString, JsValue}
@@ -51,6 +49,7 @@ abstract class NumericType(
          case JsNumber(x) => {
             JsNumber(x*Math.pow(10, rank))
          }
+         case _ => rawValue
       }
    }
 
