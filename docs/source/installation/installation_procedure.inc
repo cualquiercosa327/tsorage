@@ -2,6 +2,9 @@
 Installation Procedure
 **********************
 
+
+
+
 Installing a Collector Module
 =============================
 
@@ -28,134 +31,72 @@ set appropriately.
 Installing an Ingestion Module
 ==============================
 
+.. _INSTALL_MQTT_BROKER:
 
-.. _INSTALL_HTTP_INGESTION:
+Installing a MQTT Broker
+------------------------
 
-HTTP Ingestion Module
----------------------
+The MQTT module of the ingestion layer relies on a MQTT broker for receiving incoming messages. That implies such a broker must be deployed on an software environment that can be reached from both the data collector agents and the ingestion module. We recommand `Mosquitto`_, a popular, open source MQTT broker that comes with prepared Docker images.
 
-The HTTP Ingestion module provides an HTTP server that listens to incoming HTTP requests for ingesting new messages. Because any HTTP client library, or even the `curl` tool, can be used for submitting data points, this module offers one of the most convenient entry point to TSorage. On the other hand, each submission requires an HTTP handshake, so this method comes with an overhead that can become substantial when the module is under heavy load.
+.. _`Mosquitto`: https://mosquitto.org/
 
-This module only allows authenticated clients to submit data points. The authentication is ensured by a :ref:`Authentication micro-service <INSTALL_AUTH_MICROSERVICE>`, the use of which must be configured in the configuration file of this module.
 
-The configuration of this module must contain the following parameters:
+Password File Preparation
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ``kafka``, a :ref:`configuration of the Kafka topic <INSTALL_KAFKA_TOPIC_CONFIG>`.
-- ``port``: The port from which the HTTP server is listening for incoming connexion. Default is `8080`.
-- ``authentication``, the configuration for accessing the authentication micro-service. It must contain the following parameters:
-  - ``host``, the host name or ip address on which the authentication micro-service is running.
-  - ``port``, the port on which the authentication micro-service is listening for incoming connections. Default is ``8081``.
-  - ``path``, the URL path of the service. Default is ``/api/v1/auth``.
-
-Example of configuration for the HTTP ingestion module:
+When a text file is used for listing the users authorized to access a MQTT channel, this file must be prepared in order to store passwords hashed in a format similar to `crypt`_. First, a file containing the list of logins and their corresponding unencrypted password must be set:
 
 .. code-block::
 
-    {
-        kafka = {
-            host = localhost
-            port = 9092
-            topic = raw
-        }
+    steve:password
+    jim:secret
 
-        authentication = {
-            host = "localhost"
-            port = 8081
-            path = "/api/v1/auth"
-        }
-
-        port = 8080
-    }
-
-
-HTTP over TLS
-^^^^^^^^^^^^^
-
-
-
-.. _INSTALL_MQTT_INGESTION:
-
-MQTT Ingestion Module
----------------------
-
-The MQTT ingestion module acts as a MQTT broker. It accepts incoming MQTT session, and consumes TSorage messages represented as JSON objects.
-
-The configuration of this module must contain the following parameters:
-
-- ``kafka``, a :ref:`configuration of the Kafka topic <INSTALL_KAFKA_TOPIC_CONFIG>`.
-- ``port``: The port on which the MQTT broker listen for incoming connections. Default is `1883`.
-- ``max_connections``: The maximum number of simultaneous connections to the MQTT broker.
-- ``buffer_size``: The maximum number of messages that can be bufferized before the ingestion process will back pressure the data flow (which can ultimately result in the forced closing of some incoming connections). Default is 1000.
-- ``channel``: The name of the channel from which incoming messages will be consumed. Default is ``timeseries``.
-- security: The security policy to implement. Se below for more details.
-
-Example of configuration for the MQTT ingestion module:
+Then, this file must be processed by `mosquitto_passwd` in order to hash the passwords:
 
 .. code-block::
 
-    {
-        kafka = {
-            host = localhost
-            port = 9092
-            topic = raw
-        }
+    mosquitto_passwd -U passwordfile
 
-        security = {
-            type = "password"
-        }
+This command changes the password file, replacing the passwords by their hashes.
 
-        port = 1883
-        max_connections = 50
-        buffer_size = 1000
-        channel = timeseries
-    }
 
-Anonymous Policy
-^^^^^^^^^^^^^^^^
+Configuration Settings
+^^^^^^^^^^^^^^^^^^^^^^
 
-The anonymous security policy allows the submission of data points without any protection. No authentication is required, and the data flow is transmitted in clear. This policy should only be used for testing and debug purposes.
-
-The following parameters must be specified:
-
-- ``type`` must be set to ``anonymous``.
-
-Example of Anonymous policy configuration:
+Prepare a `configuration file`_ for describing how Mosquitto must behave. The snippet below shows a simple configuration file, that configures Mosquitto for accepting unencrypted communications from clients, and for using a password file for the authentication.
 
 .. code-block::
 
-    {
-        type = "anonymous"
-    }
+    port 1883
+    allow_anonymous false
+    password_file /path/passwordfile
+    persistence true
+    persistence_location /mosquitto/data/
+    log_dest file /mosquitto/log/mosquitto.log
 
 
-Password Policy
-^^^^^^^^^^^^^^^
+Running Mosquitto
+^^^^^^^^^^^^^^^^^
 
-This policy will enforces the security by submitting a login and a password during the initialisation of the session. Only authorized users are allowed to send data points. The data flow is transmitted in clear. This policy offers an interesting trade-off between the security and the ease of use.
-
-The following parameters must be specified:
-
-- ``type`` must be set to ``password``.
-- ``login``, the user's login.
-- ``password``, the password associated with the specified login.
-
-Example of Password policy configuration (ingestion side):
+Finally, you can run Mosquitto and refer to the configuration file:
 
 .. code-block::
 
-    {
-        type = "password"
-    }
+    mosquitto -c mosquitto.conf
 
-Example of Password policy configuration (client side):
+If you are using Docker, you can mount a local configuration file to ``/mosquitto/config/mosquitto.conf`` and use it from the running Docker image:
 
 .. code-block::
+    mkdir mosquitto
+    mkdir mosquitto/config
+    mkdir mosquitto/data
+    mkdir mosquitto/config
+    touch mosquitto/config/mosquitto.conf
+    […]
+    docker run -it -p 1883:1883 -p 9001:9001 -v mosquitto:/mosquitto/ eclipse-mosquitto
 
-    {
-        type = "password"
-        login = "my-login"
-        password = "secret-password"
-    }
+.. _`configuration file`: https://mosquitto.org/man/mosquitto-conf-5.html
+.. _`crypt`: http://man7.org/linux/man-pages/man3/crypt.3.html
 
 
 .. _INSTALL_KAFKA_TOPIC_CONFIG:

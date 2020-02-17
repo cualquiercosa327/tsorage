@@ -15,6 +15,10 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import scala.concurrent.Future
 import spray.json._
 
+/**
+ *
+ * mqtt sub -t timeseries -h localhost -p 1883 -u steve -pw password
+ */
 object MQTTSourceFactory extends SourceFactory with MessageJsonSupport
 {
    override def createSource(config: Config): Source[Message, _] =

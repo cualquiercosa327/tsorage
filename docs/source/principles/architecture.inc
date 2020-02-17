@@ -54,7 +54,7 @@ Ingestion Components expect to receive *messages*. Currently, each message is re
 - ``type``, the type of all the data points described in the message. While using the same type of all data point relating to a metric is generally considered as a good practice, the type associated with a metric can change from a message to another.
 - ``values``, a list of data points. Each data point is likewise a list of two elements. The first element is an `ISO 8601`_ representation of the timestamp associated with the data point, while the second element is the data point value.
 
-More details about the message format are available in the :ref:`IngestingTimeSeries` section.
+More details about the message format are available in the :ref:`Ingesting Time Series <Ingesting_Time_Series>` section.
 
 The following components are parts of the ingestion layer:
 

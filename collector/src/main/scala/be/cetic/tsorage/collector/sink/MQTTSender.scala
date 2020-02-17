@@ -73,7 +73,6 @@ object MQTTSender extends MessageSender with MessageJsonSupport
 
          val sink = MqttSink(advancedSettings, MqttQoS.AtLeastOnce)
 
-
          val asBytes = builder.add(
             config.getString("type") match {
                case "mqtt/pb" => Flow[CommittableReadResult]

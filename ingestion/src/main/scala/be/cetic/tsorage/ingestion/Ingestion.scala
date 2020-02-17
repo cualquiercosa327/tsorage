@@ -16,6 +16,7 @@ import akka.util.ByteString
 import be.cetic.tsorage.ingestion.sink.StdoutSinkFactory
 
 
+
 object Ingestion
 {
    implicit val system = ActorSystem()
