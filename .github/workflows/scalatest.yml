@@ -10,6 +10,7 @@ jobs:
       - uses: olafurpg/setup-scala@v5
         with:
           java-version: openjdk@1.12
+          sbt-version: 1.3.0
       - name: Run Cassandra
         env:
             CASSANDRA_CONT_NAME: cassandra
@@ -38,5 +39,3 @@ jobs:
             docker exec cassandra cqlsh -f /share/test_data.cql
       - name: Run unit tests
         run: sbt test
-        with:
-          java-version: openjdk@1.12
