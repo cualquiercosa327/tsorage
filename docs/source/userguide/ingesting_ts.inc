@@ -35,7 +35,7 @@ The configuration of this module must contain the following parameters:
 
 Example of configuration for the HTTP ingestion module:
 
-.. code-block::
+.. code-block:: none
 
     {
         kafka = {
@@ -81,7 +81,7 @@ The configuration of this module must contain the following parameters:
 
 Example of configuration for the MQTT ingestion module:
 
-.. code-block::
+.. code-block:: none
 
     {
         port = 1883
@@ -109,7 +109,7 @@ The following parameters must be specified:
 
 Example of Anonymous policy configuration:
 
-.. code-block::
+.. code-block:: none
 
     {
         type = "anonymous"
@@ -129,7 +129,7 @@ The following parameters must be specified:
 
 Example of Password policy configuration:
 
-.. code-block::
+.. code-block:: none
 
     {
         type = "password"
@@ -167,12 +167,13 @@ The configuration of this sink must have the following properties:
 - ``type``, must be ``kafka``.
 - ``topic``, the name of the Kafka topic on which incoming data points will be published. Default is ``raw``.
 - ``nodes``, a list of Kafka nodes that can be used for publishing data points. The configuration of each node must contain the following properties:
-  - ``host``, the IP address or the domain name of the name.
-  - ``port``, the port on which the node is listening for incoming connections. Default is ``9092``.
+
+   - ``host``, the IP address or the domain name of the name.
+   - ``port``, the port on which the node is listening for incoming connections. Default is ``9092``.
 
 Example of configuration for a Kafka sink:
 
-.. code-block:
+.. code-block:: none
 
     {
         type = "kafka"

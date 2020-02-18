@@ -52,14 +52,14 @@ Password File Preparation
 
 When a text file is used for listing the users authorized to access a MQTT channel, this file must be prepared in order to store passwords hashed in a format similar to `crypt`_. First, a file containing the list of logins and their corresponding unencrypted password must be set:
 
-.. code-block::
+.. code-block:: none
 
     steve:password
     jim:secret
 
 Then, this file must be processed by `mosquitto_passwd` in order to hash the passwords:
 
-.. code-block::
+.. code-block:: none
 
     mosquitto_passwd -U passwordfile
 
@@ -71,7 +71,7 @@ Configuration Settings
 
 Prepare a `configuration file`_ for describing how Mosquitto must behave. The snippet below shows a simple configuration file, that configures Mosquitto for accepting unencrypted communications from clients, and for using a password file for the authentication.
 
-.. code-block::
+.. code-block:: none
 
     port 1883
     allow_anonymous false
@@ -86,13 +86,13 @@ Running Mosquitto
 
 Finally, you can run Mosquitto and refer to the configuration file:
 
-.. code-block::
+.. code-block:: none
 
     mosquitto -c mosquitto.conf
 
 If you are using Docker, you can mount a local configuration file to ``/mosquitto/config/mosquitto.conf`` and use it from the running Docker image:
 
-.. code-block::
+.. code-block:: none
 
     mkdir mosquitto
     mkdir mosquitto/config

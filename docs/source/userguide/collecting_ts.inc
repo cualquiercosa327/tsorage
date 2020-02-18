@@ -44,7 +44,7 @@ The configuration file of a collector module contains three elements.
 
 An example of configuration document is listed below:
 
-.. code-block::
+.. code-block:: none
 
     buffer = {
         host = "localhost"
@@ -110,7 +110,7 @@ Mandatory parameters are:
 
 Example of Random Poll configuration:
 
-.. code-block::
+.. code-block:: none
 
     {
         type = "random"
@@ -180,7 +180,7 @@ in a cyclic fashion, it that order.
 
 The snippet below shows an example of coil description:
 
-.. code-block::
+.. code-block:: none
 
     output_coils = [
         {
@@ -306,7 +306,7 @@ When the ``mask``, ``rank``, and ``values`` attributes are jointly used, they ar
 	
 The snippet below shows an example of extract description:
 
-.. code-block::
+.. code-block:: none
 	
     holding_registers = [
 	{
@@ -364,7 +364,7 @@ For a REST HTTP ingestion service, the following parameters must be specified:
 
 Example of HTTP Sink configuration:
 
-.. code-block::
+.. code-block:: none
 
     {
         type = "http"
