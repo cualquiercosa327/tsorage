@@ -172,7 +172,7 @@ calculating temporal aggregations.
     are derived in order to feed time series that focus on road segments, instead of of particular vehicle activities.
 
     A derivator can be added in the Observation block, that converts any raw data point by calculating the road segment
-    corresponding to the vehicle position, and then generates an new observation mentioning the observed speed at this
+    corresponding to the vehicle position, and then generates a new observation mentioning the observed speed at this
     moment for the considered segment.
 
 Because a first temporal aggregation has already been performed on observations corresponding to raw data points, such
