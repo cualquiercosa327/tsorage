@@ -35,7 +35,7 @@ The configuration of this module must contain the following parameters:
 
 Example of configuration for the HTTP ingestion module:
 
-.. code-block::
+.. code-block:: none
 
     {
         kafka = {
@@ -77,11 +77,11 @@ The configuration of this module must contain the following parameters:
 - ``max_connections``: The maximum number of simultaneous connections to the MQTT broker.
 - ``buffer_size``: The maximum number of messages that can be bufferized before the ingestion process will back pressure the data flow (which can ultimately result in the forced closing of some incoming connections). Default is 1000.
 - ``channel``: The name of the channel from which incoming messages will be consumed. Default is ``timeseries``.
-- security: The security policy to implement. Must correspond to the :ref:`installation choices <INSTALL_MQTT_BROKER>`. See below for details.
+- ``security``: The security policy to implement. Must correspond to the :ref:`installation choices <INSTALL_MQTT_BROKER>`. See below for details.
 
 Example of configuration for the MQTT ingestion module:
 
-.. code-block::
+.. code-block:: none
 
     {
         port = 1883
@@ -109,7 +109,7 @@ The following parameters must be specified:
 
 Example of Anonymous policy configuration:
 
-.. code-block::
+.. code-block:: none
 
     {
         type = "anonymous"
@@ -129,7 +129,7 @@ The following parameters must be specified:
 
 Example of Password policy configuration:
 
-.. code-block::
+.. code-block:: none
 
     {
         type = "password"
@@ -140,7 +140,7 @@ Example of Password policy configuration:
 SSL Policy
 ^^^^^^^^^^
 
-This policy is currently not supported.^
+This policy is currently not supported.
 
 
 
@@ -172,7 +172,7 @@ The configuration of this sink must have the following properties:
 
 Example of configuration for a Kafka sink:
 
-.. code-block:
+.. code-block:: none
 
     {
         type = "kafka"
