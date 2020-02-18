@@ -38,3 +38,5 @@ jobs:
             docker exec cassandra cqlsh -f /share/test_data.cql
       - name: Run unit tests
         run: sbt test
+        with:
+          java-version: openjdk@1.12
