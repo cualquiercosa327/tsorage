@@ -33,14 +33,13 @@ component somehow extract the current value of a data source
 Configuration
 -------------
 
-The configuration file of a collector module contains three elements.
+The configuration file of a collector module contains three kinds of modules.
 
-- The **buffer** part details how collected data points are temporarily stored before being sent to the ingestion layer.
-  The configuration of the buffer should not be modified by the user.
-- The **sources** part describes the list of data sources from which data points must be collected. As mentioned above,
+- The **buffer** module details how collected data points are temporarily stored before being sent to the ingestion layer.
+- The **sources** modules cover a list of data sources from which data points must be collected. As mentioned above,
   each type of data source is covered by a specific collector component, and each component comes with its own configuration
   schema.
-- The **sinks** part describes the list outputs for the collected data points. On a typical configuration, this list contains a sinle sink that connects the collector to the ingestion layer. Each sink has its own configuration schema.
+- The **sinks** modules cover the list outputs for the collected data points. On a typical configuration, this list contains a sinle sink that connects the collector to the ingestion layer. Each sink has its own configuration schema.
 
 An example of configuration document is listed below:
 
@@ -49,9 +48,12 @@ An example of configuration document is listed below:
     buffer = {
         host = "localhost"
         port = 5672
-        queue_name = "buffer"
-        user = "guest"
-        password = "guest"
+        queue = "buffer"
+        security = {
+            type = "password"
+            user = "guest"
+            password = "guest"
+        }
     }
 
     sources = [
@@ -64,6 +66,18 @@ An example of configuration document is listed below:
         { second sink configuration }
     ]
 
+
+Buffer Configuration
+====================
+
+The buffer is an internal module of the Collector component, and therefore, should only be modified by an experienced user.
+
+Its configuration is identical to that of an :ref:`AMQP sink <CollectingTimeSeries_AMQP_Source>` without any type specified, and must contain the following parameters:
+
+- ``host`` is the IP address or the domaine name of the AMQP server.
+- ``port`` is the port the AMQP server is listening to. Typical values are ``5672`` for unencrypted communications, while ``5671`` is the register port when AMQP is used over TLS/SSL (AMQPS).
+- ``queue`` must correspond to the queue on which the publishers publish new data points.
+- ``security``, the :ref:`security policy <SECURITY_POLICIES>` to apply.
 
 
 Source Configuration
@@ -320,6 +334,48 @@ The snippet below shows an example of extract description:
     }]
 
 
+Flow Sources
+------------
+
+Flow sources are time series sources that can continuously retrieve new data points. They may consist in servers that permanently consume the content incoming connections, clients that maintain a connection permanently open for receiving data points from a remote server, etc.
+
+.. _CollectingTimeSeries_AMQP_Source:
+
+AMQP Source
+^^^^^^^^^^^
+
+This source acts as an `AMQP`_ client that establishes a connection to an AMQP server (such as `RabbitMQ`_) and attempts to consume :ref:`messages <INTRO_CONCEPTS_MESSAGE>` from a specific queue. The use of this source implies the deployment and the setting of an AMQP server, which are not considered in this section.
+
+.. warning::
+
+    Depending on the server settings, messages that have been sent by a publisher when the collector is not connected to the message queue, may be definitively missed. If this behaviour is not desired, please ensure the publisher submits `persistent` messages (delivery mode 2), and the queue is `durable`.
+
+The configuration file of this source must have the following parameters:
+
+- `type`, must be `flow/amqp/json` or `flow/amqp/pb`, depending on whether the :ref:`message representation <INTRO_CONCEPTS_MESSAGE>` is a json object or aProtobuf message (respectively).
+- ``host`` is the IP address or the domaine name of the AMQP server.
+- ``port`` is the port the AMQP server is listening to. Typical values are ``5672`` for unencrypted communications, while ``5671`` is the register port when AMQP is used over TLS/SSL (AMQPS).
+- ``queue`` must correspond to the queue on which the publishers publish new data points.
+- ``security``, the :ref:`security policy <SECURITY_POLICIES>` to apply.
+
+Example of AMQP source configuration:
+
+.. code-block:: none
+
+    {
+        type = "flow/amqp/pb"
+        host = "localhost"
+        port = 5672
+        queue = "my-queue"
+        security = {
+            type = "anonymous"
+        }
+    }
+
+.. _`AMQP`: https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol
+.. _`RabbitMQ`: https://www.rabbitmq.com/
+
+
 Sink Configuration
 ==================
 
@@ -329,9 +385,7 @@ operating ingestion component.
 
 .. warning::
 
-    Since authentication tokens may be used for altering the state of a TSorage solution, they must be considered
-    as secret items that should only be shared with trustworthy entities. Because such a token is stored in the collector
-    configuration file, the access to this file should be restricted to only allowed users.
+    Since authentication tokens may be used for altering the state of a TSorage solution, they must be considered as secret items that should only be shared with trustworthy entities. Because such a token is stored in the collector configuration file, the access to this file should be restricted to only allowed users.
 
 
 Stdout Sink
@@ -383,8 +437,10 @@ Messages are sent using a MQTT session. The following parameters must be specifi
 
 - ``type`` must be set to ``mqtt/pb`` or ``mqtt/json``, depending on whether the ingestion module is expecting Protobuf or JSON messages (respectively).
 - ``host`` is the IP address or the domaine name of the MQTT broker.
-- ``port`` is the port the MQTT broker is listening to. The default value is ``1883`` for clear communications, while ``8883`` is the register port for using MQTT over SSL.
-- ``channel`` must correspond to the channel used by the MQTT Ingestion module. Default value: ``timeseries``
+- ``port`` is the port the MQTT broker is listening to. The default value is ``1883`` for unencrypted communications, while ``8883`` is the register port when MQTT is used over SSL.
+- ``queue`` must correspond to the queue used by the MQTT Ingestion module. Default value: ``timeseries``
 - ``security``, the security policy to apply. It must be set accordingly to the :ref:`configuration of the ingestion module <Ingesting_TS_MQTT>`.
 
-
+.. include:: anonymous_policy.inc
+.. include:: password_policy.inc
+.. include:: ssl_policy.inc
