@@ -38,4 +38,7 @@ jobs:
             # Insert test data.
             docker exec cassandra cqlsh -f /share/test_data.cql
       - name: Run unit tests
-        run: sbt test
+        id: sbt
+        uses: lokkju/github-action-sbt@master
+        with:
+          commands: test
