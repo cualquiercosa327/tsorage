@@ -9,6 +9,8 @@ version := "0.1"
 
 scalaVersion := "2.12.10"
 
+libraryDependencies += "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
+
 val commonSettings = Seq(
    organization := "cetic",
    version := "1.0.0",
