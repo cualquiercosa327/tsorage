@@ -40,8 +40,8 @@ jobs:
       - name: Compile the source code
         id: sbt
         uses: lokkju/github-action-sbt@master
-          with:
-            commands: compile
+        with:
+          commands: compile
       - name: Run unit tests
         id: sbt
         uses: lokkju/github-action-sbt@master
