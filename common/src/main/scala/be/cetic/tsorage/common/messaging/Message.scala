@@ -11,6 +11,8 @@ import spray.json.JsValue
 import com.google.protobuf.ByteString
 import com.google.protobuf.timestamp.Timestamp
 import spray.json._
+import java.nio.ByteBuffer
+
 
 /**
  * A package message containing observations.
@@ -35,6 +37,21 @@ case class Message(
 
 object Message
 {
+  private def double2Bytes(number: Double) =
+  {
+    val byteBuffer = ByteBuffer.allocate(8)
+    byteBuffer.putDouble(number)
+    byteBuffer.array
+  }
+
+  private def bytes2Double(bytes: Array[Byte])=
+  {
+    val byteBuffer = ByteBuffer.allocate(8)
+    byteBuffer.put(bytes)
+    byteBuffer.flip
+    byteBuffer.getDouble
+  }
+
   def asPB(msg: Message): MessagePB = MessagePB(
     msg.metric,
     msg.tagset,
@@ -43,12 +60,29 @@ object Message
       Value(
         Some(
           Timestamp.of(DateTimeConverter.localDateTimeToEpochMilli(value._1) / 1000,
-          (1000000 * (DateTimeConverter.localDateTimeToEpochMilli(value._1) % 1000)).toInt)
+            (1000000 * (DateTimeConverter.localDateTimeToEpochMilli(value._1) % 1000)).toInt)
         ),
-        ByteString.copyFrom(value._2.compactPrint.getBytes("utf-8"))  // TODO : maybe a more efficient way to encode the json value?
+        msg.`type` match
+        {
+
+          case "tdouble" => ByteString.copyFrom(value._2 match
+          {
+            case JsNumber(v) => double2Bytes(v.doubleValue)
+            case _ => throw new IllegalArgumentException()
+          })
+
+          case "tlong" => ByteString.copyFrom(BigInt(value._2 match
+          {
+            case JsNumber(v) => v.longValue
+            case _ => throw new IllegalArgumentException()
+          }).toByteArray)
+
+          case _ => ByteString.copyFrom(value._2.compactPrint.getBytes("utf-8"))
+        }
       )
     )
   )
+
 
   def fromPB(msg: MessagePB): Message =
   {
@@ -57,8 +91,13 @@ object Message
       val millis = 1000*ts.seconds + (ts.nanos/1000000)
 
       val ldt = DateTimeConverter.epochMilliToUTCLocalDateTime(millis)
+      val bytes = value.payload.toByteArray
 
-      val payload: JsValue = new String(value.payload.toByteArray).parseJson
+      val payload: JsValue = msg.`type` match {
+        case "tdouble" => JsNumber(bytes2Double(bytes))
+        case "tlong" => JsNumber(BigInt(bytes).toLong)
+        case _ => new String(bytes).parseJson
+      }
 
       (ldt, payload)
     }).toList
