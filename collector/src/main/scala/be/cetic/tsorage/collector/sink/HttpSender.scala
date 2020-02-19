@@ -9,7 +9,7 @@ import akka.stream.scaladsl.Flow
 import be.cetic.tsorage.collector.MessageSender
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.Message
-import com.google.protobuf.util.message.MessagePB
+import be.cetic.tsorage.common.messaging.message.MessagePB
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 

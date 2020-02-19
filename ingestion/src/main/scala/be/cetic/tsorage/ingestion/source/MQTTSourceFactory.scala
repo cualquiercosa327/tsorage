@@ -7,7 +7,7 @@ import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Source
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.Message
-import com.google.protobuf.util.message.MessagePB
+import be.cetic.tsorage.common.messaging.message.MessagePB
 import com.typesafe.config.Config
 import javax.net.ssl.SSLContext
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence

@@ -5,8 +5,8 @@ import java.time.{Instant, LocalDateTime, ZoneId, ZoneOffset}
 
 import be.cetic.tsorage.common.DateTimeConverter
 import be.cetic.tsorage.common.sharder.Sharder
-import com.google.protobuf.util.message.MessagePB
-import com.google.protobuf.util.message.MessagePB.Value
+import be.cetic.tsorage.common.messaging.message.MessagePB
+import be.cetic.tsorage.common.messaging.message.MessagePB.Value
 import spray.json.JsValue
 import com.google.protobuf.ByteString
 import com.google.protobuf.timestamp.Timestamp

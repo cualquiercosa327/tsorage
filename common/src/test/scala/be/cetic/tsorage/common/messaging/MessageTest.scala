@@ -3,7 +3,7 @@ package be.cetic.tsorage.common.messaging
 import java.time.LocalDateTime
 
 import be.cetic.tsorage.common.json.MessageJsonSupport
-import com.google.protobuf.util.message.MessagePB
+import be.cetic.tsorage.common.messaging.message.MessagePB
 import org.scalatest.{FlatSpec, Matchers}
 import spray.json._
 
