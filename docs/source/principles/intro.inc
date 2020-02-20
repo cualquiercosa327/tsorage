@@ -42,3 +42,76 @@ In either case, TSorage is provided with deployment and monitoring scripts that 
 deploying and maintaining the solution.
 
 .. _CETIC: https://www.cetic.be
+
+Main Concepts
+=============
+
+Time Series
+-----------
+
+Data Point
+----------
+
+Tag
+---
+
+.. _INTRO_CONCEPTS_MESSAGE:
+
+Message
+-------
+
+.. todo:: json and protobuf representations
+
+
+.. _SECURITY_POLICIES:
+
+Security Policies
+-----------------
+
+Anonymous Policy
+^^^^^^^^^^^^^^^^
+
+The anonymous security policy allows data point sharing without any protection. No authentication is required, and the data flow is transmitted unencrypted. This policy should only be used for testing and debug purposes.
+
+The following parameters must be specified:
+
+- ``type`` must be set to ``anonymous``.
+
+Example of Anonymous policy configuration:
+
+.. code-block:: none
+
+    {
+        type = "anonymous"
+    }
+
+Password Policy
+^^^^^^^^^^^^^^^
+
+This policy will enforces the security by submitting a login and a password during the initialisation of the session. Only authorized users are allowed to share data points. Both the data flow and the account parameters are transmitted unencrypted. This policy offers an interesting trade-off between the security and the ease of use.
+
+The following parameters must be specified:
+
+- ``type`` must be set to ``password``.
+- ``login``, the user's login.
+- ``password``, the password associated with the specified login.
+
+Example of Password policy configuration:
+
+.. code-block:: none
+
+    {
+        type = "password"
+        login = "my-login"
+        password = "secret-password"
+    }
+
+
+SSL Policy
+^^^^^^^^^^
+
+This policy is currently not supported.
+
+
+
+

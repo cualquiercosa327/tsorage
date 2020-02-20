@@ -161,22 +161,13 @@ between distinct time series.
 Unbounded Ingestion Window
 ==========================
 
-A limitation of most time series databases (including industrial solutions for data historisation) is the existence of
-an ingestion window. Any incoming measurement having a timestamp preceding the window limit will be ignored.
-One of the main reasons for this limitation is the fact it allows a definitive compression of the *cold* data points,
-using a more efficient approach than the one adopted for storing *hot* data points.
+A limitation of most time series databases (including industrial solutions for data historisation) is the existence of an ingestion window. Any incoming measurement having a timestamp preceding the window limit will be ignored. One of the main reasons for this limitation is the fact it allows a definitive compression of the *cold* data points, using a more efficient approach than the one adopted for storing *hot* data points.
 
-When existing, the size of the ingestion window can generally be tuned in order to dynamics the specificities of the
-monitored system.
+When existing, the size of the ingestion window can generally be tuned in order to dynamics the specificities of the monitored system.
 
-While such an ingestion window can make sense in some cases, its size always represents a tradeoff between technical
-constraints that are meaningless from a business or operational point of view. It prevents from data ingestion from remote
-data sources with only occasional access to the storage solution, and makes the ingestion of historical data sets quite
-challenging.
+While such an ingestion window can make sense in some cases, its size always represents a tradeoff between various technical constraints that are meaningless from a business or operational point of view. It prevents from data ingestion from remote data sources with only occasional access to the storage solution, and makes the ingestion of historical data sets quite challenging.
 
-By default, TSorage uses an unbounded ingestion window, and accepts arbitrarily late observations. For archiving or
-advanced analytics purposes, a more efficient, offline, representation of the time series can be exported from the time
-series database.
+By default, TSorage uses an unbounded ingestion window, and accepts arbitrarily late observations. Data files receiving late data points are automatically reorganized in order to always store them efficiently. For :ref:`archiving <ARCHIVING>` or advanced analytics purposes, an even more efficient, offline, representation of the time series can be exported from the time series database.
 
 
 Archiving
