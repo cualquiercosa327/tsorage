@@ -100,8 +100,6 @@ Example of configuration for the MQTT ingestion module:
 .. include:: password_policy.inc
 .. include:: ssl_policy.inc
 
-.. _`Protobuf`: https://developers.google.com/protocol-buffers
-
 
 .. _INGESTION_SINK_MODULES:
 

@@ -4,7 +4,7 @@ import akka.stream.scaladsl.Source
 import be.cetic.tsorage.collector.AMQPFactory
 import be.cetic.tsorage.common.json.MessageJsonSupport
 import be.cetic.tsorage.common.messaging.Message
-import com.google.protobuf.util.message.MessagePB
+import be.cetic.tsorage.common.messaging.message.MessagePB
 import com.typesafe.config.Config
 
 import scala.concurrent.ExecutionContextExecutor

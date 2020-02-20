@@ -5,62 +5,7 @@ Features
 Tagging
 =======
 
-**Tags** are properties associated with data points. Their purpose is to help the user understanding the meaning of a particular
-data points, or querying data points having a particular meaning. Concretely, a tag is an arbitrary textual text (the **key**),
-associated with an arbitrary textual value (the **value**). Unsurprisingly, the set of tags associated with a data point
-is called its **tagset**. On distinguishes the **dynamic tags** that are directly attached to a data point, from the
-**static tags** that are attached to a metric and are automatically inherited to all the data points belonging to this metric.
-
-In TSorage, a metric associated with a tagset is called a **time series**. There are two typical ways to use the tagsets.
-According to the first approach, a metric identifies a sensor (in the broad sens of the term), while tags clarify the status of the sensor
-(name of the manufacturer, geographical position, etc.) or some of the generated data points (data quality, operational condition, etc.)
-
-With respect to the second approach, the metric refers to a property of interest (CPU usage, for instance), while the tags refer
-to the item at the origin of the data points (server number 5, for instance).
-While mixing the approaches is technically possible, we recommend to choice one of them and stick with it.
-
-Similarly to `the Spotify's Heroic documentation <https://spotify.github.io/heroic/docs/data_model#series>`__, we recommend the use of tagsets for enforcing a semantic series policy.
-Instead of placing information in the metric's name, using some enterprise specific nomenclature that is tryingly respected
-and therefore suffers many exceptions, the metric's name should be almost meaningless, and the semantic should be
-specified as a set of tags.
-Please note that such a policy does not prevent the user from organizing the metrics in a hierarchic way, since tag keys
-can be used for defining the hierarchical levels of organization. See :ref:`TagManagement`.
-
-Data points and aggregated values from different time series having the same metric can be combined in order to produce a more generic time series.
-For instance, consider we have three time series for the metric ``my-temperature``, having the following tagsets:
-
-- ``{"unit": "celcius"}``
-- ``{"unit": "celcius", "quality": "good"}``
-- ``{"unit": "celcius", "quality": "bad"}``
-
-When a :ref:`data query<Feature_DataQuerying>` is submitted to the system, asking for values belonging to ``my-temperature`` with
-an empty tagset, these three time series will be extracted and transparently merged in order to present all the relevant
-values. In other words, both values with a good quality, a bad quality, or no quality specified will be taken into account.
-
-Despite the fact the technologies involved in TSorage are quite efficient and scale pretty well, be aware extracting and
-merging multiple time series may be resource consuming. Therefore, the number of time series that must be merged in order
-to satisfy a data query should remain *reasonable* in order to keep the pressure on the data provider at an acceptable level.
-
-
-Static Tags
------------
-
-As previously stated, static tags are tags associated with a metric. All data points, and aggregated values, belonging to
-this metric automatically inherit from these properties. When the static tag of a metric is modified (see :ref:`TagManagement`),
-the change becomes effective immediately.
-
-.. _Feature_DynamicTag:
-
-Dynamic Tags
-------------
-
-Contrary to static tags, dynamic tags are attached to data points, in such a way two consecutive observations can be associated
-with distinct time series. After an observation has been ingested by TSorage, its associated dynamic tagset can not be
-modified.
-
-Tag Caching
------------
-
+:ref:`Tags <INTRO_CONCEPTS_TAGS>` are arbitrary pairs of `(key, value)` that are used for labelling individual or groups of observations. Systematically labelling improves the semantic knowledge about the stored observations, which facilitates their manual and automatic manipulation. Instead of using a hardly enforceable nomenclature for specifying the meaning of a metric, we recommend to use almost meaningless (from a human being point of view) metric names, and to use tags for specifying its semantics.
 
 Automatic Rollup
 ================

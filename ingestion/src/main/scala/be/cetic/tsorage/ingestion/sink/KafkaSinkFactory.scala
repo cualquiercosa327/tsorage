@@ -6,7 +6,7 @@ import akka.kafka.scaladsl.Producer
 import akka.stream.{ActorMaterializer, SinkShape}
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import be.cetic.tsorage.common.messaging.Message
-import com.google.protobuf.util.message.MessagePB
+import be.cetic.tsorage.common.messaging.message.MessagePB
 import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{BytesSerializer, StringSerializer}

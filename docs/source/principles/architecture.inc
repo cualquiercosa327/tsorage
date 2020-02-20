@@ -47,14 +47,7 @@ Ingestion Layer
 
 Components of the ingestion layer are responsible of accepting incoming connexions from collection agents for ingesting data points into TSorage. While basic checks (such as submitter authentication) are performed at this point, ingestion components are not supposed to perform data processing and try to forward the incoming data points as fast as possible. This ensures a highly effective ingestion, with important throughput rates. Ingestion components can easily be duplicated in order to face occasional or steady increasing needs for ingestion capacities.
 
-Ingestion Components expect to receive *messages*. Currently, each message is represented by a JSON document. A message contains
-
-- ``metric``, the metric id for which new data points are provided.
-- ``tagset``, a object representing the dynamic tagset associated with all the data points described in the message.
-- ``type``, the type of all the data points described in the message. While using the same type of all data point relating to a metric is generally considered as a good practice, the type associated with a metric can change from a message to another.
-- ``values``, a list of data points. Each data point is likewise a list of two elements. The first element is an `ISO 8601`_ representation of the timestamp associated with the data point, while the second element is the data point value.
-
-More details about the message format are available in the :ref:`Ingesting Time Series <Ingesting_Time_Series>` section.
+Ingestion Components expect to receive :ref:`messages <INTRO_CONCEPTS_MESSAGE>`, represented either as a JSON value, or as Protobuf payload.
 
 The following components are parts of the ingestion layer:
 
@@ -63,7 +56,6 @@ The following components are parts of the ingestion layer:
 
 All ingestion components push the incoming message to a message queuing system for further processing.
 
-.. _`ISO 8601`: https://en.wikipedia.org/wiki/ISO_8601
 
 Message Queuing
 ===============
@@ -140,7 +132,7 @@ Message Block
 
 Messages stored in the ``raw`` Kafka topic are consumed by the Message block, which stores the data points they contain.
 
-The :ref:`dynamic tags <Feature_DynamicTag>` mentioned in the messages are submitted to the *Tag block* for further processing.
+The :ref:`dynamic tags <INTRO_CONCEPTS_TAGS>` mentioned in the messages are submitted to the *Tag block* for further processing.
 
 After extracted data points are processed, they are sent to the *Observation block*, which can transform them into other
 observations and calculate aggregated values.
