@@ -10,7 +10,7 @@ import be.cetic.tsorage.common.messaging.{Message, RandomMessageIterator}
 import com.typesafe.config.{Config, ConfigFactory}
 import GraphDSL.Implicits._
 import akka.actor.ActorSystem
-import be.cetic.tsorage.collector.source.{ModbusRTUSerialSource, ModbusRTUTCPSource, ModbusTCPSource, RandomPollSource}
+import be.cetic.tsorage.collector.source.{AMQPSource, ModbusRTUSerialSource, ModbusRTUTCPSource, ModbusTCPSource, RandomPollSource}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -119,9 +119,13 @@ object Collector
          sourceConfigs.foreach(config => {
             val source = config.getString("type") match {
                case "random" => builder.add(Source.fromGraph(new RandomPollSource(config).buildPoller()))
+
                case "poll/modbus/tcp" => builder.add(Source.fromGraph(new ModbusTCPSource(config).buildPoller()))
                case "poll/modbus/rtu-tcp" => builder.add(Source.fromGraph(new ModbusRTUTCPSource(config).buildPoller()))
                case "poll/modbus/rtu" => builder.add(Source.fromGraph(new ModbusRTUSerialSource(config).buildPoller()))
+
+               case "flow/amqp/json" => builder.add(AMQPSource.createSource(config))
+               case "flow/amqp/pb" => builder.add(AMQPSource.createSource(config))
             }
 
             source ~> merge

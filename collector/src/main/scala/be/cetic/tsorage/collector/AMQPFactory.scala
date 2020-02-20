@@ -1,7 +1,7 @@
 package be.cetic.tsorage.collector
 
 import akka.{Done, NotUsed}
-import akka.stream.alpakka.amqp.{AmqpCachedConnectionProvider, AmqpUriConnectionProvider, AmqpWriteSettings, NamedQueueSourceSettings, QueueDeclaration}
+import akka.stream.alpakka.amqp.{AmqpCachedConnectionProvider, AmqpCredentials, AmqpDetailsConnectionProvider, AmqpUriConnectionProvider, AmqpWriteSettings, NamedQueueSourceSettings, QueueDeclaration}
 import akka.stream.alpakka.amqp.scaladsl.{AmqpSink, AmqpSource}
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.util.ByteString
@@ -15,26 +15,35 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
  */
 object AMQPFactory
 {
-   private def bufferURI(bufferConf: Config): String =
+   private def connectionProvider(bufferConf: Config) =
    {
-      val bufferHost = bufferConf.getString("host")
-      val bufferPort = bufferConf.getInt("port")
-      val bufferUser = bufferConf.getString("user")
-      val bufferPassword = bufferConf.getString("password")
+      val host = bufferConf.getString("host")
+      val port = bufferConf.getInt("port")
 
-      val amqpAuthority = s"${bufferUser}:${bufferPassword}@${bufferHost}:${bufferPort}"
-      s"amqp://${amqpAuthority}"
+      val baseConnection = AmqpDetailsConnectionProvider(host, port)
+
+      val advancedConnection = bufferConf.getString("security.type") match {
+         case "anonymous" => baseConnection
+         case "password" => {
+            val user = bufferConf.getString("security.user")
+            val password = bufferConf.getString("security.password")
+
+            baseConnection.withCredentials(AmqpCredentials(user, password))
+         }
+      }
+
+      AmqpCachedConnectionProvider(advancedConnection)
    }
 
    def buildAMQPSink(bufferConf: Config)(implicit context: ExecutionContextExecutor) =
    {
-      val connectionProvider = AmqpCachedConnectionProvider(AmqpUriConnectionProvider(bufferURI(bufferConf)))
+      val provider = connectionProvider(bufferConf)
 
-      val queueName = bufferConf.getString("queue_name")
+      val queueName = bufferConf.getString("queue")
       val queueDeclaration = QueueDeclaration(queueName).withDurable(true)
 
       AmqpSink.simple(
-         AmqpWriteSettings(connectionProvider)
+         AmqpWriteSettings(provider)
             .withRoutingKey(queueName)
             .withDeclaration(queueDeclaration)
       )
@@ -42,13 +51,14 @@ object AMQPFactory
 
    def buildAMQPSource(bufferConf: Config)(implicit context: ExecutionContextExecutor) =
    {
-      val connectionProvider = AmqpCachedConnectionProvider(AmqpUriConnectionProvider(bufferURI(bufferConf)))
+      val provider = connectionProvider(bufferConf)
 
-      val queueName = bufferConf.getString("queue_name")
+      val queueName = bufferConf.getString("queue")
       val queueDeclaration = QueueDeclaration(queueName).withDurable(true)
 
       AmqpSource.committableSource(
-         NamedQueueSourceSettings(connectionProvider, queueName).withDeclaration(queueDeclaration),
+         NamedQueueSourceSettings(provider, queueName)
+            .withDeclaration(queueDeclaration),
          bufferSize = 10
       )
    }

@@ -118,3 +118,10 @@ Installing Hub Services
 
 Authentication Micro-service
 ----------------------------
+
+
+
+.. _INSTALL_EXTRA_DATA_TYPES:
+
+Adding Extra Data Types
+=======================
