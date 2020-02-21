@@ -13,7 +13,7 @@ libraryDependencies += "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.com
 
 val commonSettings = Seq(
    organization := "cetic",
-   version := "1.0.0",
+   version := "0.1.0",
    scalaVersion := "2.12.10",
    // Docker information.
    //dockerRepository := Some("ceticasbl/tsorage")
