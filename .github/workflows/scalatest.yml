@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
     test:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-18.04
       steps:
       - uses: actions/checkout@v1
       - uses: olafurpg/setup-scala@v5
@@ -38,7 +38,4 @@ jobs:
             # Insert test data.
             docker exec cassandra cqlsh -f /share/test_data.cql
       - name: Run unit tests
-        id: sbt
-        uses: lokkju/github-action-sbt@master
-        with:
-          commands: test
+        run: sbt test
